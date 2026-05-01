@@ -1,0 +1,6 @@
+# APM package: instruction primitives deploy to .claude/rules, .cursor/rules, etc. on consumers' apm install
+# Skills stay addressable as separate paths: takak2166/agent/skills/<name>
+name: agent
+version: 1.0.0
+dependencies:
+  apm: []

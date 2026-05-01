@@ -1,0 +1,25 @@
+# Example consumer apm.yml. Copy to apm.yml in your repo root, then: apm install
+# https://microsoft.github.io/apm/
+#
+# Root package (instructions → .claude/rules, .cursor/rules, …) plus individual skills.
+
+name: example-consumer
+version: 1.0.0
+
+dependencies:
+  apm:
+    # Rules / always-on instructions (entire package primitive)
+    - takak2166/agent
+
+    # Skills (one path per skill)
+    - takak2166/agent/skills/check-pr-comment
+    - takak2166/agent/skills/code-review-agents
+    - takak2166/agent/skills/create-commit-en
+    - takak2166/agent/skills/draft-pr
+    - takak2166/agent/skills/kubectl-namespace
+    - takak2166/agent/skills/linear-create-project
+    - takak2166/agent/skills/plan
+    - takak2166/agent/skills/ready-pr
+    - takak2166/agent/skills/reply-pr-comment
+    - takak2166/agent/skills/review-skill
+    - takak2166/agent/skills/update-doc
