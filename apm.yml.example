@@ -18,6 +18,7 @@ dependencies:
     - takak2166/agent/skills/draft-pr
     - takak2166/agent/skills/kubectl-namespace
     - takak2166/agent/skills/linear-create-project
+    - takak2166/agent/skills/new-channel-member
     - takak2166/agent/skills/plan
     - takak2166/agent/skills/ready-pr
     - takak2166/agent/skills/reply-pr-comment
