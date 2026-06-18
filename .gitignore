@@ -1,0 +1,6 @@
+# APM dependencies
+apm_modules/
+
+# Local APM deploy artifacts (source: .apm/instructions/)
+.github/instructions/
+apm.lock.yaml
