@@ -22,4 +22,5 @@ dependencies:
     - takak2166/agent/skills/ready-pr
     - takak2166/agent/skills/reply-pr-comment
     - takak2166/agent/skills/review-skill
+    - takak2166/agent/skills/rke2-k8s-version-alert
     - takak2166/agent/skills/update-doc

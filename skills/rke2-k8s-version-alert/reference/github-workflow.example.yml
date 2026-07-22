@@ -1,0 +1,29 @@
+# Copy to my-k8s-platform/.github/workflows/rke2-k8s-version-alert.yml
+name: RKE2 k8s version alert
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_DATA: ${{ secrets.KUBECONFIG }}
+        run: |
+          echo "$KUBECONFIG_DATA" | base64 -d > kubeconfig
+          echo "KUBECONFIG=$PWD/kubeconfig" >> "$GITHUB_ENV"
+
+      - name: Check version and notify Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          CLUSTER_NAME: home-rke2
+          WARN_DAYS_BEFORE_EOL: '90'
+        run: |
+          chmod +x skills/rke2-k8s-version-alert/reference/check-and-notify.sh
+          ./skills/rke2-k8s-version-alert/reference/check-and-notify.sh
