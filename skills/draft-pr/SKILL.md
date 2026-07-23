@@ -1,6 +1,6 @@
 ---
 name: draft-pr
-description: Create a draft pull request for the current branch with a structured PR body.
+description: Create a draft pull request for the current branch with a structured PR body. Use when the user asks to create a draft PR, open a draft pull request, or invokes `/draft-pr`.
 ---
 
 # Draft PR

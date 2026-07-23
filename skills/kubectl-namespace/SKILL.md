@@ -1,6 +1,6 @@
 ---
 name: kubectl-namespace
-description: Ensure kubectl -n <namespace> flag is placed immediately after the verb
+description: Ensures the kubectl -n <namespace> flag is placed immediately after the verb. Use when reviewing or writing kubectl commands that include a namespace.
 ---
 
 # kubectl Command Namespace

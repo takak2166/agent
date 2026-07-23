@@ -12,6 +12,78 @@ A skill to reply to review comments on a specified PR with resolution results, a
 /reply-pr-comment [PR number]
 ```
 
+## Reply types and templates
+
+Use this section as the **single place** to decide **which** reply shape applies. **Reply structure (not addressed)** and **Reply structure (addressed change)** below define **how** to write that shape (paragraph layout only).
+
+- **Label prefix on the comment:**
+  - `[q]` (question): Direct answer from code and context
+  - `[imo]` (opinion): Agreement or counterargument with reasoning
+  - `[nits]` (nitpick): Thanks for the fix; GitHub emoji in the first paragraph when it fits (e.g. `:pray:`)
+- **Suggestion / code change (no such prefix):**
+  - If **addressed** (including a **partial** fix: some code for this point landed on the branch): use **Reply structure (addressed change)**. Match the original comment's language.
+  - If **not addressed**: use **Reply structure (not addressed)** (clear reason; optional follow-up). Do not use a commit hash or imply a fix landed when it did not.
+  - **Partial fix guidance:** treat a point as **addressed** only when the **specific suggestion** is actually implemented. If related refactors landed but the exact point is still unfixed, treat it as **not addressed** for the reply draft (and do not include a commit hash).
+- **Praise or acknowledgment:** By default, skip replying. Only when the user explicitly chooses to reply in the confirmation step, generate a brief thank-you message.
+- **Very short comment (one line, minor nit, or quick question):** Keep the reply proportionally short; do not stretch to the full **Reply structure (addressed change)** layout when the thread does not need that depth.
+
+**Addressed vs. not — commit hash and Resolution**
+
+| Situation | Commit hash | Resolution paragraph (addressed only) |
+|-----------|-------------|----------------------------------------|
+| Addressed | Required: 7-char hash at start of **Resolution** | **No emoji** |
+| Not addressed / deferred | Omit; do not fake a hash | *N/A — there is no Resolution paragraph in this template* |
+| `[q]` / `[imo]` / `[nits]` / praise (when replying) | Only if you actually fixed code (**addressed**); otherwise omit | Use **addressed** rules only when posting an **addressed** reply |
+
+- **Not addressed / deferred** means out of scope, disagree with the premise, revisit when evidence appears, etc. Do **not** apply the two-paragraph **addressed** template in those cases. The Resolution "no emoji" rule applies **only** to **addressed** replies.
+
+**Emoji (all reply shapes)**
+
+**Do not stack** multiple emoji **back-to-back at the end of one sentence** (e.g. avoid `:pray: :+1:` on the same line); a **single** trailing emoji in a sentence is fine.
+
+## Reply structure (not addressed)
+
+Use when you **choose not to implement** the suggestion (or defer it), not when a fix is already on the branch.
+
+- **Length:** Often thanks + one or two short rationale paragraphs; match the comment language.
+- **Emoji:** Natural where it fits; follow **Emoji (all reply shapes)** above. Not governed by the **addressed** Acknowledgment/Resolution split.
+- **Do not** open with or cite a commit hash to stand in for a fix that did not happen. If code **did** land, switch to **Reply structure (addressed change)**.
+
+## Reply structure (addressed change)
+
+When the reviewer's point was valid and you fixed it in code, prefer **two short paragraphs** (not a single English one-liner):
+
+1. **Acknowledgment:** Agree with the point; briefly restate the issue or root cause (e.g. why the bug happened). **Use GitHub emoji liberally** (`:name:` syntax) **only in this paragraph**—e.g. `:pray:` for thanks / お願い, `:bow:` for 失礼しました, `:sweat:` when the bug was subtle or embarrassing; `:+1:` / `:ok_person:` for agreement, `:eyes:` for caution. Match the comment language; emoji are language-agnostic. Ending with **`!`** is fine when it matches the tone. Aim for **several emoji** when it reads naturally (not one token per sentence; avoid looking like spam). Follow **Emoji (all reply shapes)** for stacking.
+2. **Resolution:** **Do not use emoji** in this paragraph. Start with the **7-char commit short hash** (e.g. 4e95eb0) inline at the start of this paragraph and describe what you added/changed (function names, behavior). Mention **regression tests** and paths (e.g. `tests/test_fetch_cmd.py`) when added or updated.
+
+**Constraints (addressed changes):** Do not paste full diffs; summarize only. Use the same language as the original comment (Japanese reply to Japanese comment, English reply to English comment). Keep each paragraph focused (avoid rambling).
+
+For **short** review comments, prefer a **short** reply (see example below); the two-paragraph + commit-hash pattern is for substantive fixes, not every thread.
+- Even for short replies, if you claim a point is **addressed**, you must still follow the **no-emoji Resolution** rule, and include a real commit hash **only when it exists**. If you cannot identify the commit hash for an addressed fix, treat it as **not addressed** for the purpose of the reply draft and ask the user whether to follow up later.
+
+## Example (Japanese, addressed change)
+```
+ご指摘の通り、ジェネレータの遅延評価で try/except が効かず、Message Fetch Error アラートが送られなくなっていました :pray:
+4e95eb0 で _slack_fetch_iter_with_alert を追加し、yield from 内で遅延イテレーション中の例外を捕捉して「Message Fetch Error」アラートを送るようにしました。tests/test_fetch_cmd.py で回帰テストも追加しました。
+```
+
+## Example (Japanese, brief reply to a short comment)
+When the review is a small style or preference point and you are keeping the current approach (or the exchange does not need commit hashes and test paths), a short acknowledgment plus one paragraph of rationale is appropriate.
+
+```
+コメントありがとうございます！
+パフォーマンスは実質差がなく、コメントを各行に付けられたほうがレビューや保守時の可読性が上がるかと思ったので、現状の形で統一しようと思います :pray:
+```
+
+## Example (Japanese, deferred / not addressing now)
+Concrete example of **Reply structure (not addressed)**. Give a clear reason (repo conventions, tool behavior, cost/benefit) and state what would trigger a follow-up (e.g. a reproducible build or runtime issue). Thanks first, then rationale.
+
+```
+コメントありがとうございます！
+src 直下にも __init__.py がなく、src/bot など 多くのサブパッケージも __init__.py なしで運用されているため、「全サブパッケージに __init__.py がある」という前提はこのリポジトリとは一致ないかと思いました :pray:
+poetry の packages = [{include = "src"}] でも通常は配下モジュールが取り込まれる想定のため、poetry build の成果物で src.mattermost が欠ける事象が出たら対応しようかと思います :pray:
+```
+
 ## Steps
 This skill assumes that the **current checkout branch** is the **head branch of the target PR**. If it is not, the mapping between comments and local diffs may be incorrect.
 
@@ -31,13 +103,13 @@ This skill assumes that the **current checkout branch** is the **head branch of 
    - Exclude comments that already have a reply from the PR author (use `author.login` from `gh pr view` and compare with `user.login` in each reply within the same thread)
    - **Thread reconstruction (do not guess):**
      - Prefer the **API reply relationship**: treat a comment `R` as a reply to a top-level comment `T` when `R.in_reply_to_id == T.id`. This is reliable even when `position` is missing.
-     - Only apply the “already has a reply from the PR author” exclusion when you can **confirm** a reply where `in_reply_to_id == T.id` and `user.login == author.login`.
+     - Only apply the "already has a reply from the PR author" exclusion when you can **confirm** a reply where `in_reply_to_id == T.id` and `user.login == author.login`.
      - If you cannot reliably reconstruct threads from the API response (e.g. missing `id`, inconsistent shapes, or no replies can be linked to a top-level comment), do not guess—keep the comment actionable and let the user decide to skip in the confirmation step.
    - Practical fallback rule: when you cannot use `in_reply_to_id` to link replies, treat comments as belonging to the same thread only when they share the same PR diff context (`path` + `position` when present).
 8. Collect the actual changes using `git log --oneline [base_branch]..HEAD` and `git diff [base_branch]...HEAD` to identify what was changed
    - Use the base branch identified in step 4
    - For each comment's `path`, check whether the relevant file was modified
-9. For each actionable comment, generate a reply message per **Reply types and templates** (below)
+9. For each actionable comment, generate a reply message per **Reply types and templates** (above)
 10. Present all generated replies to the user in a table format:
 
    ```
@@ -71,78 +143,6 @@ This skill assumes that the **current checkout branch** is the **head branch of 
    - This example uses `jq` to build JSON. If `jq` is not available, use another method to send a JSON body, but keep `in_reply_to` numeric.
    - Avoid `-f in_reply_to=...` since it can be sent as a string depending on the environment and rejected by the API.
 12. Report a summary of posted replies (count, any failures)
-
-## Reply types and templates
-
-Use this section as the **single place** to decide **which** reply shape applies. **Reply structure (not addressed)** and **Reply structure (addressed change)** below define **how** to write that shape (paragraph layout only).
-
-- **Label prefix on the comment:**
-  - `[q]` (question): Direct answer from code and context
-  - `[imo]` (opinion): Agreement or counterargument with reasoning
-  - `[nits]` (nitpick): Thanks for the fix; GitHub emoji in the first paragraph when it fits (e.g. `:pray:`)
-- **Suggestion / code change (no such prefix):**
-  - If **addressed** (including a **partial** fix: some code for this point landed on the branch): use **Reply structure (addressed change)**. Match the original comment’s language.
-  - If **not addressed**: use **Reply structure (not addressed)** (clear reason; optional follow-up). Do not use a commit hash or imply a fix landed when it did not.
-  - **Partial fix guidance:** treat a point as **addressed** only when the **specific suggestion** is actually implemented. If related refactors landed but the exact point is still unfixed, treat it as **not addressed** for the reply draft (and do not include a commit hash).
-- **Praise or acknowledgment:** By default, skip replying. Only when the user explicitly chooses to reply in the confirmation step, generate a brief thank-you message.
-- **Very short comment (one line, minor nit, or quick question):** Keep the reply proportionally short; do not stretch to the full **Reply structure (addressed change)** layout when the thread does not need that depth.
-
-**Addressed vs. not — commit hash and Resolution**
-
-| Situation | Commit hash | Resolution paragraph (addressed only) |
-|-----------|-------------|----------------------------------------|
-| Addressed | Required: 7-char hash at start of **Resolution** | **No emoji** |
-| Not addressed / deferred | Omit; do not fake a hash | *N/A — there is no Resolution paragraph in this template* |
-| `[q]` / `[imo]` / `[nits]` / praise (when replying) | Only if you actually fixed code (**addressed**); otherwise omit | Use **addressed** rules only when posting an **addressed** reply |
-
-- **Not addressed / deferred** means out of scope, disagree with the premise, revisit when evidence appears, etc. Do **not** apply the two-paragraph **addressed** template in those cases. The Resolution “no emoji” rule applies **only** to **addressed** replies.
-
-**Emoji (all reply shapes)**
-
-**Do not stack** multiple emoji **back-to-back at the end of one sentence** (e.g. avoid `:pray: :+1:` on the same line); a **single** trailing emoji in a sentence is fine.
-
-## Reply structure (not addressed)
-
-Use when you **choose not to implement** the suggestion (or defer it), not when a fix is already on the branch.
-
-- **Length:** Often thanks + one or two short rationale paragraphs; match the comment language.
-- **Emoji:** Natural where it fits; follow **Emoji (all reply shapes)** above. Not governed by the **addressed** Acknowledgment/Resolution split.
-- **Do not** open with or cite a commit hash to stand in for a fix that did not happen. If code **did** land, switch to **Reply structure (addressed change)**.
-
-## Reply structure (addressed change)
-
-When the reviewer’s point was valid and you fixed it in code, prefer **two short paragraphs** (not a single English one-liner):
-
-1. **Acknowledgment:** Agree with the point; briefly restate the issue or root cause (e.g. why the bug happened). **Use GitHub emoji liberally** (`:name:` syntax) **only in this paragraph**—e.g. `:pray:` for thanks / お願い, `:bow:` for 失礼しました, `:sweat:` when the bug was subtle or embarrassing; `:+1:` / `:ok_person:` for agreement, `:eyes:` for caution. Match the comment language; emoji are language-agnostic. Ending with **`!`** is fine when it matches the tone. Aim for **several emoji** when it reads naturally (not one token per sentence; avoid looking like spam). Follow **Emoji (all reply shapes)** for stacking.
-2. **Resolution:** **Do not use emoji** in this paragraph. Start with the **7-char commit short hash** (e.g. 4e95eb0) inline at the start of this paragraph and describe what you added/changed (function names, behavior). Mention **regression tests** and paths (e.g. `tests/test_fetch_cmd.py`) when added or updated.
-
-**Constraints (addressed changes):** Do not paste full diffs; summarize only. Use the same language as the original comment (Japanese reply to Japanese comment, English reply to English comment). Keep each paragraph focused (avoid rambling).
-
-For **short** review comments, prefer a **short** reply (see example below); the two-paragraph + commit-hash pattern is for substantive fixes, not every thread.
- - Even for short replies, if you claim a point is **addressed**, you must still follow the **no-emoji Resolution** rule, and include a real commit hash **only when it exists**. If you cannot identify the commit hash for an addressed fix, treat it as **not addressed** for the purpose of the reply draft and ask the user whether to follow up later.
-
-## Example (Japanese, addressed change)
-```
-ご指摘の通り、ジェネレータの遅延評価で try/except が効かず、Message Fetch Error アラートが送られなくなっていました :pray:
-4e95eb0 で _slack_fetch_iter_with_alert を追加し、yield from 内で遅延イテレーション中の例外を捕捉して「Message Fetch Error」アラートを送るようにしました。tests/test_fetch_cmd.py で回帰テストも追加しました。
-```
-
-## Example (Japanese, brief reply to a short comment)
-When the review is a small style or preference point and you are keeping the current approach (or the exchange does not need commit hashes and test paths), a short acknowledgment plus one paragraph of rationale is appropriate.
-
-```
-コメントありがとうございます！
-パフォーマンスは実質差がなく、コメントを各行に付けられたほうがレビューや保守時の可読性が上がるかと思ったので、現状の形で統一しようと思います :pray:
-```
-
-## Example (Japanese, deferred / not addressing now)
-Concrete example of **Reply structure (not addressed)**. Give a clear reason (repo conventions, tool behavior, cost/benefit) and state what would trigger a follow-up (e.g. a reproducible build or runtime issue). Thanks first, then rationale.
-
-```
-コメントありがとうございます！
-src 直下にも __init__.py がなく、src/bot など 多くのサブパッケージも __init__.py なしで運用されているため、「全サブパッケージに __init__.py がある」という前提はこのリポジトリとは一致ないかと思いました :pray:
-poetry の packages = [{include = "src"}] でも通常は配下モジュールが取り込まれる想定のため、poetry build の成果物で src.mattermost が欠ける事象が出たら対応しようかと思います :pray:
-```
 
 ## Restrictions
 - Do not execute any commands other than `gh repo view`, `gh pr view`, `gh api`, `git branch --show-current`, `git log`, and `git diff`

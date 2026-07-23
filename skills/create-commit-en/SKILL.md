@@ -1,6 +1,6 @@
 ---
 name: create-commit-en
-description: Generate an English commit message from staged changes with an appropriate prefix.
+description: Generate an English commit message from staged changes with an appropriate prefix. Use when the user asks to create a commit in English, wants an English commit message generated from staged changes, or invokes `/create-commit-en`.
 disable-model-invocation: true
 ---
 
