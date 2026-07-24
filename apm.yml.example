@@ -23,3 +23,5 @@ dependencies:
     - takak2166/agent/skills/reply-pr-comment
     - takak2166/agent/skills/audit-skill
     - takak2166/agent/skills/update-doc
+    # Transitive deps (audit-skill, empirical-prompt-tuning, skill-optimizer) — see skills/skill-hardening-loop/apm.yml
+    - takak2166/agent/skills/skill-hardening-loop

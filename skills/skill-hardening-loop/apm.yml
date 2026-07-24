@@ -1,0 +1,13 @@
+# Hybrid skill package: SKILL.md + transitive child-skill dependencies.
+# Consumer installs only: takak2166/agent/skills/skill-hardening-loop
+name: skill-hardening-loop
+version: 1.0.0
+type: hybrid
+
+dependencies:
+  apm:
+    # Same-repo sibling (inherits parent repo ref)
+    - git: parent
+      path: skills/audit-skill
+    - mizchi/skills/meta/empirical-prompt-tuning
+    - mcollina/skills/skills/skill-optimizer
