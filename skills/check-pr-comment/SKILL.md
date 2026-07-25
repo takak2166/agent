@@ -1,6 +1,6 @@
 ---
 name: check-pr-comment
-description: Review GitHub pull request inline review comments (via gh) and help triage them.
+description: Review and triage GitHub pull request inline review comments via gh (fetch all, group by file/thread, coverage check, score importance/difficulty). Use when the user wants to check, summarize, prioritize, or triage PR review comments, or invokes /check-pr-comment.
 disable-model-invocation: true
 ---
 
@@ -11,6 +11,25 @@ A skill to check comments on a specified PR number.
 ```
 /check-pr-comment [PR number]
 ```
+
+## Non-negotiables
+
+1. Fetch **all** review comments with pagination before filtering or summarizing — never filter at the API level by `path`.
+2. Build an internal list with **one row per comment** and every `id` from the API response.
+3. Run the **coverage check** (Step 7): every comment `id` must appear in the summary or be explicitly justified as skipped.
+4. Touch **every top-level comment** (`in_reply_to_id` is `null`) at least once in the grouped summary — when `path` + `position` fallback merges multiple null-reply comments into one thread, mention **each `id` in that thread** at least once (see Step 6).
+5. Use only the commands listed under **Restrictions** (plus `jq` only to parse or shape `gh api` JSON).
+
+## Expected output
+
+Present the triage result in this order:
+
+1. **PR context** — repo, PR number, state (Open/Draft), total comment count.
+2. **Grouped summary** — by `path`, then by thread (`in_reply_to_id` chain; use `path` + `position` only when reply links are missing).
+   - For each top-level comment: 1–2 lines on what is pointed out, bot vs human, and recommended action (**will address** / **will not address** + short reason).
+   - Include `Importance N / Difficulty N` scores (apply Step 9 before presenting the final grouped summary).
+3. **Coverage check result** — counts of API `id`s vs summarized `id`s; list any intentionally skipped `id`s with one-line justification.
+4. **User prompt** — ask whether to address the comments (or subsets), using the scores to suggest priority order.
 
 ## Steps
 1. If no PR number is provided, prompt the user to enter it and exit
@@ -28,14 +47,16 @@ A skill to check comments on a specified PR number.
     - `id`
     - `path`
     - `original_line` or `line`
+    - `position` (when present; fallback for thread grouping)
     - `user.login`
     - `body`
-    - `in_reply_to_id` (for detecting threads)
+    - `in_reply_to_id` (primary field for detecting threads)
   - You may pipe the raw output through `jq` to make it easier to read, but the internal representation must still contain **all** comments
 1. Group and summarize comments **systematically**
   - First group by `path` (file)
-  - Within each file, further group comments by thread using `original_position` / `in_reply_to_id` (i.e., treat a top-level comment and its replies as one thread)
-  - When summarizing, you **must explicitly touch every top-level comment** (where `in_reply_to_id` is `null`) at least once
+  - Within each file, further group comments by thread using `in_reply_to_id` (preferred: replies point to the top-level comment's `id`). When reply links are missing, fall back to the same `path` + `position` (when present) — comments sharing both belong to **one thread** even if every `in_reply_to_id` is `null`; mention each `id` in that thread in the summary
+  - Recognize common label prefixes in `body` when summarizing: `[q]` = question (answer vs code change), `[imo]` = opinion (agree or counter with reasoning), `[nits]` = minor fix (usually quick to address)
+  - When summarizing, you **must explicitly touch every top-level comment** (where `in_reply_to_id` is `null`) at least once — except when path+position fallback merges them, touch each merged comment's `id` instead
     - For each top-level comment, produce a 1–2 line note covering:
       - What is being pointed out (e.g., validation, performance, tests, naming, architecture)
       - Whether you recommend “will address” or “will not address”, and the short reason

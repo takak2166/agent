@@ -1,6 +1,6 @@
 ---
 name: reply-pr-comment
-description: Reply to GitHub pull request review comments with resolution results. Posts replies describing code changes, answers to questions, or reasons for not addressing. Use after check-pr-comment triage when the user wants to reply to PR comments.
+description: Reply to GitHub pull request review comments with resolution results. Posts replies describing code changes, answers to questions, or reasons for not addressing. Use after check-pr-comment triage when the user wants to reply to PR comments, or invokes /reply-pr-comment.
 disable-model-invocation: true
 ---
 
@@ -12,12 +12,31 @@ A skill to reply to review comments on a specified PR with resolution results, a
 /reply-pr-comment [PR number]
 ```
 
+## Non-negotiables
+
+1. **Verify local branch matches the PR head** (Step 5) before mapping comments to diffs — exit if mismatch.
+2. **Do not post any reply without user confirmation** (Step 10) — present drafts first.
+3. **Do not modify code** — this skill only drafts and posts replies.
+4. **Never fake a commit hash** — use **addressed** template only when the specific suggestion is implemented; if hash unknown, treat as not addressed and ask the user.
+5. **Resolution paragraph has no emoji**; **Acknowledgment** may use emoji (addressed replies only).
+6. Use only commands listed under **Restrictions** (`jq` only for `gh api` JSON bodies or parsing).
+
+## Expected output
+
+Present results in this order:
+
+1. **Pre-flight summary** — repo, PR number, state (Open/Draft), local branch vs PR head (match/mismatch), actionable comment count after Step 7 filtering.
+   - **Early exit (Step 3 CLOSED or Step 5 branch mismatch):** output a **minimal** pre-flight only (repo if known from Step 2, PR number, state or branch values) and skip items 2–4 below.
+2. **Reply drafts table** (Step 10) — one row per actionable comment; multi-paragraph drafts use `<br><br>` between paragraphs in the Reply (draft) column.
+3. **User confirmation** — ask to approve, edit, or skip each reply (and whether to reply to praise threads).
+4. **Post summary** (Step 12, after approved posts only) — count posted, skipped, failures.
+
 ## Reply types and templates
 
 Use this section as the **single place** to decide **which** reply shape applies. **Reply structure (not addressed)** and **Reply structure (addressed change)** below define **how** to write that shape (paragraph layout only).
 
 - **Label prefix on the comment:**
-  - `[q]` (question): Direct answer from code and context
+  - `[q]` (question): Direct answer from code and context — use a **short direct reply** (thanks + answer); no commit hash unless you also fixed code for this point
   - `[imo]` (opinion): Agreement or counterargument with reasoning
   - `[nits]` (nitpick): Thanks for the fix; GitHub emoji in the first paragraph when it fits (e.g. `:pray:`)
 - **Suggestion / code change (no such prefix):**
@@ -89,9 +108,12 @@ This skill assumes that the **current checkout branch** is the **head branch of 
 
 1. If no PR number is provided, prompt the user to enter it and exit
 2. Get the repository name by running `gh repo view --json nameWithOwner -q .nameWithOwner` (returns `owner/repo`). Use this value for `[owner]` and `[repo]` in the API URLs in the following steps
-3. Verify the PR is Open or Draft using `gh pr view [PR number]`. If not, inform the user and exit
+3. Verify the PR is Open or Draft using `gh pr view [PR number] --json state,isDraft -q .`
+   - **Continue** only when `state` is `"OPEN"` (Draft PRs use `state: "OPEN"` with `isDraft: true`)
+   - If `state` is `"CLOSED"`, inform the user the PR is no longer open (merged or closed without merge), present the **minimal pre-flight** (see **Expected output**), **do not** fetch comments or draft replies, and exit
+   - If JSON is unavailable, fall back to human-readable `gh pr view [PR number]` and apply the same rule: proceed only if the PR is Open or Draft
 4. Identify the target base branch, PR author, and PR head branch name using `gh pr view [PR number] --json baseRefName,author,headRefName`
-5. **Verify the local branch matches the PR head.** Run `git branch --show-current`. If the output is empty (e.g. detached HEAD) or does not match `headRefName` from the previous step, inform the user (show both values) and exit
+5. **Verify the local branch matches the PR head.** Run `git branch --show-current`. If the output is empty (e.g. detached HEAD) or does not match `headRefName` from the previous step, inform the user (show both values), present the **minimal pre-flight** (see **Expected output**), and exit
    - When exiting here, do **not** suggest any specific git command. Just instruct the user to switch to the PR head branch locally and rerun the skill.
 6. If a structured internal list of comments from `check-pr-comment` is already available in this conversation, reuse it. Otherwise, fetch **all** review comments using `gh api -X GET /repos/[owner]/[repo]/pulls/[pr_number]/comments --paginate`
    - Apply the same fetching rules as check-pr-comment (no filtering at API level, fetch all first)
@@ -105,7 +127,7 @@ This skill assumes that the **current checkout branch** is the **head branch of 
      - Prefer the **API reply relationship**: treat a comment `R` as a reply to a top-level comment `T` when `R.in_reply_to_id == T.id`. This is reliable even when `position` is missing.
      - Only apply the "already has a reply from the PR author" exclusion when you can **confirm** a reply where `in_reply_to_id == T.id` and `user.login == author.login`.
      - If you cannot reliably reconstruct threads from the API response (e.g. missing `id`, inconsistent shapes, or no replies can be linked to a top-level comment), do not guess—keep the comment actionable and let the user decide to skip in the confirmation step.
-   - Practical fallback rule: when you cannot use `in_reply_to_id` to link replies, treat comments as belonging to the same thread only when they share the same PR diff context (`path` + `position` when present).
+   - Practical fallback rule: when you cannot use `in_reply_to_id` to link replies, treat comments as belonging to the same thread when they share the same `path` + `position` (when present) — even if every `in_reply_to_id` is `null`
 8. Collect the actual changes using `git log --oneline [base_branch]..HEAD` and `git diff [base_branch]...HEAD` to identify what was changed
    - Use the base branch identified in step 4
    - For each comment's `path`, check whether the relevant file was modified
