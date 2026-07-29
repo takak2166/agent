@@ -78,6 +78,16 @@ class EngineTests(unittest.TestCase):
         self.assertFalse(d.allowed)
         self.assertEqual(d.rule_id, "deny-git-commit-bypass")
 
+    def test_deny_git_commit_no_verify_after_message(self):
+        d, _ = self._eval_shell('git commit -m "x" --no-verify')
+        self.assertFalse(d.allowed)
+        self.assertEqual(d.rule_id, "deny-git-commit-bypass")
+
+    def test_allow_git_commit_mnote_message(self):
+        d, _ = self._eval_shell("git commit -mnote")
+        self.assertTrue(d.allowed)
+        self.assertEqual(d.rule_id, "allow-git-commit-push")
+
     def test_deny_git_push_force(self):
         d, _ = self._eval_shell("git push --force origin main")
         self.assertFalse(d.allowed)

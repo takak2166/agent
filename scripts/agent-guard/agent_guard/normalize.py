@@ -514,17 +514,32 @@ def _git_commit_segment_has_bypass(segment: str) -> bool:
     i += 1
     while i < len(tokens):
         token = tokens[i]
-        if token in ("-m", "--message"):
-            return False
         if token in ("--no-verify", "--no-gpg-sign"):
             return True
         if token == "-n":
             return True
-        if token.startswith("-") and len(token) > 1 and token not in ("-m",):
-            if "n" in token[1:]:
+        if token in ("-m", "--message"):
+            i += 1
+            if i < len(tokens) and not tokens[i].startswith("-"):
+                i += 1
+            continue
+        if token.startswith("--message="):
+            i += 1
+            continue
+        if token.startswith("-m") and len(token) > 2:
+            i += 1
+            continue
+        if token.startswith("-") and not token.startswith("--"):
+            if _git_commit_short_cluster_has_bypass(token):
                 return True
         i += 1
     return False
+
+
+def _git_commit_short_cluster_has_bypass(token: str) -> bool:
+    if len(token) < 2 or token.startswith("--"):
+        return False
+    return "n" in token[1:]
 
 
 def _git_read_only(args: list[str]) -> bool:
