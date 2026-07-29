@@ -1,4 +1,4 @@
-# Agent Guard policy rules (TAK-99).
+# Agent Guard policy rules.
 # Evaluation: first matching rule wins. If nothing matches, deny (fail-closed).
 
 version: 1

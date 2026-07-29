@@ -1,4 +1,4 @@
-# Agent Guard — mutating-operation guardrails (TAK-99)
+# Agent Guard — mutating-operation guardrails
 
 Shared policy engine and APM-deployed hooks for Cursor, Claude Code, and Codex.
 
@@ -135,6 +135,5 @@ flowchart LR
 
 ## Related
 
-- Linear: [TAK-99](https://linear.app/me-time/issue/TAK-99)
 - [APM Hooks and commands](https://microsoft.github.io/apm/producer/author-primitives/hooks-and-commands/)
 - [Cursor Hooks](https://cursor.com/docs/agent/hooks)
