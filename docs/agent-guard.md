@@ -95,6 +95,8 @@ python3 -m unittest discover -s scripts/agent-guard/tests -v
 
 Edit `scripts/agent-guard/rules.yaml`. **Deny rules take precedence over allow rules.**
 
+Shared word lists (SQL verbs, HTTP methods, kubectl verbs, `gh` subcommands, etc.) live in the top-level `vocab:` section. Rules reference them with `$vocab.<key>`; shell regex patterns are generated from vocab via `$pattern.<key>` (see `policy_loader.py`). Both normalization and the policy engine read the same lists — no duplicate Python constants.
+
 Override the engine location with `AGENT_GUARD_ROOT` if needed.
 
 ## Audit log

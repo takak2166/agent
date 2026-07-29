@@ -7,10 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
 
-try:
-    import yaml
-except ImportError as e:  # pragma: no cover
-    raise ImportError("PyYAML is required: python3 -m pip install pyyaml") from e
+from agent_guard.policy_loader import PolicyDocument, PolicyLoader, default_rules_path
 
 
 @dataclass(frozen=True)
@@ -42,13 +39,9 @@ class _CompiledRule:
 class Engine:
     _cache: ClassVar[dict[tuple[str, int], "Engine"]] = {}
 
-    def __init__(self, rules: dict[str, Any]):
-        _validate_rules(rules)
-        self.default = str(rules.get("default", "deny")).lower()
-        raw_rules = rules.get("rules")
-        if not isinstance(raw_rules, list):
-            raise ValueError("rules must be a list")
-        self._compiled: list[_CompiledRule] = [_compile_rule(r) for r in raw_rules]
+    def __init__(self, policy: PolicyDocument):
+        self.default = policy.default
+        self._compiled: list[_CompiledRule] = [_compile_rule(r) for r in policy.rules]
 
     @classmethod
     def from_path(cls, path: str | Path) -> "Engine":
@@ -58,15 +51,15 @@ class Engine:
         cached = cls._cache.get(key)
         if cached is not None:
             return cached
-        text = path.read_text(encoding="utf-8")
-        data = yaml.safe_load(text) or {}
-        engine = cls(data)
+        policy = PolicyLoader.load(path)
+        engine = cls(policy)
         cls._cache[key] = engine
         return engine
 
     @classmethod
     def clear_cache(cls) -> None:
         cls._cache.clear()
+        PolicyLoader.clear_cache()
 
     def evaluate(self, action: dict[str, Any] | None) -> Decision:
         if not action:
@@ -182,18 +175,4 @@ def _compile_rule(rule: Any) -> _CompiledRule:
     )
 
 
-def _validate_rules(rules: dict[str, Any]) -> None:
-    if not isinstance(rules, dict):
-        raise ValueError("rules document must be a mapping")
-    default = str(rules.get("default", "deny")).lower()
-    if default not in ("allow", "deny"):
-        raise ValueError("default must be allow or deny")
-    raw_rules = rules.get("rules")
-    if raw_rules is None:
-        raise ValueError("rules list is required")
-    if not isinstance(raw_rules, list):
-        raise ValueError("rules must be a list")
-
-
-def default_rules_path() -> Path:
-    return Path(__file__).resolve().parent.parent / "rules.yaml"
+__all__ = ["Decision", "Engine", "default_rules_path"]

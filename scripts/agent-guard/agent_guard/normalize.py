@@ -10,14 +10,7 @@ import re
 import shlex
 from typing import Any
 
-from agent_guard.vocab import (
-    HTTP_READ_METHODS,
-    KUBECTL_MUTATE_VERBS,
-    KUBECTL_READ_VERBS,
-    KUBECTL_VALUE_FLAGS,
-    SQL_MUTATE_OPS,
-    SQL_READ_OPS,
-)
+from agent_guard.policy_loader import get_compiled_vocab, get_vocab
 
 # Simple read-only commands when the segment has no wrappers/substitution/redirects.
 _READ_ONLY_PREFIXES = frozenset(
@@ -115,38 +108,6 @@ _GIT_WRITE = {
     "stash",
 }
 
-_KUBECTL_READ = KUBECTL_READ_VERBS
-_KUBECTL_MUTATE = KUBECTL_MUTATE_VERBS
-
-_GH_READ = {
-    "status",
-    "view",
-    "list",
-    "search",
-    "api",
-    "auth",
-    "repo",
-    "issue",
-    "pr",
-    "run",
-    "workflow",
-    "release",
-    "help",
-    "version",
-}
-
-_GH_WRITE = {
-    "create",
-    "delete",
-    "edit",
-    "close",
-    "reopen",
-    "merge",
-    "upload",
-    "sync",
-    "fork",
-}
-
 _FIND_MUTATE = re.compile(r"-(?:delete|exec|execdir|ok|fprint|fls)\b")
 _CMD_SUBST = re.compile(r"\$\(|`")
 # Writes except common null/stderr sinks used by read-only diagnostics.
@@ -156,36 +117,9 @@ _WRITE_REDIRECT = re.compile(
 _INPUT_REDIRECT = re.compile(r"(?<![0-9])<(?!<<)(?!\s*/dev/null\b)")
 _SQL_FILE_INPUT = re.compile(r"(?:^|\s)(?:-[ef]|--file)(?:=|\s|\b)", re.I)
 
-_SQL_MUTATE = re.compile(
-    r"\b(" + "|".join(sorted(SQL_MUTATE_OPS, key=len, reverse=True)).upper() + r")\b",
-    re.I,
-)
-_SQL_SELECT = re.compile(
-    r"\b(" + "|".join(sorted(SQL_READ_OPS, key=len, reverse=True)).upper() + r")\b",
-    re.I,
-)
 
-_HTTP_METHOD = re.compile(
-    r"(?:(?:-X|--request|--method)\s*)(GET|HEAD|OPTIONS|POST|PUT|PATCH|DELETE)\b",
-    re.I,
-)
-_HTTP_METHOD_EQ = re.compile(
-    r"--method=(GET|HEAD|OPTIONS|POST|PUT|PATCH|DELETE)\b",
-    re.I,
-)
-_HTTPie_METHOD = re.compile(
-    r"(^|[;&|]\s*)(?:http|https)\s+(POST|PUT|PATCH|DELETE)\b",
-    re.I,
-)
-_MUTATING_HTTP_FLAGS = re.compile(
-    r"("
-    r"\s-d\s|--data(?:-binary|-urlencode|-raw)?(?:=|\s|--)|"
-    r"--json\s|-T\s|--upload-file\s|-F\s|--form\s|"
-    r"--post-data(?:=|\s)|"
-    r"--method\s+(?:POST|PUT|PATCH|DELETE)\b"
-    r")",
-    re.I,
-)
+def _compiled():
+    return get_compiled_vocab()
 
 
 def normalize(event: dict[str, Any], *, source: str = "cursor") -> dict[str, Any]:
@@ -282,47 +216,43 @@ def _from_shell(command: str, cwd: Any = None) -> dict[str, Any]:
 
 
 def _looks_like_sql_client(command: str) -> bool:
-    return bool(
-        re.search(
-            r"(^|[;&|]\s*)(psql|mysql|mariadb|sqlite3|sqlcmd|clickhouse-client)\b",
-            command,
-            re.I,
-        )
-    )
+    return bool(_compiled().sql_client_re.search(command))
 
 
 def _looks_like_http_client(command: str) -> bool:
-    return bool(re.search(r"(^|[;&|]\s*)(curl|wget|http|https?)\b", command, re.I))
+    return bool(_compiled().http_client_re.search(command))
 
 
 def _detect_sql_operation(command: str) -> str | None:
-    m = _SQL_MUTATE.search(command)
+    compiled = _compiled()
+    m = compiled.sql_mutate_re.search(command)
     if m:
         return m.group(1).lower()
-    if _SQL_SELECT.search(command):
+    if compiled.sql_read_re.search(command):
         return "select"
     return None
 
 
 def _detect_http_method(command: str) -> str | None:
-    m = _HTTP_METHOD.search(command) or _HTTP_METHOD_EQ.search(command)
+    compiled = _compiled()
+    m = compiled.http_method_re.search(command) or compiled.http_method_eq_re.search(command)
     if m:
         return m.group(1).upper()
 
-    m = _HTTPie_METHOD.search(command)
+    m = compiled.httpie_mutate_re.search(command)
     if m:
         return m.group(2).upper()
 
-    if _MUTATING_HTTP_FLAGS.search(command):
+    if compiled.mutating_http_flags_re.search(command):
         return "POST"
 
-    if re.search(r"(^|[;&|]\s*)(curl|wget)\b", command, re.I):
+    if compiled.http_client_re.search(command):
         return "GET"
     return None
 
 
 def _http_tool(command: str) -> str:
-    m = re.search(r"(^|[;&|]\s*)(curl|wget|http|https?)\b", command, re.I)
+    m = _compiled().http_client_re.search(command)
     return (m.group(2) if m else "curl").lower()
 
 
@@ -421,7 +351,7 @@ def _is_read_only_segment(segment: str) -> bool:
         method = _detect_http_method(segment)
         if method is None:
             return False
-        return method.upper() in HTTP_READ_METHODS
+        return method.upper() in get_vocab().http_read
 
     if base in ("psql", "mysql", "mariadb", "sqlite3", "sqlcmd", "clickhouse-client"):
         if _SQL_FILE_INPUT.search(segment) or _INPUT_REDIRECT.search(segment):
@@ -460,34 +390,37 @@ def _is_read_only_segment(segment: str) -> bool:
 
 
 def _gh_read_only(args: list[str]) -> bool:
+    vocab = get_vocab()
     positional = [a for a in args if not a.startswith("-")]
     if not positional:
         return True
-    if positional[0] in _GH_WRITE:
+    if positional[0] in vocab.gh_write:
         return False
-    if len(positional) >= 2 and positional[1] in _GH_WRITE:
+    if len(positional) >= 2 and positional[1] in vocab.gh_write:
         return False
-    if positional[0] in _GH_READ:
+    if positional[0] in vocab.gh_read:
         return True
     return False
 
 
 def _kubectl_read_only(args: list[str]) -> bool:
+    vocab = get_vocab()
     verb = _kubectl_subcommand(args)
     if not verb:
         return True
-    if verb in _KUBECTL_MUTATE:
+    if verb in vocab.kubectl_mutate:
         return False
-    if verb in _KUBECTL_READ:
+    if verb in vocab.kubectl_read:
         return True
     return False
 
 
 def _kubectl_subcommand(args: list[str]) -> str:
+    value_flags = get_vocab().kubectl_value_flags
     i = 0
     while i < len(args):
         token = args[i]
-        if token in KUBECTL_VALUE_FLAGS:
+        if token in value_flags:
             i += 2
             continue
         if token.startswith("-") and "=" not in token:

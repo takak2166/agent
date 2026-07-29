@@ -1,8 +1,117 @@
 # Agent Guard policy rules.
 # Evaluation: first matching rule wins. If nothing matches, deny (fail-closed).
+# Vocabulary lists are the single source of truth for normalize + engine.
 
 version: 1
 default: deny
+
+vocab:
+  sql_mutate:
+    - insert
+    - update
+    - delete
+    - drop
+    - truncate
+    - alter
+    - create
+    - grant
+    - revoke
+    - replace
+    - merge
+    - copy
+    - call
+  sql_read:
+    - select
+    - show
+    - describe
+    - explain
+    - with
+  http_mutate:
+    - POST
+    - PUT
+    - PATCH
+    - DELETE
+  http_read:
+    - GET
+    - HEAD
+    - OPTIONS
+  kubectl_mutate:
+    - apply
+    - create
+    - delete
+    - edit
+    - patch
+    - replace
+    - scale
+    - rollout
+    - exec
+    - attach
+    - cp
+    - drain
+    - cordon
+    - uncordon
+    - taint
+    - label
+    - annotate
+    - set
+  kubectl_read:
+    - get
+    - describe
+    - logs
+    - top
+    - api-resources
+    - api-versions
+    - explain
+    - cluster-info
+    - config
+    - version
+    - auth
+    - wait
+  kubectl_value_flags:
+    - "-n"
+    - --namespace
+    - --context
+    - "-c"
+    - --cluster
+    - --user
+    - --kubeconfig
+  sql_clients:
+    - psql
+    - mysql
+    - mariadb
+    - sqlite3
+    - sqlcmd
+    - clickhouse-client
+  http_clients:
+    - curl
+    - wget
+    - http
+    - https
+  gh_read:
+    - status
+    - view
+    - list
+    - search
+    - api
+    - auth
+    - repo
+    - issue
+    - pr
+    - run
+    - workflow
+    - release
+    - help
+    - version
+  gh_write:
+    - create
+    - delete
+    - edit
+    - close
+    - reopen
+    - merge
+    - upload
+    - sync
+    - fork
 
 rules:
   # --- denies first (so allows cannot shadow them) ---
@@ -32,52 +141,35 @@ rules:
     reason: "Mutating / DDL SQL is blocked"
     match:
       kind: sql
-      operation_in:
-        - insert
-        - update
-        - delete
-        - drop
-        - truncate
-        - alter
-        - create
-        - grant
-        - revoke
-        - replace
-        - merge
-        - copy
-        - call
+      operation_in: $vocab.sql_mutate
 
   - id: deny-sql-shell
     action: deny
     reason: "Mutating / DDL SQL via shell is blocked"
     match:
       kind: shell
-      command_regex: '(?i)(^|[;&|]\s*)(psql|mysql|mariadb|sqlite3|sqlcmd|clickhouse-client)\b.*\b(INSERT|UPDATE|DELETE|DROP|TRUNCATE|ALTER|CREATE|GRANT|REVOKE|REPLACE|MERGE)\b'
+      command_regex: $pattern.sql_mutate_shell
 
   - id: deny-kubectl-mutate
     action: deny
     reason: "Mutating kubectl commands are blocked"
     match:
       kind: shell
-      command_regex: '(^|[;&|]\s*)kubectl(?:\s+(?:-(?:n|c)\s+\S+|--\S+(?:=\S+)?|\S+))*?\s+\b(apply|create|delete|edit|patch|replace|scale|rollout|exec|attach|cp|drain|cordon|uncordon|taint|label|annotate|set)\b'
+      command_regex: $pattern.kubectl_mutate_shell
 
   - id: deny-http-mutate
     action: deny
     reason: "Mutating HTTP requests (POST/PUT/PATCH/DELETE) are blocked"
     match:
       kind: http
-      method_in:
-        - POST
-        - PUT
-        - PATCH
-        - DELETE
+      method_in: $vocab.http_mutate
 
   - id: deny-http-shell
     action: deny
     reason: "Mutating HTTP requests via shell are blocked"
     match:
       kind: shell
-      command_regex: '(?i)(^|[;&|]\s*)(curl|wget|http|https?)\b.*((-X|--request|--method)\s*(POST|PUT|PATCH|DELETE)\b|--method=(POST|PUT|PATCH|DELETE)\b|\s-d\s|--data(-binary|-urlencode|-raw)?([=\s]|--)|--json\s|--post-data([=\s]|$)|-T\s|--upload-file\s|-F\s|--form\s|\bhttps?\s+(POST|PUT|PATCH|DELETE)\b)'
+      command_regex: $pattern.http_mutate_shell
 
   # --- allows ---
   - id: allow-file
@@ -104,22 +196,14 @@ rules:
     reason: "Read-only SQL is allowed"
     match:
       kind: sql
-      operation_in:
-        - select
-        - show
-        - describe
-        - explain
-        - with
+      operation_in: $vocab.sql_read
 
   - id: allow-http-read
     action: allow
     reason: "Read-only HTTP is allowed"
     match:
       kind: http
-      method_in:
-        - GET
-        - HEAD
-        - OPTIONS
+      method_in: $vocab.http_read
 
   - id: allow-read-only-shell
     action: allow

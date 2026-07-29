@@ -17,6 +17,28 @@ from agent_guard.normalize import normalize
 from agent_guard.output import ALLOWED_SCOPE, format_decision
 
 
+class PolicyLoaderTests(unittest.TestCase):
+    def test_vocab_refs_resolve_in_rules(self):
+        from agent_guard.policy_loader import PolicyLoader
+
+        PolicyLoader.clear_cache()
+        policy = PolicyLoader.load(ROOT / "rules.yaml")
+        deny_sql = next(r for r in policy.rules if r["id"] == "deny-sql-mutate")
+        self.assertEqual(
+            frozenset(x.lower() for x in deny_sql["match"]["operation_in"]),
+            policy.vocab.sql_mutate,
+        )
+
+    def test_pattern_generated_from_vocab(self):
+        from agent_guard.policy_loader import PolicyLoader
+
+        policy = PolicyLoader.load(ROOT / "rules.yaml")
+        kubectl_rule = next(r for r in policy.rules if r["id"] == "deny-kubectl-mutate")
+        pattern = kubectl_rule["match"]["command_regex"]
+        self.assertIn("apply", pattern)
+        self.assertNotIn("$pattern", pattern)
+
+
 class EngineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
