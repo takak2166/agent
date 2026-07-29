@@ -1,0 +1,118 @@
+# Agent Guard policy rules (TAK-99).
+# Evaluation: first matching rule wins. If nothing matches, deny (fail-closed).
+
+version: 1
+default: deny
+
+rules:
+  # --- denies first (so allows cannot shadow them) ---
+  - id: deny-sudo
+    action: deny
+    reason: "sudo / 特権昇格が必要なコマンドはブロックされています"
+    match:
+      kind: shell
+      command_regex: '(^|[;&|]\s*)(sudo|doas|pkexec)\b'
+
+  - id: deny-git-destructive
+    action: deny
+    reason: "破壊的な git 操作（reset --hard / push --force 等）はブロックされています"
+    match:
+      kind: shell
+      command_regex: '(^|[;&|]\s*)git\s+.*\b(reset\s+--hard|push\s+.*(--force|-f)\b|clean\s+-f|checkout\s+--orphan)\b'
+
+  - id: deny-git-commit-bypass
+    action: deny
+    reason: "git commit の --no-verify / --no-gpg-sign はブロックされています"
+    match:
+      kind: shell
+      command_regex: '(^|[;&|]\s*)git\s+commit\b.*(?:--no-verify|(?:^|[\s])-n(?:[\s=]|$)|--no-gpg-sign)'
+
+  - id: deny-sql-mutate
+    action: deny
+    reason: "変更系 / DDL SQL はブロックされています"
+    match:
+      kind: sql
+      operation_in:
+        - insert
+        - update
+        - delete
+        - drop
+        - truncate
+        - alter
+        - create
+        - grant
+        - revoke
+        - replace
+        - merge
+        - copy
+        - call
+
+  - id: deny-sql-shell
+    action: deny
+    reason: "シェル経由の変更系 / DDL SQL はブロックされています"
+    match:
+      kind: shell
+      command_regex: '(?i)(^|[;&|]\s*)(psql|mysql|mariadb|sqlite3|sqlcmd|clickhouse-client)\b.*\b(INSERT|UPDATE|DELETE|DROP|TRUNCATE|ALTER|CREATE|GRANT|REVOKE|REPLACE|MERGE)\b'
+
+  - id: deny-kubectl-mutate
+    action: deny
+    reason: "kubectl の変更系操作はブロックされています"
+    match:
+      kind: shell
+      command_regex: '(^|[;&|]\s*)kubectl\s+\b(apply|create|delete|edit|patch|replace|scale|rollout|exec|attach|cp|drain|cordon|uncordon|taint|label|annotate|set)\b'
+
+  - id: deny-http-mutate
+    action: deny
+    reason: "変更系 HTTP（POST/PUT/PATCH/DELETE）はブロックされています"
+    match:
+      kind: http
+      method_in:
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+
+  - id: deny-http-shell
+    action: deny
+    reason: "シェル経由の変更系 HTTP はブロックされています"
+    match:
+      kind: shell
+      command_regex: '(?i)(^|[;&|]\s*)(curl|wget|http|https?)\b.*((-X|--request|--method)\s*(POST|PUT|PATCH|DELETE)\b|\s-d\s|--data([=\s]|-raw|--)|--json\s)'
+
+  # --- allows ---
+  - id: allow-mcp
+    action: allow
+    match:
+      kind: mcp
+
+  - id: allow-git-commit-push
+    action: allow
+    match:
+      kind: shell
+      command_regex: '(^|[;&|]\s*)git\s+(commit|push)\b'
+
+  - id: allow-sql-read
+    action: allow
+    match:
+      kind: sql
+      operation_in:
+        - select
+        - show
+        - describe
+        - explain
+        - with
+
+  - id: allow-http-read
+    action: allow
+    match:
+      kind: http
+      method_in:
+        - GET
+        - HEAD
+        - OPTIONS
+
+  - id: allow-read-only-shell
+    action: allow
+    match:
+      kind: shell
+      read_only: true

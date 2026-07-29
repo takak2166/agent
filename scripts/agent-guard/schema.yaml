@@ -1,0 +1,26 @@
+# Normalized action schema for agent-guard.
+# Events from Cursor / Claude Code / Codex adapters are mapped into one of these kinds.
+
+kinds:
+  shell:
+    fields:
+      - command
+      - cwd
+  sql:
+    fields:
+      - statement
+      - operation
+  http:
+    fields:
+      - method
+      - url
+      - tool
+  mcp:
+    fields:
+      - server
+      - tool
+      - is_write
+  file:
+    fields:
+      - path
+      - operation
