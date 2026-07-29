@@ -1,0 +1,4 @@
+{
+  "min_score": 0.43,
+  "note": "Baseline from engine/normalize/policy_loader scope. Update after improving tests."
+}

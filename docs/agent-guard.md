@@ -131,8 +131,24 @@ echo '{"tool_name":"Bash","tool_input":{"command":"kubectl apply -f x.yaml"}}' \
   | python3 scripts/agent-guard/run.py --target claude --source claude | jq .
 
 # unit tests
-python3 -m unittest discover -s scripts/agent-guard/tests -v
+cd scripts/agent-guard
+python3 -m pip install -r requirements-dev.txt
+python3 -m pytest tests/ -q
 ```
+
+## Mutation testing
+
+Mutation tests use [mutmut](https://mutmut.readthedocs.io/) on the core policy modules (`engine.py`, `normalize.py`, `policy_loader.py`). CI runs them in a separate workflow job and fails if the score drops below `scripts/agent-guard/mutmut-baseline.json`.
+
+```bash
+cd scripts/agent-guard
+python3 -m pip install -r requirements-dev.txt
+mutmut run
+mutmut export-cicd-stats
+python3 check_mutmut_score.py
+```
+
+Subprocess integration tests (`RunPyTests`, `WrapperFallbackTests`) are excluded from the mutmut pytest selection because they depend on hook scripts outside the mutant sandbox.
 
 ## Customizing rules
 

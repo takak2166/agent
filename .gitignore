@@ -8,3 +8,4 @@ apm.lock.yaml
 # Python
 __pycache__/
 *.py[cod]
+scripts/agent-guard/mutants/
