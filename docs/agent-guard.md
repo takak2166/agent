@@ -36,7 +36,7 @@ Secret scanning is handled separately (pre-commit), not by these hooks.
 ## Prerequisites
 
 - `python3` (3.10+)
-- `yq` (loads rules YAML)
+- PyYAML (`python3 -m pip install pyyaml`) — loads `rules.yaml`
 - [APM CLI](https://microsoft.github.io/apm/)
 
 ## Install (APM)
@@ -77,15 +77,15 @@ With `-g`, `${PLUGIN_ROOT}` is rewritten to absolute paths ([APM hooks docs](htt
 ## Manual testing
 
 ```bash
-# allow
-echo '{"command":"git status"}' | python3 scripts/agent-guard/run.py --adapter cursor-shell
+# allow (permission: allow in JSON; exit code 0)
+echo '{"command":"git status"}' | python3 scripts/agent-guard/run.py --target cursor
 
-# deny (exit 2)
-echo '{"command":"sudo apt update"}' | python3 scripts/agent-guard/run.py --adapter cursor-shell
+# deny (permission: deny in JSON; exit code 0)
+echo '{"command":"sudo apt update"}' | python3 scripts/agent-guard/run.py --target cursor
 
 # Claude-shaped payload
 echo '{"tool_name":"Bash","tool_input":{"command":"kubectl apply -f x.yaml"}}' \
-  | python3 scripts/agent-guard/run.py --adapter claude | jq .
+  | python3 scripts/agent-guard/run.py --target claude --source claude | jq .
 
 # unit tests
 python3 -m unittest discover -s scripts/agent-guard/tests -v
@@ -99,7 +99,7 @@ Override the engine location with `AGENT_GUARD_ROOT` if needed.
 
 ## Audit log
 
-Decisions are appended to `.agent-guard/audit.log` (JSON Lines).
+When `--audit-log PATH` or `AGENT_GUARD_AUDIT_LOG` is set, decisions are appended as JSON Lines to that file (for example `.agent-guard/audit.log`). Audit logging is opt-in; it is disabled by default.
 
 ## Architecture
 
@@ -130,7 +130,7 @@ flowchart LR
 | Symptom | What to try |
 |---|---|
 | Hooks do not run | Re-run `apm install`; reload / restart Cursor |
-| Everything is denied | Ensure `yq` and `python3` are on `PATH` |
+| Everything is denied | Ensure PyYAML is installed and `python3` is on `PATH` |
 | Engine path errors | Confirm `PLUGIN_ROOT` or fall back to `$ROOT/scripts/agent-guard` |
 
 ## Related
