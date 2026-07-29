@@ -25,7 +25,7 @@ rules:
     reason: "git commit --no-verify / --no-gpg-sign are blocked"
     match:
       kind: shell
-      command_regex: '(^|[;&|]\s*)git\s+commit\b.*(?:--no-verify|--no-gpg-sign|(?:^|[\s])-n(?:m\b|o-verify|o-gpg-sign|[\s=]|$))'
+      git_commit_bypass: true
 
   - id: deny-sql-mutate
     action: deny
@@ -59,7 +59,7 @@ rules:
     reason: "Mutating kubectl commands are blocked"
     match:
       kind: shell
-      command_regex: '(^|[;&|]\s*)kubectl\s+\b(apply|create|delete|edit|patch|replace|scale|rollout|exec|attach|cp|drain|cordon|uncordon|taint|label|annotate|set)\b'
+      command_regex: '(^|[;&|]\s*)kubectl(?:\s+(?:-(?:n|c)\s+\S+|--\S+(?:=\S+)?|\S+))*?\s+\b(apply|create|delete|edit|patch|replace|scale|rollout|exec|attach|cp|drain|cordon|uncordon|taint|label|annotate|set)\b'
 
   - id: deny-http-mutate
     action: deny

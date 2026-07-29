@@ -10,6 +10,15 @@ import re
 import shlex
 from typing import Any
 
+from agent_guard.vocab import (
+    HTTP_READ_METHODS,
+    KUBECTL_MUTATE_VERBS,
+    KUBECTL_READ_VERBS,
+    KUBECTL_VALUE_FLAGS,
+    SQL_MUTATE_OPS,
+    SQL_READ_OPS,
+)
+
 # Simple read-only commands when the segment has no wrappers/substitution/redirects.
 _READ_ONLY_PREFIXES = frozenset(
     {
@@ -106,20 +115,8 @@ _GIT_WRITE = {
     "stash",
 }
 
-_KUBECTL_READ = {
-    "get",
-    "describe",
-    "logs",
-    "top",
-    "api-resources",
-    "api-versions",
-    "explain",
-    "cluster-info",
-    "config",
-    "version",
-    "auth",
-    "wait",
-}
+_KUBECTL_READ = KUBECTL_READ_VERBS
+_KUBECTL_MUTATE = KUBECTL_MUTATE_VERBS
 
 _GH_READ = {
     "status",
@@ -160,10 +157,13 @@ _INPUT_REDIRECT = re.compile(r"(?<![0-9])<(?!<<)(?!\s*/dev/null\b)")
 _SQL_FILE_INPUT = re.compile(r"(?:^|\s)(?:-[ef]|--file)(?:=|\s|\b)", re.I)
 
 _SQL_MUTATE = re.compile(
-    r"\b(INSERT|UPDATE|DELETE|DROP|TRUNCATE|ALTER|CREATE|GRANT|REVOKE|REPLACE|MERGE|COPY|CALL)\b",
+    r"\b(" + "|".join(sorted(SQL_MUTATE_OPS, key=len, reverse=True)).upper() + r")\b",
     re.I,
 )
-_SQL_SELECT = re.compile(r"\b(SELECT|SHOW|DESCRIBE|EXPLAIN|WITH)\b", re.I)
+_SQL_SELECT = re.compile(
+    r"\b(" + "|".join(sorted(SQL_READ_OPS, key=len, reverse=True)).upper() + r")\b",
+    re.I,
+)
 
 _HTTP_METHOD = re.compile(
     r"(?:(?:-X|--request|--method)\s*)(GET|HEAD|OPTIONS|POST|PUT|PATCH|DELETE)\b",
@@ -258,6 +258,8 @@ def _from_shell(command: str, cwd: Any = None) -> dict[str, Any]:
         "cwd": cwd,
         "read_only": _is_read_only_shell(command),
     }
+    if _git_commit_has_bypass(command):
+        action["git_commit_bypass"] = True
 
     sql_op = _detect_sql_operation(command)
     if sql_op is not None and _looks_like_sql_client(command):
@@ -413,14 +415,13 @@ def _is_read_only_segment(segment: str) -> bool:
         return _git_read_only(tokens[1:])
 
     if base == "kubectl":
-        sub = _first_subcommand(tokens[1:])
-        return sub in _KUBECTL_READ
+        return _kubectl_read_only(tokens[1:])
 
     if base in ("curl", "wget", "http", "https"):
         method = _detect_http_method(segment)
         if method is None:
             return False
-        return method.upper() in {"GET", "HEAD", "OPTIONS"}
+        return method.upper() in HTTP_READ_METHODS
 
     if base in ("psql", "mysql", "mariadb", "sqlite3", "sqlcmd", "clickhouse-client"):
         if _SQL_FILE_INPUT.search(segment) or _INPUT_REDIRECT.search(segment):
@@ -459,13 +460,82 @@ def _is_read_only_segment(segment: str) -> bool:
 
 
 def _gh_read_only(args: list[str]) -> bool:
-    sub = _first_subcommand(args)
-    if not sub:
+    positional = [a for a in args if not a.startswith("-")]
+    if not positional:
         return True
-    if sub in _GH_WRITE:
+    if positional[0] in _GH_WRITE:
         return False
-    if sub in _GH_READ:
+    if len(positional) >= 2 and positional[1] in _GH_WRITE:
+        return False
+    if positional[0] in _GH_READ:
         return True
+    return False
+
+
+def _kubectl_read_only(args: list[str]) -> bool:
+    verb = _kubectl_subcommand(args)
+    if not verb:
+        return True
+    if verb in _KUBECTL_MUTATE:
+        return False
+    if verb in _KUBECTL_READ:
+        return True
+    return False
+
+
+def _kubectl_subcommand(args: list[str]) -> str:
+    i = 0
+    while i < len(args):
+        token = args[i]
+        if token in KUBECTL_VALUE_FLAGS:
+            i += 2
+            continue
+        if token.startswith("-") and "=" not in token:
+            i += 1
+            continue
+        if token.startswith("-"):
+            i += 1
+            continue
+        return token.lower()
+    return ""
+
+
+def _git_commit_has_bypass(command: str) -> bool:
+    parts = re.split(r"(?:&&|\|\||;|\n|\|(?!\|))", command)
+    return any(_git_commit_segment_has_bypass(p.strip()) for p in parts if p.strip())
+
+
+def _git_commit_segment_has_bypass(segment: str) -> bool:
+    try:
+        tokens = shlex.split(segment)
+    except ValueError:
+        tokens = segment.split()
+    if len(tokens) < 2:
+        return False
+    if tokens[0].rsplit("/", 1)[-1].lower() != "git":
+        return False
+
+    i = 1
+    while i < len(tokens) and tokens[i] != "commit":
+        if not tokens[i].startswith("-"):
+            return False
+        i += 1
+    if i >= len(tokens) or tokens[i] != "commit":
+        return False
+
+    i += 1
+    while i < len(tokens):
+        token = tokens[i]
+        if token in ("-m", "--message"):
+            return False
+        if token in ("--no-verify", "--no-gpg-sign"):
+            return True
+        if token == "-n":
+            return True
+        if token.startswith("-") and len(token) > 1 and token not in ("-m",):
+            if "n" in token[1:]:
+                return True
+        i += 1
     return False
 
 

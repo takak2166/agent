@@ -36,6 +36,26 @@ def _parse_target(argv: list[str]) -> str:
     return args.target
 
 
+def _audit_base() -> Path:
+    for env_name in ("AGENT_GUARD_AUDIT_ROOT", "AGENT_GUARD_ROOT"):
+        env_val = os.environ.get(env_name)
+        if env_val:
+            return Path(env_val).expanduser().resolve()
+    return Path.cwd().resolve()
+
+
+def _write_audit(audit_log: str | None, record: dict) -> None:
+    if not audit_log:
+        return
+    from agent_guard.audit import resolve_audit_path, write_audit
+
+    try:
+        path = resolve_audit_path(Path(audit_log), base=_audit_base())
+        write_audit(path, record)
+    except (OSError, ValueError):
+        pass
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = argparse.ArgumentParser(description="Agent Guard policy hook")
@@ -62,6 +82,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    source = args.source or args.target
+    action: dict | None = None
+
     try:
         from agent_guard.engine import Engine, default_rules_path
         from agent_guard.normalize import normalize
@@ -69,16 +92,6 @@ def main(argv: list[str] | None = None) -> int:
     except ImportError as exc:
         _emit(_fail_closed_payload(args.target, f"Agent Guard error (fail-closed): {exc}"))
         return 0
-
-    def _audit(path: Path | None, record: dict) -> None:
-        if path is None:
-            return
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps(record, ensure_ascii=False) + "\n")
-        except OSError:
-            pass
 
     try:
         raw = sys.stdin.read()
@@ -88,6 +101,16 @@ def main(argv: list[str] | None = None) -> int:
                 reason="Empty hook input (fail-closed)",
                 target=args.target,
             )
+            _write_audit(
+                args.audit_log,
+                {
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                    "target": args.target,
+                    "source": source,
+                    "allowed": False,
+                    "error": "empty stdin",
+                },
+            )
             _emit(payload)
             return 0
 
@@ -96,7 +119,6 @@ def main(argv: list[str] | None = None) -> int:
         except json.JSONDecodeError:
             event = {"command": raw}
 
-        source = args.source or args.target
         rules_path = Path(args.rules) if args.rules else default_rules_path()
         engine = Engine.from_path(rules_path)
         action = normalize(event, source=source)
@@ -107,10 +129,8 @@ def main(argv: list[str] | None = None) -> int:
             rule_id=decision.rule_id,
             target=args.target,
         )
-
-        audit_path = Path(args.audit_log) if args.audit_log else None
-        _audit(
-            audit_path,
+        _write_audit(
+            args.audit_log,
             {
                 "ts": datetime.now(timezone.utc).isoformat(),
                 "target": args.target,
@@ -126,6 +146,17 @@ def main(argv: list[str] | None = None) -> int:
             allowed=False,
             reason=f"Agent Guard error (fail-closed): {exc}",
             target=args.target,
+        )
+        _write_audit(
+            args.audit_log,
+            {
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "target": args.target,
+                "source": source,
+                "action": action,
+                "allowed": False,
+                "error": str(exc),
+            },
         )
 
     _emit(payload)

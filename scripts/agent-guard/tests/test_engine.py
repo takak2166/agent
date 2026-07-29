@@ -74,7 +74,7 @@ class EngineTests(unittest.TestCase):
     def test_deny_curl_post(self):
         d, _ = self._eval_shell("curl -X POST https://example.com/api -d '{}'")
         self.assertFalse(d.allowed)
-        self.assertIn(d.rule_id, {"deny-http-shell", "deny-http-mutate"})
+        self.assertEqual(d.rule_id, "deny-http-mutate")
 
     def test_allow_curl_get(self):
         d, action = self._eval_shell("curl -s https://example.com")
@@ -83,7 +83,7 @@ class EngineTests(unittest.TestCase):
     def test_deny_psql_insert(self):
         d, _ = self._eval_shell('psql -c "INSERT INTO t VALUES (1)"')
         self.assertFalse(d.allowed)
-        self.assertIn(d.rule_id, {"deny-sql-shell", "deny-sql-mutate"})
+        self.assertEqual(d.rule_id, "deny-sql-mutate")
 
     def test_allow_psql_select(self):
         d, action = self._eval_shell('psql -c "SELECT 1"')
@@ -190,6 +190,74 @@ class EngineTests(unittest.TestCase):
         self.assertTrue(d.allowed)
         self.assertEqual(d.rule_id, "allow-file")
 
+    def test_deny_kubectl_apply_with_namespace_flag(self):
+        d, _ = self._eval_shell("kubectl -n default apply -f deploy.yaml")
+        self.assertFalse(d.allowed)
+        self.assertEqual(d.rule_id, "deny-kubectl-mutate")
+
+    def test_allow_git_commit_message_mentions_no_verify(self):
+        d, _ = self._eval_shell('git commit -m "document --no-verify handling"')
+        self.assertTrue(d.allowed)
+        self.assertEqual(d.rule_id, "allow-git-commit-push")
+
+    def test_deny_gh_pr_create(self):
+        d, _ = self._eval_shell("gh pr create --title test")
+        self.assertFalse(d.allowed)
+        self.assertTrue(d.default)
+
+    def test_engine_cache_reuses_instance(self):
+        from agent_guard.engine import Engine
+
+        Engine.clear_cache()
+        path = ROOT / "rules.yaml"
+        first = Engine.from_path(path)
+        second = Engine.from_path(path)
+        self.assertIs(first, second)
+        Engine.clear_cache()
+
+
+class AuditTests(unittest.TestCase):
+    def test_sanitize_redacts_secrets(self):
+        from agent_guard.audit import sanitize_action
+
+        action = {
+            "kind": "shell",
+            "command": "curl -H 'Authorization: Bearer secret-token' https://x.com",
+        }
+        sanitized = sanitize_action(action)
+        self.assertIsNotNone(sanitized)
+        assert sanitized is not None
+        self.assertIn("***", sanitized["command"])
+        self.assertNotIn("secret-token", sanitized["command"])
+
+    def test_resolve_audit_path_rejects_escape(self):
+        from agent_guard.audit import resolve_audit_path
+
+        with self.assertRaises(ValueError):
+            resolve_audit_path(Path("/etc/passwd"), base=ROOT)
+
+
+class BypassMatrixTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.engine = Engine.from_path(ROOT / "rules.yaml")
+
+    def _deny(self, command: str) -> None:
+        action = normalize({"command": command}, source="cursor")
+        decision = self.engine.evaluate(action)
+        self.assertFalse(decision.allowed, msg=f"expected deny: {command!r} action={action}")
+
+    def test_bypass_matrix(self):
+        cases = [
+            "command kubectl apply -f x.yaml",
+            "kubectl -n prod apply -f x.yaml",
+            "wget --post-data='{}' https://example.com/api",
+            "gh issue create --title x",
+        ]
+        for cmd in cases:
+            with self.subTest(cmd=cmd):
+                self._deny(cmd)
+
 
 class OutputTests(unittest.TestCase):
     def test_allowed_scope_text(self):
@@ -263,23 +331,7 @@ class RunPyTests(unittest.TestCase):
 class WrapperFallbackTests(unittest.TestCase):
     def test_wrapper_without_plugin_root(self):
         script = ROOT.parents[1] / ".apm" / "hooks" / "scripts" / "cursor-before-shell.sh"
-        env = {
-            "PATH": "/usr/bin:/bin",
-            "HOME": str(Path.home()),
-        }
-        # Explicitly unset plugin roots
-        for key in ("PLUGIN_ROOT", "CURSOR_PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT", "AGENT_GUARD_ROOT"):
-            env[key] = ""
-        proc = subprocess.run(
-            ["bash", str(script)],
-            input=json.dumps({"command": "git status"}),
-            text=True,
-            capture_output=True,
-            check=False,
-            env={k: v for k, v in env.items() if v != "" or k.startswith("X")},
-        )
-        # Re-run with cleaned env (omit empty plugin vars entirely)
-        clean = {"PATH": env["PATH"], "HOME": env["HOME"]}
+        clean = {"PATH": "/usr/bin:/bin", "HOME": str(Path.home())}
         proc = subprocess.run(
             ["bash", str(script)],
             input=json.dumps({"command": "git status"}),
