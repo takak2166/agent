@@ -23,6 +23,7 @@ class _CompiledMatch:
     kind: str | None
     read_only: bool | None
     git_commit_bypass: bool | None
+    kubectl_mutate: bool | None
     command_regex: re.Pattern[str] | None
     operation_in: frozenset[str] | None
     method_in: frozenset[str] | None
@@ -104,6 +105,10 @@ class Engine:
             if bool(action.get("git_commit_bypass")) != match.git_commit_bypass:
                 return False
 
+        if match.kubectl_mutate is not None:
+            if bool(action.get("kubectl_mutate")) != match.kubectl_mutate:
+                return False
+
         if match.command_regex is not None:
             command = str(action.get("command") or "")
             if not match.command_regex.search(command):
@@ -159,6 +164,9 @@ def _compile_rule(rule: Any) -> _CompiledRule:
     git_commit_bypass = (
         raw_match.get("git_commit_bypass") if "git_commit_bypass" in raw_match else None
     )
+    kubectl_mutate = (
+        raw_match.get("kubectl_mutate") if "kubectl_mutate" in raw_match else None
+    )
 
     return _CompiledRule(
         id=str(rule_id),
@@ -168,6 +176,7 @@ def _compile_rule(rule: Any) -> _CompiledRule:
             kind=raw_match.get("kind"),
             read_only=read_only,
             git_commit_bypass=git_commit_bypass,
+            kubectl_mutate=kubectl_mutate,
             command_regex=compiled_regex,
             operation_in=operation_in,
             method_in=method_in,

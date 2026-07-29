@@ -165,7 +165,14 @@ def _alt_join(words: frozenset[str], *, upper: bool = False) -> str:
     items = sorted(words, key=len, reverse=True)
     if upper:
         items = [w.upper() for w in items]
-    return "|".join(items)
+    return "|".join(re.escape(w) for w in items)
+
+
+_HTTP_MUTATE_BODY_FLAGS = (
+    r"\s-d\s|--data(?:-binary|-urlencode|-raw)?(?:=|\s|--)|"
+    r"--json\s|-T\s|--upload-file\s|-F\s|--form\s|"
+    r"--post-data(?:=|\s)|--post-file(?:=|\s)|--body-file(?:=|\s)"
+)
 
 
 def _build_patterns(vocab: Vocab) -> dict[str, str]:
@@ -175,18 +182,14 @@ def _build_patterns(vocab: Vocab) -> dict[str, str]:
     http_clients = _alt_join(vocab.http_clients)
     http_mutate = _alt_join(vocab.http_mutate, upper=True)
     return {
-        "kubectl_mutate_shell": (
-            rf"(^|[;&|]\s*)kubectl(?:\s+(?:-(?:n|c)\s+\S+|--\S+(?:=\S+)?|\S+))*?\s+\b"
-            rf"({kubectl_mutate})\b"
-        ),
         "sql_mutate_shell": (
-            rf"(?i)(^|[;&|]\s*)({sql_clients})\b.*\b({sql_mutate})\b"
+            rf"(?i)(^|[;&|\n]\s*)({sql_clients})\b.*\b({sql_mutate})\b"
         ),
         "http_mutate_shell": (
-            rf"(?i)(^|[;&|]\s*)({http_clients})\b.*("
+            rf"(?i)(^|[;&|\n]\s*)({http_clients})\b.*("
             rf"(-X|--request|--method)\s*({http_mutate})\b|--method=({http_mutate})\b|"
-            rf"\s-d\s|--data(-binary|-urlencode|-raw)?([=\s]|--)|--json\s|"
-            rf"--post-data([=\s]|$)|-T\s|--upload-file\s|-F\s|--form\s|"
+            rf"{_HTTP_MUTATE_BODY_FLAGS}|"
+            rf"--method\s+({http_mutate})\b|"
             rf"\bhttps?\s+({http_mutate})\b)"
         ),
     }
@@ -213,12 +216,7 @@ def _compile_vocab(vocab: Vocab) -> CompiledVocab:
             re.I,
         ),
         mutating_http_flags_re=re.compile(
-            rf"("
-            rf"\s-d\s|--data(?:-binary|-urlencode|-raw)?(?:=|\s|--)|"
-            rf"--json\s|-T\s|--upload-file\s|-F\s|--form\s|"
-            rf"--post-data(?:=|\s)|"
-            rf"--method\s+({http_mutate})\b"
-            rf")",
+            rf"({_HTTP_MUTATE_BODY_FLAGS}|--method\s+({http_mutate})\b)",
             re.I,
         ),
         sql_client_re=re.compile(rf"(^|[;&|]\s*)({sql_clients})\b", re.I),

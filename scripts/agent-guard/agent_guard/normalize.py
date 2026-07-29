@@ -194,6 +194,8 @@ def _from_shell(command: str, cwd: Any = None) -> dict[str, Any]:
     }
     if _git_commit_has_bypass(command):
         action["git_commit_bypass"] = True
+    if _command_has_kubectl_mutate(command):
+        action["kubectl_mutate"] = True
 
     sql_op = _detect_sql_operation(command)
     if sql_op is not None and _looks_like_sql_client(command):
@@ -235,6 +237,16 @@ def _detect_sql_operation(command: str) -> str | None:
 
 def _detect_http_method(command: str) -> str | None:
     compiled = _compiled()
+    vocab = compiled.vocab
+
+    if compiled.mutating_http_flags_re.search(command):
+        m = compiled.http_method_re.search(command) or compiled.http_method_eq_re.search(command)
+        if m:
+            method = m.group(1).upper()
+            if method in vocab.http_mutate:
+                return method
+        return "POST"
+
     m = compiled.http_method_re.search(command) or compiled.http_method_eq_re.search(command)
     if m:
         return m.group(1).upper()
@@ -242,9 +254,6 @@ def _detect_http_method(command: str) -> str | None:
     m = compiled.httpie_mutate_re.search(command)
     if m:
         return m.group(2).upper()
-
-    if compiled.mutating_http_flags_re.search(command):
-        return "POST"
 
     if compiled.http_client_re.search(command):
         return "GET"
@@ -394,13 +403,59 @@ def _gh_read_only(args: list[str]) -> bool:
     positional = [a for a in args if not a.startswith("-")]
     if not positional:
         return True
-    if positional[0] in vocab.gh_write:
+    sub = positional[0]
+    if sub == "api":
+        return _gh_api_explicit_method(args) == "GET"
+    if sub in vocab.gh_write:
         return False
     if len(positional) >= 2 and positional[1] in vocab.gh_write:
         return False
-    if positional[0] in vocab.gh_read:
+    if sub in vocab.gh_read:
         return True
     return False
+
+
+def _gh_api_explicit_method(args: list[str]) -> str | None:
+    """Return HTTP method only when explicitly set via -X / --method."""
+    for i, token in enumerate(args):
+        if token in ("-X", "--method") and i + 1 < len(args):
+            return args[i + 1].upper()
+        if token.startswith("--method="):
+            return token.split("=", 1)[1].upper()
+    return None
+
+
+def _command_has_kubectl_mutate(command: str) -> bool:
+    parts = re.split(r"(?:&&|\|\||;|\n|\|(?!\|))", command)
+    return any(_segment_has_kubectl_mutate(p.strip()) for p in parts if p.strip())
+
+
+def _segment_has_kubectl_mutate(segment: str) -> bool:
+    if not segment:
+        return False
+    try:
+        tokens = shlex.split(segment)
+    except ValueError:
+        tokens = segment.split()
+    if not tokens:
+        return False
+
+    while tokens and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", tokens[0]):
+        tokens = tokens[1:]
+    if not tokens:
+        return False
+
+    base = tokens[0].rsplit("/", 1)[-1].lower()
+    if base in _WRAPPER_CMDS:
+        inner = _unwrap_wrapper(tokens)
+        if inner is None:
+            return False
+        return _segment_has_kubectl_mutate(inner)
+
+    if base != "kubectl":
+        return False
+    verb = _kubectl_subcommand(tokens[1:])
+    return verb in get_vocab().kubectl_mutate
 
 
 def _kubectl_read_only(args: list[str]) -> bool:

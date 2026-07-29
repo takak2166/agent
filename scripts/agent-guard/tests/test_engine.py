@@ -33,10 +33,20 @@ class PolicyLoaderTests(unittest.TestCase):
         from agent_guard.policy_loader import PolicyLoader
 
         policy = PolicyLoader.load(ROOT / "rules.yaml")
-        kubectl_rule = next(r for r in policy.rules if r["id"] == "deny-kubectl-mutate")
-        pattern = kubectl_rule["match"]["command_regex"]
-        self.assertIn("apply", pattern)
+        http_rule = next(r for r in policy.rules if r["id"] == "deny-http-shell")
+        pattern = http_rule["match"]["command_regex"]
+        self.assertIn("post-file", pattern)
         self.assertNotIn("$pattern", pattern)
+
+    def test_all_vocab_and_pattern_refs_resolve(self):
+        from agent_guard.policy_loader import PolicyLoader
+
+        policy = PolicyLoader.load(ROOT / "rules.yaml")
+        for rule in policy.rules:
+            match = rule.get("match") or {}
+            for key, value in match.items():
+                if isinstance(value, str):
+                    self.assertFalse(value.startswith("$"), msg=f"{rule['id']}.{key}")
 
 
 class EngineTests(unittest.TestCase):
@@ -227,6 +237,68 @@ class EngineTests(unittest.TestCase):
         self.assertFalse(d.allowed)
         self.assertTrue(d.default)
 
+    def test_deny_curl_get_with_body(self):
+        d, action = self._eval_shell("curl -X GET -d '{}' https://example.com/api")
+        self.assertFalse(d.allowed)
+        self.assertEqual(d.rule_id, "deny-http-mutate")
+        self.assertEqual(action.get("method"), "POST")
+
+    def test_deny_wget_post_file(self):
+        d, _ = self._eval_shell("wget --post-file=payload.txt https://example.com/api")
+        self.assertFalse(d.allowed)
+        self.assertEqual(d.rule_id, "deny-http-mutate")
+
+    def test_deny_gh_api_post(self):
+        d, _ = self._eval_shell("gh api -X POST repos/o/r/issues -f title=x")
+        self.assertFalse(d.allowed)
+        self.assertTrue(d.default)
+
+    def test_deny_gh_api_without_explicit_method(self):
+        d, _ = self._eval_shell("gh api repos/o/r")
+        self.assertFalse(d.allowed)
+        self.assertTrue(d.default)
+
+    def test_deny_gh_api_head(self):
+        d, _ = self._eval_shell("gh api -X HEAD repos/o/r")
+        self.assertFalse(d.allowed)
+        self.assertTrue(d.default)
+
+    def test_allow_gh_api_get(self):
+        d, _ = self._eval_shell("gh api -X GET repos/o/r")
+        self.assertTrue(d.allowed)
+        self.assertEqual(d.rule_id, "allow-read-only-shell")
+
+    def test_kubectl_long_flags_do_not_hang(self):
+        import time
+
+        flags = " ".join(f"--flag{i}=x" for i in range(40))
+        cmd = f"kubectl {flags} get pods"
+        start = time.monotonic()
+        d, _ = self._eval_shell(cmd)
+        elapsed = time.monotonic() - start
+        self.assertLess(elapsed, 2.0, "evaluation took too long (possible ReDoS)")
+        self.assertTrue(d.allowed)
+
+    def test_deny_http_shell_pattern_on_shell_action(self):
+        action = {
+            "kind": "shell",
+            "command": "wget --post-file=payload.txt https://example.com/api",
+            "read_only": False,
+        }
+        d = self.engine.evaluate(action)
+        self.assertFalse(d.allowed)
+        self.assertEqual(d.rule_id, "deny-http-shell")
+
+    def test_deny_sql_shell_pattern_on_shell_action(self):
+        action = {
+            "kind": "shell",
+            "command": 'psql -c "INSERT INTO t VALUES (1)"',
+            "read_only": False,
+        }
+        d = self.engine.evaluate(action)
+        self.assertFalse(d.allowed)
+        self.assertEqual(d.rule_id, "deny-sql-shell")
+
     def test_engine_cache_reuses_instance(self):
         from agent_guard.engine import Engine
 
@@ -274,6 +346,9 @@ class BypassMatrixTests(unittest.TestCase):
             "command kubectl apply -f x.yaml",
             "kubectl -n prod apply -f x.yaml",
             "wget --post-data='{}' https://example.com/api",
+            "wget --post-file=payload.txt https://example.com/api",
+            "curl -X GET -d '{}' https://example.com/api",
+            "gh api -X POST repos/o/r/issues",
             "gh issue create --title x",
         ]
         for cmd in cases:
