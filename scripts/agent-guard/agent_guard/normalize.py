@@ -10,72 +10,62 @@ import re
 import shlex
 from typing import Any
 
-# Leading tokens that are treated as read-only when the whole command is simple.
-_READ_ONLY_PREFIXES = (
-    "ls",
-    "ll",
-    "dir",
-    "pwd",
-    "cd",
-    "echo",
-    "printf",
-    "cat",
-    "head",
-    "tail",
-    "less",
-    "more",
-    "bat",
-    "rg",
-    "grep",
-    "find",
-    "fd",
-    "which",
-    "type",
-    "command",
-    "true",
-    "false",
-    "test",
-    "[",
-    "stat",
-    "file",
-    "wc",
-    "sort",
-    "uniq",
-    "diff",
-    "tree",
-    "env",
-    "printenv",
-    "date",
-    "whoami",
-    "id",
-    "uname",
-    "hostname",
-    "df",
-    "du",
-    "free",
-    "ps",
-    "top",
-    "htop",
-    "jq",
-    "yq",
-    "python",
-    "python3",
-    "node",
-    "ruby",
-    "perl",
-    "awk",
-    "sed",  # sed without -i is often filter; -i handled as not read-only below
-    "git",
-    "gh",
-    "kubectl",
-    "curl",
-    "wget",
-    "http",
-    "https",
-    "psql",
-    "mysql",
-    "sqlite3",
+# Simple read-only commands when the segment has no wrappers/substitution/redirects.
+_READ_ONLY_PREFIXES = frozenset(
+    {
+        "ls",
+        "ll",
+        "dir",
+        "pwd",
+        "cd",
+        "cat",
+        "head",
+        "tail",
+        "less",
+        "more",
+        "bat",
+        "rg",
+        "grep",
+        "fd",
+        "which",
+        "type",
+        "true",
+        "false",
+        "test",
+        "[",
+        "stat",
+        "file",
+        "wc",
+        "sort",
+        "uniq",
+        "diff",
+        "tree",
+        "printenv",
+        "date",
+        "whoami",
+        "id",
+        "uname",
+        "hostname",
+        "df",
+        "du",
+        "free",
+        "ps",
+        "top",
+        "htop",
+        "jq",
+        "git",
+        "kubectl",
+        "curl",
+        "wget",
+        "http",
+        "https",
+        "psql",
+        "mysql",
+        "sqlite3",
+    }
 )
+
+_WRAPPER_CMDS = frozenset({"command", "env", "time", "nice"})
 
 _GIT_READ_ONLY = {
     "status",
@@ -92,8 +82,6 @@ _GIT_READ_ONLY = {
     "rev-list",
     "describe",
     "blame",
-    "stash",  # stash list default; stash drop/pop denied elsewhere if needed
-    "config",  # get; --unset mutating is rare in agents
     "help",
     "version",
 }
@@ -133,6 +121,44 @@ _KUBECTL_READ = {
     "wait",
 }
 
+_GH_READ = {
+    "status",
+    "view",
+    "list",
+    "search",
+    "api",
+    "auth",
+    "repo",
+    "issue",
+    "pr",
+    "run",
+    "workflow",
+    "release",
+    "help",
+    "version",
+}
+
+_GH_WRITE = {
+    "create",
+    "delete",
+    "edit",
+    "close",
+    "reopen",
+    "merge",
+    "upload",
+    "sync",
+    "fork",
+}
+
+_FIND_MUTATE = re.compile(r"-(?:delete|exec|execdir|ok|fprint|fls)\b")
+_CMD_SUBST = re.compile(r"\$\(|`")
+# Writes except common null/stderr sinks used by read-only diagnostics.
+_WRITE_REDIRECT = re.compile(
+    r"(?<![0-9])>>?(?!\s*/dev/null\b)|(?<![0-9])>(?!\s*/dev/null\b)|<<<?"
+)
+_INPUT_REDIRECT = re.compile(r"(?<![0-9])<(?!<<)(?!\s*/dev/null\b)")
+_SQL_FILE_INPUT = re.compile(r"(?:^|\s)(?:-[ef]|--file)(?:=|\s|\b)", re.I)
+
 _SQL_MUTATE = re.compile(
     r"\b(INSERT|UPDATE|DELETE|DROP|TRUNCATE|ALTER|CREATE|GRANT|REVOKE|REPLACE|MERGE|COPY|CALL)\b",
     re.I,
@@ -141,6 +167,23 @@ _SQL_SELECT = re.compile(r"\b(SELECT|SHOW|DESCRIBE|EXPLAIN|WITH)\b", re.I)
 
 _HTTP_METHOD = re.compile(
     r"(?:(?:-X|--request|--method)\s*)(GET|HEAD|OPTIONS|POST|PUT|PATCH|DELETE)\b",
+    re.I,
+)
+_HTTP_METHOD_EQ = re.compile(
+    r"--method=(GET|HEAD|OPTIONS|POST|PUT|PATCH|DELETE)\b",
+    re.I,
+)
+_HTTPie_METHOD = re.compile(
+    r"(^|[;&|]\s*)(?:http|https)\s+(POST|PUT|PATCH|DELETE)\b",
+    re.I,
+)
+_MUTATING_HTTP_FLAGS = re.compile(
+    r"("
+    r"\s-d\s|--data(?:-binary|-urlencode|-raw)?(?:=|\s|--)|"
+    r"--json\s|-T\s|--upload-file\s|-F\s|--form\s|"
+    r"--post-data(?:=|\s)|"
+    r"--method\s+(?:POST|PUT|PATCH|DELETE)\b"
+    r")",
     re.I,
 )
 
@@ -167,7 +210,6 @@ def _normalize_pre_tool_use(event: dict[str, Any]) -> dict[str, Any]:
     tool = str(event.get("tool_name") or event.get("toolName") or "")
     raw_input = event.get("tool_input") or event.get("toolInput") or event.get("input") or {}
     if isinstance(raw_input, str):
-        # Some harnesses pass JSON string
         import json
 
         try:
@@ -186,7 +228,6 @@ def _normalize_pre_tool_use(event: dict[str, Any]) -> dict[str, Any]:
     if "mcp" in tool_l or tool_l.startswith("mcp__") or event.get("mcp_server") or event.get("server"):
         return _mcp_action({**event, **raw_input, "tool_name": tool})
 
-    # File tools are intentionally not guarded (tracked/untracked alike).
     if tool_l in ("edit", "write", "multiedit", "strreplace", "delete", "read", "searchreplace"):
         return {
             "kind": "file",
@@ -194,11 +235,10 @@ def _normalize_pre_tool_use(event: dict[str, Any]) -> dict[str, Any]:
             "operation": tool_l,
         }
 
-    # Fallback: treat unknown as shell-ish if command present, else opaque allow via mcp-like
     if raw_input.get("command"):
         return _from_shell(str(raw_input["command"]), cwd=raw_input.get("cwd"))
 
-    return {"kind": "mcp", "server": "unknown", "tool": tool or "unknown", "is_write": False}
+    return {"kind": "unknown", "tool": tool or "unknown"}
 
 
 def _mcp_action(event: dict[str, Any]) -> dict[str, Any]:
@@ -219,9 +259,6 @@ def _from_shell(command: str, cwd: Any = None) -> dict[str, Any]:
         "read_only": _is_read_only_shell(command),
     }
 
-    # Promote to sql/http when clearly detectable as a dedicated statement.
-    # Keep read-only clients as shell (allow-read-only-shell).
-    # Promote only when useful for typed deny/allow rules.
     sql_op = _detect_sql_operation(command)
     if sql_op is not None and _looks_like_sql_client(command):
         return {
@@ -266,14 +303,17 @@ def _detect_sql_operation(command: str) -> str | None:
 
 
 def _detect_http_method(command: str) -> str | None:
-    m = _HTTP_METHOD.search(command)
+    m = _HTTP_METHOD.search(command) or _HTTP_METHOD_EQ.search(command)
     if m:
         return m.group(1).upper()
-    # curl with body flags implies POST
-    if re.search(r"(^|[;&|]\s*)curl\b", command, re.I) and re.search(
-        r"(\s-d\s|--data([=\s]|-raw|--)|--json\s)", command
-    ):
+
+    m = _HTTPie_METHOD.search(command)
+    if m:
+        return m.group(2).upper()
+
+    if _MUTATING_HTTP_FLAGS.search(command):
         return "POST"
+
     if re.search(r"(^|[;&|]\s*)(curl|wget)\b", command, re.I):
         return "GET"
     return None
@@ -289,32 +329,82 @@ def _extract_url(command: str) -> str:
     return m.group(0) if m else ""
 
 
+def _segment_has_shell_mutation(segment: str) -> bool:
+    if _CMD_SUBST.search(segment):
+        return True
+    if _WRITE_REDIRECT.search(segment):
+        return True
+    if _INPUT_REDIRECT.search(segment):
+        return True
+    return False
+
+
 def _is_read_only_shell(command: str) -> bool:
     if not command:
-        return True
-    # Split on shell operators; every segment must be read-only.
+        return False
     parts = re.split(r"(?:&&|\|\||;|\n|\|(?!\|))", command)
     return all(_is_read_only_segment(p.strip()) for p in parts if p.strip())
 
 
+def _unwrap_wrapper(tokens: list[str]) -> str | None:
+    if not tokens:
+        return None
+    base = tokens[0].rsplit("/", 1)[-1].lower()
+    if base == "command":
+        i = 1
+        while i < len(tokens) and tokens[i].startswith("-"):
+            i += 1
+        if i >= len(tokens):
+            return None
+        return shlex.join(tokens[i:])
+    if base == "env":
+        i = 1
+        while i < len(tokens):
+            token = tokens[i]
+            if token == "--":
+                rest = tokens[i + 1 :]
+                return shlex.join(rest) if rest else None
+            if token.startswith("-") or re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", token):
+                i += 1
+                continue
+            return shlex.join(tokens[i:])
+        return None
+    if base in {"time", "nice"}:
+        i = 1
+        while i < len(tokens) and tokens[i].startswith("-"):
+            i += 1
+        if i >= len(tokens):
+            return None
+        return shlex.join(tokens[i:])
+    return None
+
+
 def _is_read_only_segment(segment: str) -> bool:
     if not segment:
-        return True
+        return False
+    if _segment_has_shell_mutation(segment):
+        return False
+
     try:
         tokens = shlex.split(segment)
     except ValueError:
         tokens = segment.split()
     if not tokens:
-        return True
+        return False
 
-    # Strip env assignments: FOO=bar cmd
     while tokens and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", tokens[0]):
         tokens = tokens[1:]
     if not tokens:
-        return True
+        return False
 
     prog = tokens[0]
     base = prog.rsplit("/", 1)[-1].lower()
+
+    if base in _WRAPPER_CMDS:
+        inner = _unwrap_wrapper(tokens)
+        if inner is None:
+            return False
+        return _is_read_only_segment(inner)
 
     if base in ("sudo", "doas", "pkexec"):
         return False
@@ -327,12 +417,31 @@ def _is_read_only_segment(segment: str) -> bool:
         return sub in _KUBECTL_READ
 
     if base in ("curl", "wget", "http", "https"):
-        method = _detect_http_method(segment) or "GET"
+        method = _detect_http_method(segment)
+        if method is None:
+            return False
         return method.upper() in {"GET", "HEAD", "OPTIONS"}
 
     if base in ("psql", "mysql", "mariadb", "sqlite3", "sqlcmd", "clickhouse-client"):
+        if _SQL_FILE_INPUT.search(segment) or _INPUT_REDIRECT.search(segment):
+            return False
         op = _detect_sql_operation(segment)
         return op in (None, "select")
+
+    if base == "find":
+        return _FIND_MUTATE.search(segment) is None
+
+    if base == "awk":
+        return False
+
+    if base in ("echo", "printf"):
+        return False
+
+    if base == "gh":
+        return _gh_read_only(tokens[1:])
+
+    if base == "yq":
+        return not any(t == "-i" or t.startswith("-i") for t in tokens[1:])
 
     if base == "sed" and any(t == "-i" or t.startswith("-i") for t in tokens[1:]):
         return False
@@ -341,13 +450,22 @@ def _is_read_only_segment(segment: str) -> bool:
         return False
 
     if base in ("python", "python3", "node", "ruby", "perl"):
-        # Interpreters may mutate; only treat obvious one-liners printing as RO when -c and no write APIs — fail closed.
         return False
 
     if base in _READ_ONLY_PREFIXES:
         return True
 
-    # Unknown binaries: not read-only (fail-closed via default deny unless another rule matches)
+    return False
+
+
+def _gh_read_only(args: list[str]) -> bool:
+    sub = _first_subcommand(args)
+    if not sub:
+        return True
+    if sub in _GH_WRITE:
+        return False
+    if sub in _GH_READ:
+        return True
     return False
 
 
@@ -356,7 +474,6 @@ def _git_read_only(args: list[str]) -> bool:
     if not sub:
         return True
     if sub in _GIT_READ_ONLY and sub not in _GIT_WRITE - {"stash", "config"}:
-        # stash without args defaults to push (write). stash list is RO.
         if sub == "stash":
             rest = [a for a in args if not a.startswith("-")]
             if len(rest) >= 2 and rest[1] in {"list", "show"}:
@@ -364,6 +481,8 @@ def _git_read_only(args: list[str]) -> bool:
             if len(rest) == 1:
                 return False
             return rest[1] in {"list", "show"}
+        if sub == "config":
+            return not any(a in {"--unset", "--unset-all", "--replace-all"} for a in args)
         return True
     if sub in {"diff", "log", "show", "status", "branch", "tag", "remote", "fetch"}:
         return True

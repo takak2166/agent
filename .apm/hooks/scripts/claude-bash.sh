@@ -10,4 +10,4 @@ elif [ -n "$PLUGIN" ]; then
 else
   GUARD="${ROOT}/scripts/agent-guard"
 fi
-exec python3 "$GUARD/run.py" --target claude --source claude
+python3 "$GUARD/run.py" --target claude --source claude || python3 "$GUARD/fail_closed.py" --target claude

@@ -18,14 +18,14 @@ rules:
     reason: "Destructive git operations are blocked"
     match:
       kind: shell
-      command_regex: '(^|[;&|]\s*)git\s+.*\b(reset\s+--hard|push\s+.*(--force|-f)\b|clean\s+-f|checkout\s+--orphan)\b'
+      command_regex: '(^|[;&|]\s*)git\s+.*\b(reset\s+--hard|push\s+(\+|.*\s+\+|.*(--force|-f|--force-with-lease|--delete|--mirror)\b)|clean\s+-f|checkout\s+--orphan)\b'
 
   - id: deny-git-commit-bypass
     action: deny
     reason: "git commit --no-verify / --no-gpg-sign are blocked"
     match:
       kind: shell
-      command_regex: '(^|[;&|]\s*)git\s+commit\b.*(?:--no-verify|(?:^|[\s])-n(?:[\s=]|$)|--no-gpg-sign)'
+      command_regex: '(^|[;&|]\s*)git\s+commit\b.*(?:--no-verify|--no-gpg-sign|(?:^|[\s])-n(?:m\b|o-verify|o-gpg-sign|[\s=]|$))'
 
   - id: deny-sql-mutate
     action: deny
@@ -77,9 +77,15 @@ rules:
     reason: "Mutating HTTP requests via shell are blocked"
     match:
       kind: shell
-      command_regex: '(?i)(^|[;&|]\s*)(curl|wget|http|https?)\b.*((-X|--request|--method)\s*(POST|PUT|PATCH|DELETE)\b|\s-d\s|--data([=\s]|-raw|--)|--json\s)'
+      command_regex: '(?i)(^|[;&|]\s*)(curl|wget|http|https?)\b.*((-X|--request|--method)\s*(POST|PUT|PATCH|DELETE)\b|--method=(POST|PUT|PATCH|DELETE)\b|\s-d\s|--data(-binary|-urlencode|-raw)?([=\s]|--)|--json\s|--post-data([=\s]|$)|-T\s|--upload-file\s|-F\s|--form\s|\bhttps?\s+(POST|PUT|PATCH|DELETE)\b)'
 
   # --- allows ---
+  - id: allow-file
+    action: allow
+    reason: "File tool operations are allowed"
+    match:
+      kind: file
+
   - id: allow-mcp
     action: allow
     reason: "MCP writes are allowed"

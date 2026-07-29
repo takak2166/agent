@@ -10,7 +10,7 @@ from typing import Any
 try:
     import yaml
 except ImportError as e:  # pragma: no cover
-    raise SystemExit("PyYAML is required: python3 -m pip install pyyaml") from e
+    raise ImportError("PyYAML is required: python3 -m pip install pyyaml") from e
 
 
 @dataclass(frozen=True)

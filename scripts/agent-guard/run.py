@@ -17,23 +17,27 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-from agent_guard.engine import Engine, default_rules_path  # noqa: E402
-from agent_guard.normalize import normalize  # noqa: E402
-from agent_guard.output import format_decision  # noqa: E402
+
+def _emit(payload: dict) -> None:
+    sys.stdout.write(json.dumps(payload, ensure_ascii=False))
+    sys.stdout.write("\n")
 
 
-def _audit(path: Path | None, record: dict) -> None:
-    if path is None:
-        return
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
-    except OSError:
-        pass
+def _fail_closed_payload(target: str, reason: str) -> dict:
+    from agent_guard.output import format_decision
+
+    return format_decision(allowed=False, reason=reason, target=target)
+
+
+def _parse_target(argv: list[str]) -> str:
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--target", default="cursor")
+    args, _ = parser.parse_known_args(argv)
+    return args.target
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
     parser = argparse.ArgumentParser(description="Agent Guard policy hook")
     parser.add_argument(
         "--target",
@@ -59,9 +63,36 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        raw = sys.stdin.read()
+        from agent_guard.engine import Engine, default_rules_path
+        from agent_guard.normalize import normalize
+        from agent_guard.output import format_decision
+    except ImportError as exc:
+        _emit(_fail_closed_payload(args.target, f"Agent Guard error (fail-closed): {exc}"))
+        return 0
+
+    def _audit(path: Path | None, record: dict) -> None:
+        if path is None:
+            return
         try:
-            event = json.loads(raw) if raw.strip() else {}
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except OSError:
+            pass
+
+    try:
+        raw = sys.stdin.read()
+        if not raw.strip():
+            payload = format_decision(
+                allowed=False,
+                reason="Empty hook input (fail-closed)",
+                target=args.target,
+            )
+            _emit(payload)
+            return 0
+
+        try:
+            event = json.loads(raw)
         except json.JSONDecodeError:
             event = {"command": raw}
 
@@ -97,12 +128,16 @@ def main(argv: list[str] | None = None) -> int:
             target=args.target,
         )
 
-    sys.stdout.write(json.dumps(payload, ensure_ascii=False))
-    sys.stdout.write("\n")
-    # Exit 0 always; harnesses honor JSON permission field.
-    # Exit 2 is an alternate deny signal some harnesses accept — keep 0 + JSON.
+    _emit(payload)
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except BaseException as exc:
+        target = _parse_target(sys.argv[1:])
+        _emit(_fail_closed_payload(target, f"Agent Guard error (fail-closed): {exc}"))
+        raise SystemExit(0) from exc

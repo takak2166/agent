@@ -112,6 +112,84 @@ class EngineTests(unittest.TestCase):
         self.assertFalse(d.allowed)
         self.assertEqual(d.rule_id, "deny-sudo")
 
+    def test_deny_command_wrapper_kubectl(self):
+        d, _ = self._eval_shell("command kubectl apply -f deploy.yaml")
+        self.assertFalse(d.allowed)
+
+    def test_deny_command_wrapper_rm(self):
+        d, _ = self._eval_shell("command rm -rf /tmp/foo")
+        self.assertFalse(d.allowed)
+
+    def test_deny_env_wrapper(self):
+        d, _ = self._eval_shell("env kubectl apply -f deploy.yaml")
+        self.assertFalse(d.allowed)
+
+    def test_deny_find_exec(self):
+        d, _ = self._eval_shell("find . -exec rm -rf {} +")
+        self.assertFalse(d.allowed)
+
+    def test_deny_find_delete(self):
+        d, _ = self._eval_shell("find . -delete")
+        self.assertFalse(d.allowed)
+
+    def test_deny_awk_system(self):
+        d, _ = self._eval_shell('awk \'BEGIN{system("rm -rf /tmp/foo")}\'')
+        self.assertFalse(d.allowed)
+
+    def test_deny_echo_command_substitution(self):
+        d, _ = self._eval_shell("echo $(kubectl apply -f deploy.yaml)")
+        self.assertFalse(d.allowed)
+
+    def test_deny_shell_redirect(self):
+        d, _ = self._eval_shell("echo evil > /tmp/agent-guard-pwn")
+        self.assertFalse(d.allowed)
+
+    def test_deny_psql_file_input(self):
+        d, _ = self._eval_shell("psql -f /tmp/mutate.sql")
+        self.assertFalse(d.allowed)
+
+    def test_deny_psql_stdin_redirect(self):
+        d, _ = self._eval_shell("psql < /tmp/mutate.sql")
+        self.assertFalse(d.allowed)
+
+    def test_deny_wget_post_data(self):
+        d, _ = self._eval_shell("wget --post-data='{}' https://example.com/api")
+        self.assertFalse(d.allowed)
+
+    def test_deny_curl_data_binary(self):
+        d, _ = self._eval_shell("curl --data-binary @payload.json https://example.com/api")
+        self.assertFalse(d.allowed)
+
+    def test_deny_httpie_post(self):
+        d, _ = self._eval_shell("http POST https://example.com/api name=value")
+        self.assertFalse(d.allowed)
+
+    def test_deny_git_push_plus_ref(self):
+        d, _ = self._eval_shell("git push origin +main")
+        self.assertFalse(d.allowed)
+        self.assertEqual(d.rule_id, "deny-git-destructive")
+
+    def test_deny_git_commit_nm(self):
+        d, _ = self._eval_shell('git commit -nm "skip hooks"')
+        self.assertFalse(d.allowed)
+        self.assertEqual(d.rule_id, "deny-git-commit-bypass")
+
+    def test_deny_unknown_tool_not_mcp(self):
+        action = normalize({"tool_name": "CustomTool", "tool_input": {}}, source="claude")
+        d = self.engine.evaluate(action)
+        self.assertFalse(d.allowed)
+        self.assertTrue(d.default)
+        self.assertEqual(action["kind"], "unknown")
+
+    def test_allow_file_tool(self):
+        action = normalize(
+            {"tool_name": "Write", "tool_input": {"path": "foo.txt"}},
+            source="claude",
+        )
+        d = self.engine.evaluate(action)
+        self.assertTrue(d.allowed)
+        self.assertEqual(d.rule_id, "allow-file")
+
 
 class OutputTests(unittest.TestCase):
     def test_allowed_scope_text(self):
@@ -157,6 +235,29 @@ class RunPyTests(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         payload = json.loads(proc.stdout)
         self.assertEqual(payload.get("permission"), "deny")
+
+    def test_run_py_empty_stdin_denies(self):
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "run.py"), "--target", "cursor"],
+            input="",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload.get("permission"), "deny")
+
+    def test_fail_closed_py_emits_deny(self):
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "fail_closed.py"), "--target", "claude"],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(proc.stdout)
+        self.assertEqual(payload["hookSpecificOutput"]["permissionDecision"], "deny")
 
 
 class WrapperFallbackTests(unittest.TestCase):
