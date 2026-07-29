@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-ALLOWED_SCOPE = "ファイル編集、git commit/push、MCP 書き込み、読み取り専用操作"
+ALLOWED_SCOPE = "Allowed: file edits, git commit/push, MCP writes, read-only operations"
 
 
 def format_decision(
@@ -18,13 +18,13 @@ def format_decision(
     if allowed:
         return _allow(target)
 
-    detail = reason or "ポリシーによりブロックされました"
+    detail = reason or "blocked by policy"
     if rule_id:
         detail = f"[{rule_id}] {detail}"
     message = (
-        f"{detail}\n"
-        f"許可されている操作: {ALLOWED_SCOPE}\n"
-        "このガードは本番影響のある変更系操作のみをブロックします。"
+        f"Blocked by Agent Guard: {detail}\n"
+        f"{ALLOWED_SCOPE}\n"
+        "This guard only blocks production-impacting mutating operations."
     )
     return _deny(target, message)
 

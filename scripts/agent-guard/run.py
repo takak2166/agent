@@ -58,37 +58,44 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    raw = sys.stdin.read()
     try:
-        event = json.loads(raw) if raw.strip() else {}
-    except json.JSONDecodeError:
-        event = {"command": raw}
+        raw = sys.stdin.read()
+        try:
+            event = json.loads(raw) if raw.strip() else {}
+        except json.JSONDecodeError:
+            event = {"command": raw}
 
-    source = args.source or args.target
-    rules_path = Path(args.rules) if args.rules else default_rules_path()
-    engine = Engine.from_path(rules_path)
-    action = normalize(event, source=source)
-    decision = engine.evaluate(action)
-    payload = format_decision(
-        allowed=decision.allowed,
-        reason=decision.reason,
-        rule_id=decision.rule_id,
-        target=args.target,
-    )
+        source = args.source or args.target
+        rules_path = Path(args.rules) if args.rules else default_rules_path()
+        engine = Engine.from_path(rules_path)
+        action = normalize(event, source=source)
+        decision = engine.evaluate(action)
+        payload = format_decision(
+            allowed=decision.allowed,
+            reason=decision.reason,
+            rule_id=decision.rule_id,
+            target=args.target,
+        )
 
-    audit_path = Path(args.audit_log) if args.audit_log else None
-    _audit(
-        audit_path,
-        {
-            "ts": datetime.now(timezone.utc).isoformat(),
-            "target": args.target,
-            "source": source,
-            "action": action,
-            "allowed": decision.allowed,
-            "rule_id": decision.rule_id,
-            "reason": decision.reason,
-        },
-    )
+        audit_path = Path(args.audit_log) if args.audit_log else None
+        _audit(
+            audit_path,
+            {
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "target": args.target,
+                "source": source,
+                "action": action,
+                "allowed": decision.allowed,
+                "rule_id": decision.rule_id,
+                "reason": decision.reason,
+            },
+        )
+    except Exception as exc:
+        payload = format_decision(
+            allowed=False,
+            reason=f"Agent Guard error (fail-closed): {exc}",
+            target=args.target,
+        )
 
     sys.stdout.write(json.dumps(payload, ensure_ascii=False))
     sys.stdout.write("\n")

@@ -117,7 +117,7 @@ class OutputTests(unittest.TestCase):
     def test_allowed_scope_text(self):
         self.assertEqual(
             ALLOWED_SCOPE,
-            "ファイル編集、git commit/push、MCP 書き込み、読み取り専用操作",
+            "Allowed: file edits, git commit/push, MCP writes, read-only operations",
         )
 
     def test_cursor_deny_payload(self):

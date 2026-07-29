@@ -32,7 +32,14 @@ class Engine:
         data = yaml.safe_load(text) or {}
         return cls(data)
 
-    def evaluate(self, action: dict[str, Any]) -> Decision:
+    def evaluate(self, action: dict[str, Any] | None) -> Decision:
+        if not action:
+            return Decision(
+                allowed=False,
+                rule_id=None,
+                reason="No actions to evaluate",
+                default=True,
+            )
         for rule in self.rules:
             if self._matches(rule.get("match") or {}, action):
                 action_name = str(rule.get("action", "deny")).lower()
@@ -40,14 +47,20 @@ class Engine:
                 return Decision(
                     allowed=allowed,
                     rule_id=rule.get("id"),
-                    reason=None if allowed else (rule.get("reason") or "blocked by policy"),
+                    reason=rule.get("reason")
+                    or ("All actions allowed" if allowed else "blocked by policy"),
                 )
         if self.default == "allow":
-            return Decision(allowed=True, rule_id=None, reason=None, default=True)
+            return Decision(
+                allowed=True,
+                rule_id=None,
+                reason="All actions allowed",
+                default=True,
+            )
         return Decision(
             allowed=False,
             rule_id=None,
-            reason="どの許可ルールにも一致しないためブロックしました（fail-closed）",
+            reason="No matching policy rule (default)",
             default=True,
         )
 
