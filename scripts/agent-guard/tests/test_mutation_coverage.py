@@ -148,6 +148,14 @@ SHELL_DECIDE_CASES: tuple[ShellDecideCase, ...] = (
     git_commit_bypass=True,
     rule_id="deny-git-commit-bypass",
   ),
+  ShellDecideCase(
+    "git_commit_bypass_after_message",
+    'git commit -m "x" --no-verify',
+    False,
+    False,
+    git_commit_bypass=True,
+    rule_id="deny-git-commit-bypass",
+  ),
   ShellDecideCase("git_log", "git log --oneline -5", True, True),
   ShellDecideCase("git_diff", "git diff HEAD", True, True),
   ShellDecideCase("git_fetch", "git fetch origin", True, True),
@@ -953,6 +961,10 @@ HTTP_DETECT_CASES: tuple[IdCommandStrCase, ...] = (
 GIT_COMMIT_BYPASS_CASES: tuple[IdStrBoolCase, ...] = (
   IdStrBoolCase("short_n", "git commit -nm x", True),
   IdStrBoolCase("no_verify", "git commit --no-verify -m x", True),
+  IdStrBoolCase("no_verify_after_message", 'git commit -m "msg" --no-verify', True),
+  IdStrBoolCase("message_eq_flag", "git commit --message=msg --no-verify", True),
+  IdStrBoolCase("mnote_not_bypass", "git commit -mnote", False),
+  IdStrBoolCase("message_contains_bypass_text", 'git commit -m "document --no-verify handling"', False),
   IdStrBoolCase("no_gpg_sign", "git commit --no-gpg-sign -m x", True),
   IdStrBoolCase("short_m_cluster", "git commit -am msg", False),
   IdStrBoolCase("normal", 'git commit -m "ok"', False),
@@ -997,6 +1009,9 @@ SHELL_MUTATION_CASES: tuple[IdStrBoolCase, ...] = (
 
 GIT_COMMIT_SEGMENT_CASES: tuple[IdStrBoolCase, ...] = (
   IdStrBoolCase("no_verify", "git commit --no-verify -m x", True),
+  IdStrBoolCase("no_verify_after_message", 'git commit -m "msg" --no-verify', True),
+  IdStrBoolCase("message_eq_flag", "git commit --message=msg --no-verify", True),
+  IdStrBoolCase("mnote_not_bypass", "git commit -mnote", False),
   IdStrBoolCase("n_flag", "git commit -n -m x", True),
   IdStrBoolCase("short_cluster_n", "git commit -nm x", True),
   IdStrBoolCase("normal", 'git commit -m "ok"', False),
