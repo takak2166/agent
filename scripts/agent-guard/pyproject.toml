@@ -1,0 +1,22 @@
+[project]
+name = "agent-guard"
+version = "0.0.0"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.mutmut]
+source_paths = ["agent_guard/"]
+only_mutate = [
+  "agent_guard/engine.py",
+  "agent_guard/normalize.py",
+  "agent_guard/policy_loader.py",
+]
+pytest_add_cli_args_test_selection = [
+  "tests/",
+  "-k",
+  "not RunPyTests and not WrapperFallbackTests",
+]
+also_copy = ["rules.yaml", "schema.yaml", "run.py", "fail_closed.py"]

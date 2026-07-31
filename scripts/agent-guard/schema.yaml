@@ -1,0 +1,29 @@
+# Normalized action schema for agent-guard.
+# Events from Cursor / Claude Code / Codex adapters are mapped into one of these kinds.
+#
+# Policy vocabulary (SQL/HTTP/kubectl/gh lists) lives in rules.yaml under `vocab:`.
+# Rules reference lists via $vocab.<key> and generated shell patterns via $pattern.<key>.
+
+kinds:
+  shell:
+    fields:
+      - command
+      - cwd
+  sql:
+    fields:
+      - statement
+      - operation
+  http:
+    fields:
+      - method
+      - url
+      - tool
+  mcp:
+    fields:
+      - server
+      - tool
+      - is_write
+  file:
+    fields:
+      - path
+      - operation

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "./.apm/hooks/scripts/cursor-before-shell.sh",
+        "timeout": 15,
+        "failClosed": true
+      }
+    ]
+  }
+}
