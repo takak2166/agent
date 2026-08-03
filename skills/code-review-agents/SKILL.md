@@ -12,6 +12,16 @@ description: >-
 
 8 specialized analysis agents (parallel) → 1 integration agent (sequential).
 
+## Non-negotiables (orchestrator)
+
+Before launching any sub-agent, confirm:
+
+- [ ] **Code Context complete** — Changed Files + Diff + File Contents for the current round (Step 4)
+- [ ] **agent-prompts.md read** (Step 3)
+- [ ] **8 analysis Tasks in one message** — parallel launch only (Step 5)
+- [ ] **Shared: Restrictions first** in every Task prompt — not SKILL.md Restrictions (see Two restriction scopes)
+- [ ] **Review only** — no file edits, no GitHub comments, no shell beyond allowed git/gh commands
+
 ## Usage
 
 ```
@@ -21,6 +31,15 @@ description: >-
 - PR number: review the PR diff (e.g., `/code-review-agents 42`)
 - Base branch: review diff against specified branch (e.g., `/code-review-agents main`)
 - No argument: review staged changes (fall back to `git diff HEAD` if nothing staged)
+
+## Restrictions
+
+- Do not modify any code — this skill only produces review output
+- Do not execute shell commands other than `gh pr diff`, `git diff`, `git log`, `git branch`, `git branch --list`, and `git status --porcelain`. For workspace inspection use the `Read`, `Glob`, and `Grep` tools only (no `ls`, `cat`, `find`, or similar shell utilities)
+- Each sub-agent must stay within its designated expertise area
+- Do not post review comments to GitHub (use `reply-pr-comment` for that)
+- Sub-agents must not modify workspace files — include the **Shared: Restrictions** block from [agent-prompts.md](agent-prompts.md) in every analysis and integration `Task` prompt
+- **Two restriction scopes:** The bullets above govern the **orchestrator** (you). Sub-agent prompts use **Shared: Restrictions** from agent-prompts.md — do not substitute SKILL.md Restrictions into Task prompts or merge the two blocks
 
 ## Steps
 
@@ -49,8 +68,9 @@ description: >-
          - `D`: number of lines starting with `-` excluding the file header line `--- a/<path>`
          - For binary/submodule diffs that have no hunks, use `hunks:0, +0/-0`
    - **Empty diff:** If the diff output is empty (no changed files / no hunks), inform the user that there is nothing to review and **stop** — do not launch sub-agents.
-     - For **base-branch reviews** (`git diff <branch>...HEAD`): this is intentionally a **committed-diff-only** view. If the user expects a review of their working tree (uncommitted changes), point them to `/code-review-agents` (no argument) or ask them to commit first and re-run.
-     - Optionally, if the diff is empty but the situation looks suspicious, run `git status --porcelain` and explicitly tell the user what you found (or that it is clean) before stopping.
+     - **Always** run `git status --porcelain` before stopping. Report porcelain paths as-is (one line per path; no need to classify staged vs unstaged). If porcelain is empty, say the working tree is clean.
+     - For **base-branch reviews** (`git diff <branch>...HEAD`): this is **committed-diff-only**. Primary message: nothing to review in the committed diff. If porcelain shows uncommitted or untracked changes, list those paths and recommend `/code-review-agents` (no argument) for working-tree review, or commit first and re-run for committed-diff review.
+     - Do not launch subagents when there is nothing to review in the selected diff scope.
    - **If `gh` is unavailable (PR flow only):**
      - If `gh` is not installed, not authenticated, or the PR cannot be fetched, **stop** and tell the user to install/authenticate `gh` and re-run.
 
@@ -92,9 +112,8 @@ description: >-
    | Parameter | Value |
    |-----------|-------|
    | `subagent_type` | `"generalPurpose"` |
-   | `readonly` | `true` |
    | `description` | Short label, e.g. `"Review: Security"` |
-   | `prompt` | **Shared: Finding Format** + agent-specific section from agent-prompts.md **+** the code-context block (see [agent-prompts.md](agent-prompts.md) **How to construct prompts**) |
+   | `prompt` | **Shared: Restrictions** + **Shared: Finding Format** + agent-specific section from agent-prompts.md **+** the code-context block (see [agent-prompts.md](agent-prompts.md) **How to construct prompts**) |
 
    All 8 calls **must** appear in the same assistant message so they execute in parallel.
 
@@ -107,9 +126,8 @@ description: >-
    | Parameter | Value |
    |-----------|-------|
    | `subagent_type` | `"generalPurpose"` |
-   | `readonly` | `true` |
    | `description` | `"Integrate review findings"` |
-   | `prompt` | **Shared: Final Report Format** + Agent 9 section from agent-prompts.md **+** all available specialist outputs (see [agent-prompts.md](agent-prompts.md) **How to construct prompts**) |
+   | `prompt` | **Shared: Restrictions** + **Shared: Final Report Format** + Agent 9 section from agent-prompts.md **+** all available specialist outputs (see [agent-prompts.md](agent-prompts.md) **How to construct prompts**) |
 
 8. **Present the final review**
    Display the integration agent's report to the user. Ask if they want to drill down into any area.
@@ -134,6 +152,7 @@ Templates and severity tables are defined **only** in [agent-prompts.md](agent-p
 
 | What | Where in agent-prompts.md | Use |
 |------|---------------------------|-----|
+| Agent constraints | **Shared: Restrictions** | Copy verbatim into every analysis and integration agent's `Task` `prompt` (first block) |
 | Analysis findings | **Shared: Finding Format** (structure + severity table) | Copy verbatim into each analysis agent’s `Task` `prompt` per **How to construct prompts** |
 | Integration report | **Shared: Final Report Format** | Copy verbatim into the integration agent’s `Task` `prompt` per **How to construct prompts** |
 
@@ -144,11 +163,4 @@ When changing formats, edit **agent-prompts.md** only.
 - **Output language**: Match the user's language preference (default: 日本語)
 - **Large diffs**: Split into related file groups and run multiple rounds; merge before integration
 - **Codebase exploration**: Analysis agents may also explore surrounding code with `Read` / `Grep` for broader context beyond the diff
-- **Model choice**: Omit the `model` parameter (inherits from parent) for best quality; if you explicitly choose a faster model, use `model: "composer-2-fast"` consistently on all Task calls
-
-## Restrictions
-
-- Do not modify any code — this skill only produces review output
-- Do not execute shell commands other than `gh pr diff`, `git diff`, `git log`, `git branch`, `git branch --list`, and `git status --porcelain`. For workspace inspection use the `Read`, `Glob`, and `Grep` tools only (no `ls`, `cat`, `find`, or similar shell utilities)
-- Each sub-agent must stay within its designated expertise area
-- Do not post review comments to GitHub (use `reply-pr-comment` for that)
+- **Model choice**: Omit the `model` parameter (inherits from parent) for best quality; if you explicitly choose a faster model, use `model: "composer-2.5-fast"` consistently on all Task calls

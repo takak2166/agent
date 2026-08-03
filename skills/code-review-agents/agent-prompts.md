@@ -2,11 +2,25 @@
 
 Per-agent prompt templates for **code-review-agents**. The parent agent reads this file and builds each `Task` tool call so that **every sub-agent prompt is self-contained**: include the **Shared** sections below in the order given, then the agent-specific section, then the code context or specialist findings.
 
-**Canonical formats:** **Shared: Finding Format** and **Shared: Final Report Format** below are the single source of truth. [SKILL.md](SKILL.md) links here only; do not maintain duplicate templates in SKILL.md.
+**Canonical formats:** **Shared: Restrictions**, **Shared: Finding Format**, and **Shared: Final Report Format** below are the single source of truth. [SKILL.md](SKILL.md) links here only; do not maintain duplicate templates in SKILL.md.
+
+## Shared: Restrictions
+
+Include this block verbatim at the start of every analysis (1–8) and integration (9) agent prompt:
+
+```
+## Restrictions
+- Do not modify any files or run shell commands.
+- Read and Grep are allowed to explore surrounding code for context beyond the diff.
+- Produce review text only — no edits, no commits, no GitHub comments.
+- Stay within your designated expertise area.
+```
 
 ## Shared: Finding Format
 
 Every analysis agent (1–8) must return findings in this structure:
+
+**Output language:** Write findings in the user's preferred language (default: 日本語).
 
 ```
 ### [Agent Name]
@@ -68,13 +82,16 @@ The integration agent (9) must produce the report in this structure:
 
 **Analysis agents (1-8):** Concatenate in this order:
 
-1. **Shared: Finding Format** (full section above — copy verbatim so the sub-agent has the schema)
-2. The **## Agent N: …** section for that specialist (persona, focus, guidelines)
-3. A `---` separator, then `## Code Context`, then the code-context block from SKILL.md Step 4
+1. **Shared: Restrictions** (copy verbatim)
+2. **Shared: Finding Format** (full section above — copy verbatim so the sub-agent has the schema)
+3. The **## Agent N: …** section for that specialist (persona, focus, guidelines)
+4. A `---` separator, then `## Code Context`, then the code-context block from SKILL.md Step 4
 
 Example shape:
 
 ```
+<contents of Shared: Restrictions>
+
 <contents of Shared: Finding Format>
 
 ---
@@ -90,13 +107,16 @@ Example shape:
 
 **Integration agent (9):** Concatenate in this order:
 
-1. **Shared: Final Report Format** (full section above)
-2. The **## Agent 9: Integration Agent** section below
-3. A `---` separator, then `## Specialist Findings`, then the concatenated outputs from all 8 analysis agents (or available outputs, with a note if any specialist failed)
+1. **Shared: Restrictions** (copy verbatim)
+2. **Shared: Final Report Format** (full section above)
+3. The **## Agent 9: Integration Agent** section below
+4. A `---` separator, then `## Specialist Findings`, then the concatenated outputs from all 8 analysis agents (or available outputs, with a note if any specialist failed)
 
 Example shape:
 
 ```
+<contents of Shared: Restrictions>
+
 <contents of Shared: Final Report Format>
 
 ---
