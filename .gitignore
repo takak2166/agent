@@ -4,8 +4,3 @@ apm_modules/
 # Local APM deploy artifacts (source: .apm/instructions/)
 .github/instructions/
 apm.lock.yaml
-
-# Python
-__pycache__/
-*.py[cod]
-scripts/agent-guard/mutants/
