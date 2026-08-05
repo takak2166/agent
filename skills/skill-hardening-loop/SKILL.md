@@ -17,7 +17,7 @@ Orchestrate **audit-skill → empirical-prompt-tuning → skill-optimizer** on o
 3. **Scope edits** to the target skill directory only—the same restriction as audit-skill.
 4. **Do not** create git commits unless the user explicitly asks.
 5. **Task tool required** for Phase 2 and Phase 3 subagent dispatch. If unavailable, stop after Phase 1 and report `empirical/optimizer evaluation skipped: dispatch unavailable`. Outer convergence is unreachable; verification audit is N/A.
-6. **Record every round** in `/tmp/{skill-name}/HARDENING.md` (create on Round 1). Append Phase 2 detail to `/tmp/{skill-name}/BENCHMARKS.md` per empirical-prompt-tuning; append Phase 3 optimizer benchmark matrices to the same file under `## Optimizer benchmark — Round N` headings.
+6. **Record every round** in `/tmp/{skill-name}/HARDENING.md` (create on Round 1). `{skill-name}` is always the **target skill's** frontmatter `name`—never this loop skill's name. Append Phase 2 detail to `/tmp/{skill-name}/BENCHMARKS.md` per empirical-prompt-tuning; append Phase 3 optimizer benchmark matrices to the same file under `## Optimizer benchmark — Round N` headings.
 
 ## Usage
 
@@ -25,7 +25,9 @@ Orchestrate **audit-skill → empirical-prompt-tuning → skill-optimizer** on o
 /skill-hardening-loop [path to SKILL.md or skill directory] [--max-rounds N]
 ```
 
-**Quick example:** `/skill-hardening-loop @skills/draft-pr` → Round 1 runs audit on `draft-pr`, logs to `/tmp/draft-pr/HARDENING.md`, then empirical and optimizer; repeats until a round makes zero edits across all three phases.
+**Quick examples:**
+- `/skill-hardening-loop @skills/draft-pr` → Round 1 runs audit on `draft-pr`, logs to `/tmp/draft-pr/HARDENING.md`, then empirical and optimizer; repeats until a round makes zero edits across all three phases.
+- `/skill-hardening-loop @skills/skill-hardening-loop` → self-hardening; logs to `/tmp/skill-hardening-loop/HARDENING.md`.
 
 - Default `--max-rounds`: **5**. At cap, finish all three phases of the **current round**, then stop; do not start the next round.
 - Optional flags from child skills (for example `--audit-only`) are **not** supported unless the user explicitly passes them—this loop always runs the full edit-capable pipeline.
@@ -83,13 +85,15 @@ Read the full `SKILL.md` (and linked files that skill requires) at phase start. 
 | 2 | empirical-prompt-tuning | `SKILL.md` |
 | 3 | skill-optimizer | `SKILL.md`, `rules/benchmark-loop.md`, `rules/activation-design.md`, `rules/regression-triage.md`, `rules/release-gates.md` |
 
-**Path resolution (all phases):** try in order; stop at the first directory that contains the skill's `SKILL.md`:
+**Path resolution (all phases):** try in order; use the first directory that contains the skill's `SKILL.md`:
 
 1. `.agents/skills/<skill-name>/` — APM default for Cursor, Copilot, Codex, Gemini, Windsurf, OpenCode
 2. `.claude/skills/<skill-name>/` — APM default for Claude Code (project-local)
 3. `skills/<skill-name>/` — source layout in `takak2166/agent` or vendored monorepo skills
 4. `~/.claude/skills/<skill-name>/` — manual global install (Claude Code)
-5. `Glob` search for `<skill-name>/SKILL.md`; stop only if still not found
+5. `Glob` search for `<skill-name>/SKILL.md`
+
+**Unresolved child skill:** If no path yields a readable `SKILL.md` after step 5, stop immediately. Report `child skill unresolved: {skill-name}` and the phase that needed it. Do **not** substitute that child from memory. Do **not** continue phases that depend on it. Do **not** claim outer convergence. Log remaining phases as `skipped` in `HARDENING.md`; emit Final report with Status **Partial (child skill unresolved)**; Artifacts: `HARDENING.md` only (`BENCHMARKS.md` only if Phase 2 already wrote it); Recommended follow-ups: install/restore the child (e.g. `apm deps tree` / install this package) and rerun.
 
 Phase 1–3 child skills are declared as transitive APM dependencies in [`apm.yml`](apm.yml). Installing `takak2166/agent/skills/skill-hardening-loop` resolves them automatically; verify with `apm deps tree`.
 
@@ -119,7 +123,7 @@ Round N:
 Skip entirely if Task tool is unavailable (see **Non-negotiables**).
 
 1. Read empirical-prompt-tuning `SKILL.md` in full.
-2. Run **Iteration 0** (description/body consistency) on the target. For **manual-invoke targets**, reconcile only **factual** WHAT/body gaps—do not add discovery WHEN or trigger phrases to `description`.
+2. Run **Iteration 0** (description/body consistency) on the target. For **manual-invoke targets**, reconcile only **factual** WHAT/body gaps—do not add discovery WHEN or trigger phrases to `description`. If Phase 1 already fixed factual WHAT/body gaps, Iteration 0 is a confirmation pass only—do not re-edit unless Phase 1 skipped the fix.
 3. Run the full empirical loop (baseline → dispatch subagents → two-sided evaluation → apply diff → re-evaluate) until **empirical convergence**:
    - **3** consecutive iterations with **zero new unclear points** for orchestrator/meta skills (including this skill); **2** for ordinary targets
    - Accuracy improvement ≤ +3 points vs previous iteration
@@ -141,13 +145,27 @@ Skip entirely if Task tool is unavailable (same as Phase 2).
 1. Read skill-optimizer `SKILL.md` and all rule files listed in **Child skill paths**.
 2. Run skill-optimizer's **default optimization loop** (measure → find failure pattern → edit for salience → re-run evals → release gates). Do **not** substitute Phase 2 empirical results for the benchmark matrix—Phase 3 owns with/without cross-model measurement.
 3. **Benchmark matrix (subagent dispatch required):**
-   - **Scenarios:** Reuse Phase 2 scenarios and requirements checklists from `BENCHMARKS.md` when present; add any missing **benchmark-loop** required scenarios (core capability, omission-prone footer/checklist, noisy-context retrieval).
+
+   **Phase 3 dispatch checklist** (orchestrator-only — do **not** paste this checklist or its items into Task prompts; complete before first subagent call):
+   - [ ] Scenarios cover core capability, omission-prone footer/checklist, and noisy-context retrieval
+   - [ ] Orchestrator-only **scoring rubric** drafted (5 items, ≥1 `[critical]`) — not pasted into Task prompts
+   - [ ] Executor **task brief** written thinner than the rubric (no Status labels, skip-phase wording, or artifact rules as answer keys)
+   - [ ] Phase 2 *scenario settings* reused from `BENCHMARKS.md` when present; missing benchmark-loop scenarios added
+   - [ ] At least 2 distinct Task models when supported (log `multi-model: partial` if only one)
+   - [ ] Each scenario × model: two **fresh** subagents (with-skill gets target `SKILL.md`; without-skill gets brief only)
+   - [ ] After cells return, score against rubric only; record matrix under `## Optimizer benchmark — Round N` in `BENCHMARKS.md`
+
+   - **Scenarios:** Reuse Phase 2 *scenario settings* from `BENCHMARKS.md` when present; add any missing **benchmark-loop** required scenarios (core capability, omission-prone footer/checklist, noisy-context retrieval). Do **not** paste Phase 2 requirements checklists into executor prompts as-is—Phase 2 lists are with-skill achievement items and leak answers into without-skill cells.
    - **Models:** Use **distinct models available via Task in this environment**—no fixed slug list (panels differ by host). Dispatch at least **2** when supported; if only one is available, run the full with/without matrix on that model and log `multi-model: partial (single model)`. Record chosen slugs in the round log and `BENCHMARKS.md`.
-   - **Cells:** For each scenario × model, dispatch **two fresh subagents** (never reuse):
-     - **Without skill:** scenario + requirements checklist only—do **not** attach the target skill.
-     - **With skill:** same scenario + checklist + target `SKILL.md` (Read path or inline per empirical subagent contract).
+   - **Split scoring from the task brief [critical] (overrides skill-optimizer when they conflict):** Keep two artifacts per scenario (bad/good brief vs rubric contrast: [Phase 3 anti-leakage example](reference.md#phase-3-anti-leakage-example)):
+     - **Scoring rubric** (orchestrator-only, **5 items**, ≥1 `[critical]`): used only when *you* score deliverables. May name exact Status strings, Notes phrases, artifact rules, and must/omit criteria.
+     - **Task brief** (executor-facing): user request + constraints + what to produce. Must **not** include the scoring rubric, and must **not** spell the rubric's answer keys (exact Status labels, required Notes wording, "skip Phase 2/3", "do not create BENCHMARKS.md", "do not emit Verification audit", etc.).
+   - **Cells:** For each scenario × model, dispatch **two fresh subagents** (never reuse). Both cells get the **same task brief**; only with-skill also gets the target skill:
+     - **Without skill:** task brief only—do **not** attach the target skill; do **not** attach the scoring rubric.
+     - **With skill:** same task brief + target `SKILL.md` (Read path or inline)—do **not** attach the scoring rubric.
+   - **Anti-leakage:** If without-skill can satisfy the rubric by copying the prompt (no skill needed), rewrite the task brief thinner and keep specifics only in the rubric. Prefer outcome-shaped briefs ("handle Task unavailable and report the run") over procedure-shaped briefs that restate the skill. When most without cells hit ~100% with Δ≈0, treat it as **eval contamination**, not proof the skill is unnecessary—fix briefs/rubric split and re-run affected cells before salience-editing the target.
    - **Parallelism:** Batch independent cells in one message (multiple Task calls) when practical.
-   - **Checklists:** **5 items** per scenario (include at least one `[critical]` item). Score each cell as **%** = satisfied items / 5 (○ = 1, partial = 0.5, × = 0). Delta = with − without.
+   - **Scoring:** After each cell returns, score against the orchestrator-only rubric: **%** = satisfied items / 5 (○ = 1, partial = 0.5, × = 0). Delta = with − without. Record rubric + brief alongside the matrix in `BENCHMARKS.md`.
    - **Readout:** Use benchmark-loop table format; flag universal failures (0% with skill) and regressions (negative delta) per `regression-triage.md`.
 4. **Salience edits:** If the matrix shows universal failures or regressions, apply **minimum salience edits**. For **manual-invoke targets**, limit to in-body execution clarity (front-loaded checklists, integrated examples, must/omit wording)—**not** discovery triggers (`## Triggers`, `description` WHEN expansion, trigger-phrase lists). For other targets, activation-design patterns (including triggers) apply when the matrix shows activation gaps. One theme per optimizer iteration within this phase.
 5. **Re-run evals:** After edits, re-dispatch subagents on **affected scenario × model cells** (at minimum: any cell with regression or universal failure; ideally the full matrix if edits were global). Compare deltas to the pre-edit run.
@@ -195,8 +213,9 @@ Use this structure:
 **Target:** {resolved SKILL.md path, not the raw CLI argument}
 **Skill name:** {skill-name}
 **Rounds completed:** N
-**Status:** Converged | Max rounds reached | Partial (dispatch skipped) | Partial (verification audit)
-(if Phase 2 or Phase 3 is skipped in the same round the cap is hit, use **Partial (dispatch skipped)**—it takes precedence over Max rounds reached)
+**Status:** Converged | Max rounds reached | Partial (dispatch skipped) | Partial (child skill unresolved) | Partial (verification audit)
+(if Phase 2 or Phase 3 is skipped because Task is unavailable in the same round the cap is hit, use **Partial (dispatch skipped)**—it takes precedence over Max rounds reached)
+(if a required child skill file is missing after Path resolution, use **Partial (child skill unresolved)**—takes precedence over dispatch-skipped and Max rounds reached)
 (if verification audit finds Critical/Major when otherwise converged, use **Partial (verification audit)**)
 
 ### Round summary
@@ -214,7 +233,7 @@ Use this structure:
 (when Status is **Converged**: bullets from verification audit **Findings** only—Minor severity; when Status is **Partial (verification audit)**: list unresolved Critical/Major from verification; otherwise from the last round's Phase 1 **Findings**; or "none")
 
 ### Recommended follow-ups
-(only if release-gates failed, hold-out failed, unresolved Critical/Major, Status is **Max rounds reached**, Status is **Partial (dispatch skipped)**, or Status is **Partial (verification audit)** — for Partial (dispatch skipped), recommend rerunning in a session with Task dispatch)
+(only if release-gates failed, hold-out failed, unresolved Critical/Major, Status is **Max rounds reached**, Status is **Partial (dispatch skipped)**, Status is **Partial (child skill unresolved)**, or Status is **Partial (verification audit)** — for Partial (dispatch skipped), recommend rerunning with Task dispatch; for Partial (child skill unresolved), recommend installing/restoring the missing child and rerunning)
 ```
 
 ## Restrictions
