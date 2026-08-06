@@ -127,7 +127,7 @@ Skip entirely if Task tool is unavailable (see **Non-negotiables**).
 3. Run the full empirical loop (baseline → dispatch subagents → two-sided evaluation → apply diff → re-evaluate) until **empirical convergence**:
    - **3** consecutive iterations with **zero new unclear points** for orchestrator/meta skills (including this skill); **2** for ordinary targets
    - Accuracy improvement ≤ +3 points vs previous iteration
-   - Step count within ±10%, duration within ±15% of previous
+   - Step count within ±10%, duration within ±15% of previous — **these two bands only mean something at ≥2 runs per scenario.** At n=1 a single extra file read moves step count past ±10%, so the band measures run-to-run noise rather than the target. With one run per scenario, **record both numbers but do not gate convergence on them**; converge on the unclear-point and accuracy criteria instead, and write `step/duration: n=1, recorded not gating` in the iteration block. Raise n only for scenarios whose trend you actually intend to read—paying for extra runs everywhere is rarely worth it.
    - Hold-out scenario: if accuracy drops ≥15 points from recent average, add edge scenarios and continue (do not declare converged)
 4. Append iteration summaries to `/tmp/{skill-name}/BENCHMARKS.md`.
 5. Record:
@@ -152,6 +152,7 @@ Skip entirely if Task tool is unavailable (same as Phase 2).
    - [ ] Executor **task brief** written thinner than the rubric (no Status labels, skip-phase wording, or artifact rules as answer keys)
    - [ ] Phase 2 *scenario settings* reused from `BENCHMARKS.md` when present; missing benchmark-loop scenarios added
    - [ ] At least 2 distinct Task models when supported (log `multi-model: partial` if only one)
+   - [ ] Target `name` checked against installed skills; if it collides, the without-cell prompt names that skill and forbids loading it
    - [ ] Each scenario × model: two **fresh** subagents (with-skill gets target `SKILL.md`; without-skill gets brief only)
    - [ ] After cells return, score against rubric only; record matrix under `## Optimizer benchmark — Round N` in `BENCHMARKS.md`
 
@@ -163,7 +164,10 @@ Skip entirely if Task tool is unavailable (same as Phase 2).
    - **Cells:** For each scenario × model, dispatch **two fresh subagents** (never reuse). Both cells get the **same task brief**; only with-skill also gets the target skill:
      - **Without skill:** task brief only—do **not** attach the target skill; do **not** attach the scoring rubric.
      - **With skill:** same task brief + target `SKILL.md` (Read path or inline)—do **not** attach the scoring rubric.
-   - **Anti-leakage:** If without-skill can satisfy the rubric by copying the prompt (no skill needed), rewrite the task brief thinner and keep specifics only in the rubric. Prefer outcome-shaped briefs ("handle Task unavailable and report the run") over procedure-shaped briefs that restate the skill. When most without cells hit ~100% with Δ≈0, treat it as **eval contamination**, not proof the skill is unnecessary—fix briefs/rubric split and re-run affected cells before salience-editing the target.
+   - **Anti-leakage:** A without cell can be handed the answer from two directions—the **brief** or the **environment**. They look identical in the matrix (high baseline, Δ≈0) but need opposite fixes, so diagnose which one before acting.
+     - **Brief leakage:** without-skill satisfies the rubric by copying the prompt. Rewrite the task brief thinner and keep specifics only in the rubric. Prefer outcome-shaped briefs ("handle Task unavailable and report the run") over procedure-shaped briefs that restate the skill.
+     - **Environment leakage:** the target—or a same-named sibling still installed at `~/.claude/skills/`, `.claude/skills/`, or `.agents/skills/`—is auto-discoverable, so the without-skill executor loads it regardless of what the brief says. Thinning the brief does nothing here. Before dispatching, check whether the target's `name` collides with an installed skill; if it does, name that skill in the without-cell prompt and instruct the executor not to load or consult it. A cell whose transcript cites it is **void, not low-scoring**—re-run it, or drop it from the delta and record why.
+     - When most without cells hit ~100% with Δ≈0, treat it as **eval contamination**, not proof the skill is unnecessary. Averaging a contaminated cell into the matrix understates the delta, so exclude it explicitly rather than letting it drag the mean.
    - **Parallelism:** Batch independent cells in one message (multiple Task calls) when practical.
    - **Scoring:** After each cell returns, score against the orchestrator-only rubric: **%** = satisfied items / 5 (○ = 1, partial = 0.5, × = 0). Delta = with − without. Record rubric + brief alongside the matrix in `BENCHMARKS.md`.
    - **Readout:** Use benchmark-loop table format; flag universal failures (0% with skill) and regressions (negative delta) per `regression-triage.md`.
