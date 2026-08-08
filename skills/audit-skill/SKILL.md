@@ -1,6 +1,6 @@
 ---
 name: audit-skill
-description: Audits and fixes agent SKILL.md files for discovery, scope, clarity, structure, context efficiency (~500-line cap), and execution safety. Auto-applies edits for Critical and Major issues; reports Minor as suggestions only. Use when auditing agent skills, refactoring SKILL.md, reviewing skill quality, or when the user asks for feedback on a skill.
+description: Audits and fixes agent SKILL.md files for discovery, scope, clarity, structure, context efficiency (~500-line cap), and execution safety. Auto-applies edits for Critical and Major issues; reports Minor as suggestions only.
 disable-model-invocation: true
 ---
 
@@ -9,13 +9,6 @@ disable-model-invocation: true
 Follow **Non-negotiables**, **Restrictions**, **Steps**, and **Audit Output** below.
 
 **Role:** Act as a strict but constructive skill-design auditor who fixes Critical and Major defects in the target skill.
-
-## Triggers
-
-Apply when the user mentions or invokes:
-- `/audit-skill`, skill audit, SKILL.md review, skill quality feedback
-- frontmatter `description`, WHAT + WHEN, discovery, `disable-model-invocation`
-- skill refactor, progressive disclosure, ~500-line cap, execution safety
 
 ## Severity → action (do not omit)
 
@@ -43,7 +36,7 @@ Confirm all of the following before composing the final reply:
 
 ## Success criteria
 
-When the full Audit Output applies, the reply includes **## Changes Applied**, **## Findings**, and **## Strengths** with field labels from **Audit Output**; severities match **Steps**. Default to one audit pass; re-audit only when the user asks to repeat until only Minor findings remain.
+When the full Audit Output applies, the reply includes **## Changes Applied**, **## Findings**, and **## Strengths** with field labels from **Audit Output**; severities match **Steps**. Default to one audit pass; re-audit only when the user asks to repeat until only Minor findings remain. For targets with `disable-model-invocation: true`, evaluate `description` for factual WHAT accuracy only—do not Major-fix absent discovery WHEN.
 
 ## Restrictions
 
@@ -83,7 +76,7 @@ Cross-references **Steps §1–§3** mean the **first three items** in this list
 1. If the target lives under a parent directory that groups multiple skills (for example `.../skills/<skill-name>/SKILL.md`):
    - Use `Glob` on that parent to list sibling `SKILL.md` paths (for example `*/SKILL.md`).
    - When at least one sibling exists besides the target, `Read` at least one sibling far enough to compare frontmatter (`name`, `description`) and top-level heading structure; read more siblings only when needed for the audit.
-   - Use this comparison only to flag material divergence from nearby skills (for example inconsistent `description` tone or top-level heading patterns) as a Major or Minor finding when it would affect discovery or maintenance; if the target aligns with sibling conventions, do not add a finding solely because siblings were read. **Do not use sibling alignment to downgrade or skip checklist-driven Critical or Major items** (for example missing WHEN in `description` stays Major even when a sibling shares the same gap).
+   - Use this comparison only to flag material divergence from nearby skills (for example inconsistent `description` tone or top-level heading patterns) as a Major or Minor finding when it would affect discovery or maintenance; if the target aligns with sibling conventions, do not add a finding solely because siblings were read. **Do not use sibling alignment to downgrade or skip checklist-driven Critical or Major items** (for example missing WHEN in `description` stays Major for auto-discovered skills even when a sibling shares the same gap; for targets with `disable-model-invocation: true`, WHAT-only `description` is acceptable per checklist row 1).
    - If there is no such parent or no sibling exists, skip this step.
    - Do not load every skill in the repository unless the user asks for a repo-wide audit
 1. If the main skill links directly to one-level-deep supporting files such as `reference.md`, `examples.md`, or `scripts/*`, read them with `Read` (use `Glob` or `Grep` / ripgrep (`rg`) to locate paths when needed). Validate claims in the main skill **and** audit those files with the same checklist where applicable (the ~500-line cap applies to `SKILL.md` only). Fix Critical/Major issues in supporting files per **Restrictions**.
@@ -91,7 +84,7 @@ Cross-references **Steps §1–§3** mean the **first three items** in this list
 
    | Priority | Category | Key checks |
    |----------|----------|------------|
-   | 1 | Discovery and scope | `name` ≤64 chars, lowercase, hyphenated; `description` states WHAT + WHEN in third person; narrow scope; `disable-model-invocation` matches side-effect vs reference intent |
+   | 1 | Discovery and scope | `name` ≤64 chars, lowercase, hyphenated; `description` states WHAT + WHEN in third person (WHAT-only acceptable when `disable-model-invocation: true`); narrow scope; `disable-model-invocation` matches side-effect vs reference intent |
    | 2 | Structure | YAML frontmatter + Markdown body; not under reserved dirs; headings readable; ~500-line `SKILL.md` cap with progressive disclosure to linked files |
    | 3 | Instruction quality | Ordered steps; constraints near top; freedom level matches fragility; one default + escape hatch; no contradictions; preserve verbatim user wording |
    | 4 | Output and examples | Explicit response structure when needed; concrete separated examples; validation loops for quality-critical workflows |

@@ -9,7 +9,7 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 ### 1. Discovery and scope
 
 - `name` is specific, lowercase, hyphenated, and not vague; **≤ 64 characters**; avoid generic names such as `helper`, `utils`, or `tools`
-- `description` explains both WHAT the skill does and WHEN to use it, in **third person** (not "I can help" or "You can use")
+- `description` explains both WHAT the skill does and WHEN to use it, in **third person** (not "I can help" or "You can use"); for targets with `disable-model-invocation: true`, factual WHAT-only is acceptable—do not Major-fix absent discovery WHEN
 - Trigger scenarios are specific enough for discovery
 - The skill scope is narrow enough to avoid unrelated tasks
 - `disable-model-invocation` matches intent when inferable: side-effect or manually timed workflows should usually set `true`; background reference knowledge may omit it—flag **Major** when the mismatch likely causes unwanted auto-invocation or blocks intended auto-discovery
