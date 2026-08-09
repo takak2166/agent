@@ -1,6 +1,6 @@
 ---
 name: init-agents
-description: Scaffold or refresh project-local AGENTS.md (and optionally CLAUDE.md) from a lean template when the user explicitly asks. Use when setting up agent guidelines, AGENTS.md/CLAUDE.md is missing or a thin stub, or the user runs /init-agents. Do not invent a file unprompted.
+description: Scaffolds or refreshes project-local AGENTS.md (and optionally CLAUDE.md) from a lean template when the user explicitly asks. Do not invent a file unprompted.
 disable-model-invocation: true
 ---
 

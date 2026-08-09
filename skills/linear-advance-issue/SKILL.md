@@ -51,6 +51,7 @@ Orchestrate **existing** Linear Issues: read context → start → comment progr
 - Inferring the target from conversation context **without** a key/URL in the current message
 - Session start / every-turn Linear scans (`list_projects`, broad `list_issues`)
 - Creating new Issues or Projects → `linear-create-issue` / `linear-create-project`
+- Cosense bulk issue-ization → `linear-create-issue`
 - Weekly summary / "先週のサマリ"
 - Bulk status-only changes → `linear-bulk-update` (future)
 
@@ -65,7 +66,7 @@ Orchestrate **existing** Linear Issues: read context → start → comment progr
 - **Do not mark Done** unless acceptance criteria in the Issue (or user-stated done definition) are satisfied. Blockers → comment and stay **In Progress** (or ask).
 - **`list_issues` `limit`**: start 5–10; lower on complexity errors. Prefer filters: `assignee`, `state`, `team`, `project`, `query`.
 - **Do not set Done** on research-only Issues when the deliverable is "post findings to comment" until the comment is posted.
-- **Delegate** specialized work to existing skills when present: `draft-pr`, `create-commit-en`, `ready-pr`, `plan`, etc. This skill orchestrates Linear state + comments, not every implementation detail.
+- **Delegate** specialized work to existing skills when present: `draft-pr`, `ready-pr`, etc. This skill orchestrates Linear state + comments, not every implementation detail.
 
 ## Defaults (personal me-time / TAK only)
 

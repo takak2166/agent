@@ -1,6 +1,6 @@
 ---
 name: reply-pr-comment
-description: Reply to GitHub pull request review comments with resolution results. Posts replies describing code changes, answers to questions, or reasons for not addressing. Use after check-pr-comment triage when the user wants to reply to PR comments, or invokes /reply-pr-comment.
+description: Replies to GitHub pull request review comments with resolution results. Posts replies describing code changes, answers to questions, or reasons for not addressing. Assumes check-pr-comment triage ran in the same conversation.
 disable-model-invocation: true
 ---
 
