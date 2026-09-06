@@ -1,26 +1,32 @@
 ---
 name: code-review-agents
-description: >-
-  Perform multi-perspective code review using 8 specialized analysis agents in
-  parallel (language spec, refactoring, DDD, clean architecture, security,
-  performance, TDD, observability) plus 1 integration agent that synthesizes
-  all findings. Use when performing thorough code reviews, PR reviews, or
-  when the user asks for a comprehensive code review.
+description: Runs a multi-perspective code review by launching 8 specialist analysis subagents in parallel (language spec, refactoring, DDD, clean architecture, security, performance, TDD, observability) plus 1 integration subagent that deduplicates, prioritizes, and reports their findings.
+disable-model-invocation: true
 ---
 
 # Code Review Agents
 
-8 specialized analysis agents (parallel) → 1 integration agent (sequential).
+Orchestrate 8 specialist analysis subagents (parallel), then 1 integration subagent (sequential). Produce review text only.
 
-## Non-negotiables (orchestrator)
+## Restrictions
 
-Before launching any sub-agent, confirm:
+These bullets govern the orchestrator (you):
 
-- [ ] **Code Context complete** — Changed Files + Diff + File Contents for the current round (Step 4)
-- [ ] **agent-prompts.md read** (Step 3)
-- [ ] **8 analysis Tasks in one message** — parallel launch only (Step 5)
-- [ ] **Shared: Restrictions first** in every Task prompt — not SKILL.md Restrictions (see Two restriction scopes)
-- [ ] **Review only** — no file edits, no GitHub comments, no shell beyond allowed git/gh commands
+- Do not modify any file — this skill produces review output only.
+- Do not post review comments to GitHub (use `reply-pr-comment` for that).
+- Limit shell use to `gh pr diff`, `git diff`, `git log`, `git branch`, `git branch --list`, and `git status --porcelain`. Inspect the workspace with `Read`, `Glob`, and `Grep` only (no `ls`, `cat`, `find`, or similar).
+- Do not create git commits.
+
+Subagents carry their own constraints: copy **Shared: Restrictions** from [agent-prompts.md](agent-prompts.md) verbatim as the first block of every analysis and integration `Task` prompt. Never substitute the bullets above into a `Task` prompt, and never merge the two blocks.
+
+## Before launching subagents
+
+Confirm all four:
+
+- [ ] Code Context block for the current round is complete — Changed Files + optional Project Notes + Diff + File Contents (Step 4)
+- [ ] [agent-prompts.md](agent-prompts.md) read (Step 3)
+- [ ] All 8 analysis `Task` calls go out in a single message (Step 5)
+- [ ] Every `Task` prompt starts with **Shared: Restrictions**
 
 ## Usage
 
@@ -28,113 +34,61 @@ Before launching any sub-agent, confirm:
 /code-review-agents [PR number | base branch]
 ```
 
-- PR number: review the PR diff (e.g., `/code-review-agents 42`)
-- Base branch: review diff against specified branch (e.g., `/code-review-agents main`)
-- No argument: review staged changes (fall back to `git diff HEAD` if nothing staged)
-
-## Restrictions
-
-- Do not modify any code — this skill only produces review output
-- Do not execute shell commands other than `gh pr diff`, `git diff`, `git log`, `git branch`, `git branch --list`, and `git status --porcelain`. For workspace inspection use the `Read`, `Glob`, and `Grep` tools only (no `ls`, `cat`, `find`, or similar shell utilities)
-- Each sub-agent must stay within its designated expertise area
-- Do not post review comments to GitHub (use `reply-pr-comment` for that)
-- Sub-agents must not modify workspace files — include the **Shared: Restrictions** block from [agent-prompts.md](agent-prompts.md) in every analysis and integration `Task` prompt
-- **Two restriction scopes:** The bullets above govern the **orchestrator** (you). Sub-agent prompts use **Shared: Restrictions** from agent-prompts.md — do not substitute SKILL.md Restrictions into Task prompts or merge the two blocks
+| Argument | Review target |
+|----------|---------------|
+| Bare integer (e.g. `42`) | PR diff — `gh pr diff 42` |
+| Branch name (e.g. `main`) | Committed diff — `git diff main...HEAD` |
+| None | Staged changes — `git diff --staged`; only when that output is empty, `git diff HEAD` for unstaged changes to tracked files |
 
 ## Steps
 
-1. **Determine review target**
-   - **Disambiguation:** If the argument is a bare integer (e.g. `42`), treat it as a **PR number** by default. Otherwise treat it as a **base branch name** for `git diff`. If the intent is ambiguous (e.g. a branch named like a number), ask the user before proceeding.
-     - If the argument is a bare integer, run `git branch --list <arg>`:
-       - If it returns a matching branch, ask the user: “`<arg>` は PR 番号ですか？それともブランチ名ですか？”
-       - If it returns nothing, proceed as PR number.
-   - PR number → `gh pr diff <number>`
-   - Branch name → `git diff <branch>...HEAD`
-   - No argument → `git diff --staged` (fall back to `git diff HEAD`)
-     - `git diff HEAD` is intended to review **unstaged changes on tracked files** relative to `HEAD`.
-     - Note: **untracked files are not included** in `git diff HEAD`.
-       - If `git diff --staged` and `git diff HEAD` are both empty, also run `git status --porcelain` to detect untracked changes. If only untracked files exist, treat them as changed files (adds) and include their full contents in Step 2/4 (no diff hunks will exist; use `hunks:0, +0/-0`).
-       - Always run `git status --porcelain` in the **no-argument** flow after computing the diff, and include any **untracked** paths as **adds** in the review (same handling: `hunks:0, +0/-0`, include full contents). This keeps behavior consistent whether the tracked diff comes from `--staged` or `HEAD`.
-         - If `git status --porcelain` includes directory-like entries (e.g. `?? dot_kube/`), expand them into concrete file paths using `Glob` scoped to that directory (e.g. `dot_kube/**`) and treat each matched file as an added file to `Read` and include in Step 2/4.
-         - If `Glob` returns no files but the directory exists, report it as an untracked directory with unknown contents (coverage gap) rather than guessing.
-   - Collect the list of changed files from the diff output
-     - **Changed files extraction (minimum rule):**
-       - Extract paths from lines like `diff --git a/<path> b/<path>` (prefer the `b/<path>` side)
-       - Treat `/dev/null` as add/delete; if rename info exists, use the `rename to` path
-     - **One-line change summary (standardize):**
-       - Use a mechanical summary such as `hunks:<N>, +<A>/-<D>` per file
-         - `N`: number of lines starting with `@@` in that file’s diff block
-         - `A`: number of lines starting with `+` excluding the file header line `+++ b/<path>`
-         - `D`: number of lines starting with `-` excluding the file header line `--- a/<path>`
-         - For binary/submodule diffs that have no hunks, use `hunks:0, +0/-0`
-   - **Empty diff:** If the diff output is empty (no changed files / no hunks), inform the user that there is nothing to review and **stop** — do not launch sub-agents.
-     - **Always** run `git status --porcelain` before stopping. Report porcelain paths as-is (one line per path; no need to classify staged vs unstaged). If porcelain is empty, say the working tree is clean.
-     - For **base-branch reviews** (`git diff <branch>...HEAD`): this is **committed-diff-only**. Primary message: nothing to review in the committed diff. If porcelain shows uncommitted or untracked changes, list those paths and recommend `/code-review-agents` (no argument) for working-tree review, or commit first and re-run for committed-diff review.
-     - Do not launch subagents when there is nothing to review in the selected diff scope.
-   - **If `gh` is unavailable (PR flow only):**
-     - If `gh` is not installed, not authenticated, or the PR cannot be fetched, **stop** and tell the user to install/authenticate `gh` and re-run.
+1. **Determine the review target** — run the command for the resolved argument per the table above, then collect the changed files with a one-line summary each (`hunks:<N>, +<A>/-<D>`). In the **no-argument flow**, run `git diff --staged` first, run `git diff HEAD` only when staged output is empty, then run `git status --porcelain` — never run porcelain before the staged/HEAD diff sequence. Run only the commands named in the table and in **Restrictions**: use `git status --porcelain` for working-tree state, not bare `git status` or `git diff --stat`. When the resolved diff has no changed files, tell the user there is nothing to review and stop — never launch subagents on an empty diff. For number-vs-branch ambiguity, untracked files, empty-diff reporting, or unavailable `gh`, follow [reference.md](reference.md) **Target resolution**.
 
-2. **Gather full context**
-   - Before reading full contents, estimate whether you will exceed the ~50k Code Context limit (Step 4). If the diff is large, pre-group files into rounds first, then `Read` files per-round to avoid wasted context.
-   - For each changed file, read the full file content using `Read` (not just the diff hunk)
-   - Detect primary language(s) from file extensions
-   - Optionally use `Glob` on relevant directories to understand the project structure (do not use shell `ls`)
-   - **Do not launch any analysis agents until the Code Context block is complete** (Changed Files + Diff + File Contents for the files in the round). Partial contexts lead to low-signal reviews and forced retries.
+2. **Gather full context** — `Read` each changed file in full (not only the diff hunk), detect the primary language(s) from file extensions, and optionally `Glob` relevant directories to understand project structure. When the diff is large, group files into rounds before reading (see [reference.md](reference.md) **Context budget and rounds**).
 
-3. **Read agent prompts**
-   - Read [agent-prompts.md](agent-prompts.md) for per-agent prompt templates
+3. **Read the prompt templates** — read [agent-prompts.md](agent-prompts.md) for the shared blocks and per-agent sections.
 
-4. **Build a shared code-context block**
-   Assemble the following text to embed in every analysis agent's prompt:
+4. **Build the shared Code Context block** — assemble this text once per round and embed it in every analysis prompt:
 
    ```
    ## Changed Files
-   <list of changed files with a one-line change summary each>
+   <changed files, one line of summary each>
+
+   ## Project Notes
+   <optional: structure facts from Step 2 that change how findings should be read, e.g. "no test directory exists">
 
    ## Diff
-   <full diff output>
+   <diff for the files in this round>
 
    ## File Contents
-   <full content of each changed file, labeled by path>
+   <full content of each file in this round, labeled by path>
    ```
 
-   If the total context (the full **Code Context** block above: Changed Files + Diff + File Contents) exceeds approximately 50 000 characters (counted as the constructed Code Context string length), split files into related groups and run multiple review rounds per group.
-   - Counting rule (practical): treat the assembled Code Context as a single string and use its character length as the estimate. If an exact count is not available, approximate using file content sizes and keep each round comfortably below the limit.
-   - Practical reminder: the **same Code Context is duplicated into 8 analysis prompts**. Staying under ~50k per-round keeps each specialist prompt reasonably sized; if you're close to the limit, split earlier (e.g., target ~35–40k) to avoid prompt-size issues.
-   - **Grouping heuristic (in order):** directory/module → language → size (keep each group under ~50k)
-   - **Merge rule:** concatenate specialist outputs across rounds and let the integration agent deduplicate; if any specialist is missing for any round, note it as a coverage gap.
-   - **Diff in each round:** include only the `diff --git ...` blocks for files in that round (do not paste the full diff into every round)
-   - **File contents in each round:** include only the full contents of files in that round
+   Keep each round's Code Context under ~50 000 characters; the same block is duplicated into 8 prompts, so split at ~35–40k when close to the limit. Grouping, merging, and per-round rules: [reference.md](reference.md) **Context budget and rounds**.
 
-5. **Launch 8 analysis sub-agents in parallel**
-   In a **single message**, issue 8 `Task` tool calls with these parameters:
+5. **Launch the 8 analysis subagents in parallel** — issue 8 `Task` calls in one assistant message so they run concurrently:
 
    | Parameter | Value |
    |-----------|-------|
    | `subagent_type` | `"generalPurpose"` |
    | `description` | Short label, e.g. `"Review: Security"` |
-   | `prompt` | **Shared: Restrictions** + **Shared: Finding Format** + agent-specific section from agent-prompts.md **+** the code-context block (see [agent-prompts.md](agent-prompts.md) **How to construct prompts**) |
+   | `prompt` | **Shared: Restrictions** + **Shared: Finding Format** + the agent's section from [agent-prompts.md](agent-prompts.md) + the Code Context block (see **How to construct prompts** there) |
 
-   All 8 calls **must** appear in the same assistant message so they execute in parallel.
+6. **Collect results** — wait for all 8 to return. When a subagent times out or returns empty or unusable output, tell the user and retry that one subagent once with the same prompt; do not retry a second time, and do not retry a subagent that returned a usable report. Then proceed with the available outputs and instruct the integration subagent to record the gap.
 
-6. **Collect results**
-   Wait for all 8 agents to return their findings. If any agent **fails**, **times out**, or returns **empty or unusable** output: report that to the user; **retry** that agent once with the same prompt if appropriate; otherwise **proceed** with the available specialist outputs and instruct the integration agent to note the gap in **Overview** or a short **Coverage gap** subsection.
-
-7. **Launch the integration sub-agent**
-   Issue a single `Task` tool call:
+7. **Launch the integration subagent** — issue a single `Task` call:
 
    | Parameter | Value |
    |-----------|-------|
    | `subagent_type` | `"generalPurpose"` |
    | `description` | `"Integrate review findings"` |
-   | `prompt` | **Shared: Restrictions** + **Shared: Final Report Format** + Agent 9 section from agent-prompts.md **+** all available specialist outputs (see [agent-prompts.md](agent-prompts.md) **How to construct prompts**) |
+   | `prompt` | **Shared: Restrictions** + **Shared: Final Report Format** + the Agent 9 section from [agent-prompts.md](agent-prompts.md) + all available specialist outputs |
 
-8. **Present the final review**
-   Display the integration agent's report to the user. Ask if they want to drill down into any area.
+8. **Present the final review** — show the integration subagent's report, then offer to drill down into any area.
 
-## Agent Roster
+## Agent roster
 
-| # | Agent | Focus Area |
+| # | Agent | Focus area |
 |---|-------|------------|
 | 1 | Language Spec | Type safety, idioms, API misuse, deprecation |
 | 2 | Refactoring & Patterns | Code smells, SOLID, Martin Fowler's refactoring catalog |
@@ -146,21 +100,18 @@ Before launching any sub-agent, confirm:
 | 8 | Observability | Logging, metrics, tracing, error handling, operability |
 | 9 | Integration | Synthesis, deduplication, prioritization, final report |
 
-## Output formats (canonical)
+## Where formats live
 
-Templates and severity tables are defined **only** in [agent-prompts.md](agent-prompts.md). Do not duplicate them in SKILL.md.
+[agent-prompts.md](agent-prompts.md) is the single source of truth for prompt blocks and output templates. Copy each block verbatim; when changing a format, edit that file only.
 
-| What | Where in agent-prompts.md | Use |
-|------|---------------------------|-----|
-| Agent constraints | **Shared: Restrictions** | Copy verbatim into every analysis and integration agent's `Task` `prompt` (first block) |
-| Analysis findings | **Shared: Finding Format** (structure + severity table) | Copy verbatim into each analysis agent’s `Task` `prompt` per **How to construct prompts** |
-| Integration report | **Shared: Final Report Format** | Copy verbatim into the integration agent’s `Task` `prompt` per **How to construct prompts** |
-
-When changing formats, edit **agent-prompts.md** only.
+| Block | Goes into |
+|-------|-----------|
+| **Shared: Restrictions** | First block of every analysis and integration prompt |
+| **Shared: Finding Format** | Each analysis prompt (structure + severity table) |
+| **Shared: Final Report Format** | The integration prompt |
 
 ## Notes
 
-- **Output language**: Match the user's language preference (default: 日本語)
-- **Large diffs**: Split into related file groups and run multiple rounds; merge before integration
-- **Codebase exploration**: Analysis agents may also explore surrounding code with `Read` / `Grep` for broader context beyond the diff
-- **Model choice**: Omit the `model` parameter (inherits from parent) for best quality; if you explicitly choose a faster model, use `model: "composer-2.5-fast"` consistently on all Task calls
+- **Output language**: match the user's preference (default: 日本語).
+- **Codebase exploration**: analysis subagents may `Read` / `Grep` surrounding code for context beyond the diff.
+- **Model choice**: omit the `model` parameter so subagents inherit the parent model; if choosing a faster model instead, use `model: "composer-2.5-fast"` on all `Task` calls consistently.

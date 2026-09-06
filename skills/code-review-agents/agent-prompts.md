@@ -1,12 +1,18 @@
 # Agent Prompts
 
-Per-agent prompt templates for **code-review-agents**. The parent agent reads this file and builds each `Task` tool call so that **every sub-agent prompt is self-contained**: include the **Shared** sections below in the order given, then the agent-specific section, then the code context or specialist findings.
+Per-agent prompt templates for **code-review-agents**. The parent agent reads this file and builds each `Task` tool call so that **every subagent prompt is self-contained**: include the **Shared** sections below in the order given, then the agent-specific section, then the code context or specialist findings.
 
 **Canonical formats:** **Shared: Restrictions**, **Shared: Finding Format**, and **Shared: Final Report Format** below are the single source of truth. [SKILL.md](SKILL.md) links here only; do not maintain duplicate templates in SKILL.md.
 
+- [Shared: Restrictions](#shared-restrictions)
+- [Shared: Finding Format](#shared-finding-format)
+- [Shared: Final Report Format](#shared-final-report-format)
+- [How to construct prompts](#how-to-construct-prompts)
+- Agent sections: [1 Language Spec](#agent-1-language-spec-specialist), [2 Refactoring & Patterns](#agent-2-refactoring--design-patterns-specialist), [3 DDD](#agent-3-domain-driven-design-specialist), [4 Clean Architecture](#agent-4-clean-architecture-specialist), [5 Security](#agent-5-security-specialist), [6 Performance](#agent-6-performance-tuning-specialist), [7 TDD](#agent-7-tdd-specialist), [8 Observability](#agent-8-observability--operability-specialist), [9 Integration](#agent-9-integration-agent)
+
 ## Shared: Restrictions
 
-Include this block verbatim at the start of every analysis (1–8) and integration (9) agent prompt:
+Include this block verbatim at the start of every analysis (1–8) and integration (9) subagent prompt:
 
 ```
 ## Restrictions
@@ -80,10 +86,12 @@ The integration agent (9) must produce the report in this structure:
 
 ## How to construct prompts
 
+"Verbatim" means the text inside a block's code fence. The fences in this file are delimiters for reading; reproduce their contents in the `Task` prompt, not the fence lines themselves. Do not copy markdown labels such as `## Shared: Finding Format` into Task prompts — only the fenced block contents plus agent section headings (for example `## Agent 5: Security Specialist`).
+
 **Analysis agents (1-8):** Concatenate in this order:
 
-1. **Shared: Restrictions** (copy verbatim)
-2. **Shared: Finding Format** (full section above — copy verbatim so the sub-agent has the schema)
+1. **Shared: Restrictions** (copy the fenced block verbatim — starts with `## Restrictions`)
+2. **Shared: Finding Format** (copy from `Every analysis agent (1–8) must return findings in this structure:` through the severity table — include the intro, output-language line, template fence contents, and severity table; exclude the doc heading `## Shared: Finding Format`)
 3. The **## Agent N: …** section for that specialist (persona, focus, guidelines)
 4. A `---` separator, then `## Code Context`, then the code-context block from SKILL.md Step 4
 
