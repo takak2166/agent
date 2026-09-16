@@ -32,6 +32,7 @@ Round 1:
 - **empirical_edits:** yes | no
 - **iterations:** {count}
 - **converged:** yes | no
+- **chain_follow:** per cell — observed | claimed-only | unknown
 (paste final Iteration N block from empirical presentation format)
 
 ### Phase 3 — skill-optimizer
@@ -103,6 +104,9 @@ No `## Round 2` heading is created — the verification audit is the last block 
 | Optimizer skips benchmark matrix | Phase 3 treated as edit-only pass | Follow Phase 3 subagent dispatch steps; do not proxy Phase 2 scores for release-gates |
 | High baseline + Δ≈0 on all cells | **Brief leakage** — scoring rubric leaked into executor task brief (or Phase 2 checklist pasted into without-skill) | Split rubric (orchestrator-only) vs task brief; strip answer keys from briefs; re-run cells — do not conclude the skill is unnecessary |
 | High baseline + Δ≈0, and without-cell transcripts cite the target skill or a same-named installed one | **Environment leakage** — the skill is auto-discoverable at `~/.claude/skills/` etc., so without cells load it anyway. Thinning the brief cannot fix this | Name the colliding skill in the without-cell prompt and forbid loading it; treat citing cells as void, not low-scoring; exclude them from the delta with the reason recorded |
+| Executor claims it followed the skill; `chain_follow: claimed-only` | Self-report treated as proof of chain-following | Score from the cell transcript (`Read` of target `SKILL.md`); keep the self-report for unclear points only |
+| No cell transcript | Subagent jsonl not in this workspace's `agent-transcripts/` | Record `chain_follow: unknown`; do not glob `~/.cursor/projects/*/`; do not infer either way |
+| Candidate sandbox named `eval-run/` or brief says "rubric" | **Name leakage** — eval-meta tokens in executor-visible paths or prompts | Rename to a project-shaped path; rewrite as an organic user request; re-run |
 | Step/duration bands blown on every scenario | n=1 per scenario — one extra file read exceeds ±10% | Record the numbers, do not gate convergence on them; raise n only where the trend matters |
 | Optimizer edits every round | Chasing metrics without audit stability | Compare optimizer benchmark deltas round-over-round; one salience theme per Phase 3 cycle |
 | Phase 2 or Phase 3 skipped | Task tool unavailable | Partial stop; user reruns in session with dispatch |
@@ -132,11 +136,48 @@ End of Round N
 
 | Child skill | Scope within this loop |
 |-------------|------------------------|
-| audit-skill | Phase 1 only; owns Critical/Major static fixes |
-| empirical-prompt-tuning | Phase 2 only; owns executor-verified behavior fixes |
-| skill-optimizer | Phase 3 only; owns with/without cross-model benchmark dispatch, salience edits, and release-gates |
+| audit-skill | Phase 1 only; owns Critical/Major static fixes (including Voice and mechanisms) |
+| empirical-prompt-tuning | Phase 2 only; owns executor-verified behavior fixes (self-report). This loop adds transcript `chain_follow` as a second channel |
+| skill-optimizer | Phase 3 only; owns with/without cross-model benchmark dispatch, salience edits, and release-gates. This loop adds eval-meta sanitization on candidate-visible names |
 
 This loop **does not replace** child skills—it sequences them. Do not duplicate their checklists here; read them each phase.
+
+## Chain-following and eval-meta sanitization
+
+Applies to Phase 2 executor cells and Phase 3 with/without cells. Self-report stays the primary *improvement* signal (unclear points, discretionary fill-ins). Chain-following is the primary *compliance* signal.
+
+### Transcript scope
+
+- Use the `agent-transcripts/` directory the system prompt names for **this** workspace.
+- Look at flat `*.jsonl`, nested `*/*.jsonl`, and `*/subagents/*.jsonl` under that directory only.
+- Match a file by reading the first JSONL line and checking that the opening user text is this cell's prompt.
+- Do **not** glob `~/.cursor/projects/*/`. That crosses workspaces and reads unrelated chats.
+
+### `chain_follow` labels
+
+| Label | Meaning |
+|-------|---------|
+| `observed` | With-skill: a `Read` (or equivalent) of the target `SKILL.md` appears in that cell's transcript. Without-skill: the transcript does **not** load the target or a same-named installed skill |
+| `claimed-only` | The executor's self-report says it followed the skill; the transcript has no `Read` of the target |
+| `unknown` | No matching transcript in this workspace |
+
+`claimed-only` is not proof of chain-following. Keep the self-report bullets; do not let them satisfy a "read the skill" requirement.
+
+### Eval-meta sanitization
+
+Executor-visible directories, files, and prompts must look like an organic user request.
+
+**Forbidden as meta labels** (path segments, filenames, or prompt words that announce the experiment): `eval`, `judge`, `experiment`, `rubric`, `score`, `compare`, `benchmark`, `candidate`, `arena`. `test` is forbidden as a meta label (`test-run`, `eval-test`) and allowed when it is the project's real test path the organic task would use.
+
+**Also forbidden:** telling a cell that other cells, models, or a judge exist.
+
+**Allowed:** a fixture that mirrors a real app (`app/`, `src/`, `skills/draft-pr/`).
+
+If a path or brief fails this check, treat it as **name leakage** (same class as brief leakage): rename, rewrite, re-run. Do not score the contaminated cell.
+
+### Parent read-through
+
+After rubric or checklist scoring, read each cell's returned body end to end. Disagreement with the score or the self-report means an ambiguous rubric or a biased summary. Log it and exclude that cell from the mean.
 
 ## Phase 3 anti-leakage example
 

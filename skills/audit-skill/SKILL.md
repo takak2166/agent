@@ -1,6 +1,6 @@
 ---
 name: audit-skill
-description: Audits and fixes agent SKILL.md files for discovery, scope, clarity, structure, context efficiency (~500-line cap), and execution safety. Auto-applies edits for Critical and Major issues; reports Minor as suggestions only.
+description: Audits and fixes agent SKILL.md files for discovery, scope, clarity, structure, context efficiency (~500-line cap), and execution safety. Flags prose that does not change a decision and invariants that belong in a check rather than more text. Auto-applies edits for Critical and Major issues; reports Minor as suggestions only.
 disable-model-invocation: true
 ---
 
@@ -42,7 +42,7 @@ When the full Audit Output applies, the reply includes **## Changes Applied**, *
 
 - **Scope edits to the target skill:** You may edit only files in the target skill directory (for example `SKILL.md`, `reference.md`, `examples.md`, and files under `scripts/` when the fix requires it). Use `Read` / `ReadFile`, `Glob`, and `Grep` / ripgrep (`rg`) (or equivalents) to inspect; use file-edit tools only within that directory. Do not modify unrelated workspace files.
 - **Fix vs suggest by severity:** Apply fixes for **Critical** and **Major** findings directly in the target skill files. Report **Minor** findings as suggestions only—do not edit for Minor.
-- **When not to auto-fix:** Do not edit when evidence is insufficient, the full file was not readable, the fix requires product or scope decisions you cannot infer, or the user explicitly asked for audit-only. Report those Critical/Major items under **## Findings** with **Suggested fix:** instead.
+- **When not to auto-fix:** Do not edit when evidence is insufficient, the full file was not readable, the fix requires product or scope decisions you cannot infer (including adding a lint, script, metadata flag, or runtime check), or the user explicitly asked for audit-only. Report those Critical/Major items under **## Findings** with **Suggested fix:** instead.
 - **Evidence-based work:** Ground every finding and every edit in text you actually read. When something was not read, is missing, or is unclear, state that plainly; do not infer undocumented behavior or rewrite intent you cannot verify.
 - **Preserve intentional design:** Keep user-specified verbatim wording, explicit constraints, and `disable-model-invocation` choices unless the finding requires changing them to resolve a defect.
 - **No commits:** Do not create git commits unless the user explicitly asks.
@@ -86,11 +86,12 @@ Cross-references **Steps §1–§3** mean the **first three items** in this list
    |----------|----------|------------|
    | 1 | Discovery and scope | `name` ≤64 chars, lowercase, hyphenated; `description` states WHAT + WHEN in third person (WHAT-only acceptable when `disable-model-invocation: true`); narrow scope; `disable-model-invocation` matches side-effect vs reference intent |
    | 2 | Structure | YAML frontmatter + Markdown body; not under reserved dirs; headings readable; ~500-line `SKILL.md` cap with progressive disclosure to linked files |
-   | 3 | Instruction quality | Ordered steps; constraints near top; freedom level matches fragility; one default + escape hatch; no contradictions; preserve verbatim user wording |
-   | 4 | Output and examples | Explicit response structure when needed; concrete separated examples; validation loops for quality-critical workflows |
+   | 3 | Instruction quality | Ordered steps; constraints near top; freedom level matches fragility; one default + escape hatch; no contradictions; preserve verbatim user wording; tell the agent to do the thing and skip the reason except when the rule is confusing without one |
+   | 4 | Output and examples | Explicit response structure when needed; concrete separated examples; validation loops for quality-critical workflows; a verify or test step when the skill has `scripts/` or a parseable artifact — skip when the work is subjective |
    | 5 | Tooling and safety | Named tools/commands; forward-slash paths; execute vs read for scripts; restrictions align with steps; workflow feasible |
    | 6 | Context efficiency | No redundant agent-common knowledge; rules near top; progressive disclosure; frontmatter within discovery limits (~1024 chars Cursor / ~1536 Claude Code) |
    | 7 | Authoring anti-patterns | **Minor** only: dated deprecations missing, many equivalent tools with no default, duplicate examples |
+   | 8 | Voice and mechanisms | Keep only prose that changes a decision; delegate sibling skills by path instead of restating them; prefer a lint, script, flag, or runtime check over more instruction text |
 
    When a row is ambiguous, apply the expanded bullet list in [`reference.md`](reference.md) **Audit checklist (expanded)**.
 
@@ -98,6 +99,7 @@ Cross-references **Steps §1–§3** mean the **first three items** in this list
    - `Critical`: likely wrong behavior, unsafe behavior, or failed execution
    - `Major`: materially harms discovery, clarity, maintainability, or audit quality
    - `Minor`: consistency, wording, or optional improvements
+   - **Voice and mechanisms (row 8):** default **Minor**. **Major** when non-decision prose is a large inline block that buries the steps or contributes to the ~500-line problem, or when the body copies another skill's step list instead of linking its path. Encode-in-structure items stay under **## Findings** with **Suggested fix:** (do **not** auto-add lints or scripts — product/scope decision).
 
 1. Apply fixes for **Critical** and **Major** findings (Critical first):
    - Edit target skill files with the client's file-edit tools (`StrReplace`, `Write`, or equivalents).

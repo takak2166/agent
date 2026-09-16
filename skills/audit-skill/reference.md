@@ -34,7 +34,7 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 - Important constraints appear near the top
 - Instruction specificity matches task fragility: high freedom for context-dependent work; medium for preferred patterns; low (scripts, exact steps) for fragile or consistency-critical ops
 - Prefer **one default approach with an explicit escape hatch** over many peer options that force discretionary choice
-- Fragile rules include brief rationale when it helps correct execution
+- Tell the agent to **do the thing**; skip the reason unless the rule is confusing without one. Fragile rules may keep a brief rationale when it changes whether the agent follows the step
 - Instructions do not contradict each other
 - The skill does not mix too many unrelated objectives
 - User-specified verbatim wording in the target is preserved, not paraphrased or expanded, unless a defect requires changing it
@@ -44,6 +44,7 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 - Expected output or response structure is explicit when the task needs it
 - Examples are concrete and clearly separated from the main instructions
 - Quality-critical workflows include a validation or feedback loop when the task needs it (for example run validator → fix → rerun)
+- When the skill ships `scripts/` or a parseable artifact (JSON, TSV, exit codes), it names a verify or test step the agent should **execute**. Skip this bullet when the skill's work is subjective (interview, writing style, judgment-only)
 - If XML is used, it improves precision instead of adding noise
 
 ### 5. Tooling, safety, and feasibility
@@ -68,6 +69,16 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 - **Minor** for listing many equivalent tools/libraries with no default
 - **Minor** for duplicate examples that teach the same lesson
 - Do not flag anti-patterns that are already clearly handled elsewhere in the checklist
+
+### 8. Voice and mechanisms
+
+Keep only prose that changes a future agent's action. When in doubt, flag for deletion rather than adding more explanation.
+
+- **Decision-changing prose:** If removing a sentence would not change the next tool call, constraint, or output, it is a trim candidate. **Minor** for a few stray sentences. **Major** when a large rationale block buries the steps or contributes to the ~500-line problem
+- **Do the thing:** Prefer imperative steps over essays about why. Do not strip a one-line rationale that is the only thing that makes a fragile rule make sense
+- **Delegate by path:** If a sibling or child skill already owns a workflow, the target should name that skill's path and stop. **Major** when the body copies another skill's step list (two sources of truth). **Minor** for a short overlapping sentence
+- **Encode in structure:** If a lint, script, metadata flag, or runtime check would enforce the rule more reliably than more text, suggest that mechanism. Do **not** auto-add the mechanism (product/scope decision — **When not to auto-fix**). Leave the item under **## Findings** with **Suggested fix:** naming the check to add, not a thicker prompt
+- Do not flag row-8 items that row 3, 4, or 6 already covers (redundant agent-common knowledge stays in Context efficiency)
 
 ## Integrated workflow example
 
@@ -342,6 +353,48 @@ Below is a **complete** sample from **## Changes Applied** through **## Strength
 ## Strengths
 
 - The visible section uses clear Markdown headings.
+```
+
+</example>
+
+<example type="Minor" title="Minor — voice (prose that does not change a decision)">
+
+```markdown
+## Findings
+
+### Minor
+
+- **Affected section:** Instruction quality / Voice and mechanisms
+- **Problem:** Three paragraphs explain the history of the workflow before the first numbered step; deleting them would not change any tool call.
+- **Why it matters:** Extra rationale competes with the steps at invocation time and does not change the agent's next action.
+- **Suggested fix:** Delete the history block; keep the numbered steps. If a reviewer needs the why, one sentence under the heading is enough.
+
+## Strengths
+
+- Numbered steps are otherwise executable.
+```
+
+</example>
+
+<example type="Major" title="Major — restated sibling skill (auto-fixed)">
+
+```markdown
+## Changes Applied
+
+### Major
+
+- **Affected section:** Steps vs `skills/draft-pr/SKILL.md`
+- **Problem:** The body copied draft-pr's `gh pr create` step list instead of naming `skills/draft-pr/SKILL.md`.
+- **Why it matters:** Two sources of truth will drift; the sibling skill already owns that workflow.
+- **Fix applied:** Replaced the copied command list in `SKILL.md` with a one-line delegate to `skills/draft-pr/SKILL.md`.
+
+## Findings
+
+**No Minor findings.**
+
+## Strengths
+
+- Scope now stops at orchestration instead of duplicating the sibling workflow.
 ```
 
 </example>

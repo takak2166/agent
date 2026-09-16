@@ -1,6 +1,6 @@
 ---
 name: skill-hardening-loop
-description: Runs audit-skill, empirical-prompt-tuning, and skill-optimizer sequentially on a target skill, repeating rounds until no phase edits the target.
+description: Runs audit-skill, empirical-prompt-tuning, and skill-optimizer sequentially on a target skill, repeating rounds until no phase edits the target. Scores executor chain-following from transcripts and sanitizes eval-meta names in candidate-visible paths.
 disable-model-invocation: true
 ---
 
@@ -124,19 +124,29 @@ Skip entirely if Task tool is unavailable (see **Non-negotiables**).
 
 1. Read empirical-prompt-tuning `SKILL.md` in full.
 2. Run **Iteration 0** (description/body consistency) on the target. For **manual-invoke targets**, reconcile only **factual** WHAT/body gaps—do not add discovery WHEN or trigger phrases to `description`. If Phase 1 already fixed factual WHAT/body gaps, Iteration 0 is a confirmation pass only—do not re-edit unless Phase 1 skipped the fix.
-3. Run the full empirical loop (baseline → dispatch subagents → two-sided evaluation → apply diff → re-evaluate) until **empirical convergence**:
+3. Run the full empirical loop (baseline → dispatch subagents → two-sided evaluation → apply diff → re-evaluate) until **empirical convergence**. Before the first dispatch, apply **eval-meta sanitization** (step 4).
    - **3** consecutive iterations with **zero new unclear points** for orchestrator/meta skills (including this skill); **2** for ordinary targets
    - Accuracy improvement ≤ +3 points vs previous iteration
    - Step count within ±10%, duration within ±15% of previous — **these two bands only mean something at ≥2 runs per scenario.** At n=1 a single extra file read moves step count past ±10%, so the band measures run-to-run noise rather than the target. With one run per scenario, **record both numbers but do not gate convergence on them**; converge on the unclear-point and accuracy criteria instead, and write `step/duration: n=1, recorded not gating` in the iteration block. Raise n only for scenarios whose trend you actually intend to read—paying for extra runs everywhere is rarely worth it.
    - Hold-out scenario: if accuracy drops ≥15 points from recent average, add edge scenarios and continue (do not declare converged)
-4. Append iteration summaries to `/tmp/{skill-name}/BENCHMARKS.md`.
-5. Record:
+4. **Eval-meta sanitization (Phase 2 and Phase 3).** Names and prompts the executor sees must look like an organic user task. Do not put eval-meta labels in candidate-visible directories, files, or prompts: `eval`, `judge`, `experiment`, `rubric`, `score`, `compare`, `benchmark`, `candidate`, `arena`. `test` is forbidden as a meta label (`test-run`, `eval-test`) but allowed when it is the project's real test path the organic task would use. Do not tell a cell that other cells or models exist. Details in [reference.md](reference.md) **Chain-following and eval-meta sanitization**.
+5. **Chain-following (second channel — does not replace self-report).** Keep empirical self-report for unclear points and discretionary fill-ins. Score **whether the executor followed the target skill** from the cell transcript, not from the executor's claims. Full rules: [reference.md](reference.md) **Chain-following and eval-meta sanitization**.
+   - Use only the active workspace's `agent-transcripts/` path named in the system prompt. Do **not** glob `~/.cursor/projects/*/`.
+   - Prefer the subagent transcript for that Task cell (nested `.../subagents/*.jsonl` or the path returned with the Task). Match it by the cell's opening user prompt.
+   - With-skill cell: did it actually `Read` the target `SKILL.md`? Record `chain_follow: observed | claimed-only | unknown`.
+   - `claimed-only` (self-report says it followed the skill; transcript shows no `Read` of the target) does **not** count as chain-following. Do not treat that self-report as proof.
+   - `unknown` (no transcript): record it; do not infer either way.
+   - Do **not** gate empirical inner-loop convergence on `chain_follow` alone. Use it to discount false "I followed the skill" reports when applying diffs.
+   - After scoring, read each executor's returned body end to end. If it disagrees with the self-report or the requirements checklist, log the disagreement and do not paper over it in the iteration average.
+6. Append iteration summaries to `/tmp/{skill-name}/BENCHMARKS.md` (include `chain_follow` per cell).
+7. Record:
    - `empirical_edits`: yes / no
    - Iteration count
    - Final accuracy / success per scenario (table from empirical presentation format)
+   - Per-cell `chain_follow` (observed / claimed-only / unknown)
    - Converged: yes / no (and why if no)
 
-**Phase output:** one **Iteration N** block (final state) from empirical presentation format in the round log.
+**Phase output:** one **Iteration N** block (final state) from empirical presentation format in the round log, plus the `chain_follow` column.
 
 ### Phase 3 — skill-optimizer
 
@@ -150,6 +160,7 @@ Skip entirely if Task tool is unavailable (same as Phase 2).
    - [ ] Scenarios cover core capability, omission-prone footer/checklist, and noisy-context retrieval
    - [ ] Orchestrator-only **scoring rubric** drafted (5 items, ≥1 `[critical]`) — not pasted into Task prompts
    - [ ] Executor **task brief** written thinner than the rubric (no Status labels, skip-phase wording, or artifact rules as answer keys)
+   - [ ] Candidate-visible dirs, files, and briefs pass **eval-meta sanitization** (same rule as Phase 2; see [reference.md](reference.md) **Chain-following and eval-meta sanitization**)
    - [ ] Phase 2 *scenario settings* reused from `BENCHMARKS.md` when present; missing benchmark-loop scenarios added
    - [ ] At least 2 distinct Task models when supported (log `multi-model: partial` if only one)
    - [ ] Target `name` checked against installed skills; if it collides, the without-cell prompt names that skill and forbids loading it
@@ -168,8 +179,10 @@ Skip entirely if Task tool is unavailable (same as Phase 2).
      - **Brief leakage:** without-skill satisfies the rubric by copying the prompt. Rewrite the task brief thinner and keep specifics only in the rubric. Prefer outcome-shaped briefs ("handle Task unavailable and report the run") over procedure-shaped briefs that restate the skill.
      - **Environment leakage:** the target—or a same-named sibling still installed at `~/.claude/skills/`, `.claude/skills/`, or `.agents/skills/`—is auto-discoverable, so the without-skill executor loads it regardless of what the brief says. Thinning the brief does nothing here. Before dispatching, check whether the target's `name` collides with an installed skill; if it does, name that skill in the without-cell prompt and instruct the executor not to load or consult it. A cell whose transcript cites it is **void, not low-scoring**—re-run it, or drop it from the delta and record why.
      - When most without cells hit ~100% with Δ≈0, treat it as **eval contamination**, not proof the skill is unnecessary. Averaging a contaminated cell into the matrix understates the delta, so exclude it explicitly rather than letting it drag the mean.
+     - **Name leakage:** a sandbox path or brief that contains eval-meta tokens (`eval`, `judge`, `rubric`, `benchmark`, …) is contamination of the same class as brief leakage. Rename to a project-shaped path and rewrite the brief as an organic request before re-running. Do not tell a cell that other cells or models exist.
    - **Parallelism:** Batch independent cells in one message (multiple Task calls) when practical.
    - **Scoring:** After each cell returns, score against the orchestrator-only rubric: **%** = satisfied items / 5 (○ = 1, partial = 0.5, × = 0). Delta = with − without. Record rubric + brief alongside the matrix in `BENCHMARKS.md`.
+   - **Parent read-through:** After the matrix scores, read each cell's returned body end to end. If the parent's reading disagrees with the rubric %, log the disagreement (ambiguous rubric or biased self-summary) and exclude that cell from the mean rather than averaging it away.
    - **Readout:** Use benchmark-loop table format; flag universal failures (0% with skill) and regressions (negative delta) per `regression-triage.md`.
 4. **Salience edits:** If the matrix shows universal failures or regressions, apply **minimum salience edits**. For **manual-invoke targets**, limit to in-body execution clarity (front-loaded checklists, integrated examples, must/omit wording)—**not** discovery triggers (`## Triggers`, `description` WHEN expansion, trigger-phrase lists). For other targets, activation-design patterns (including triggers) apply when the matrix shows activation gaps. One theme per optimizer iteration within this phase.
 5. **Re-run evals:** After edits, re-dispatch subagents on **affected scenario × model cells** (at minimum: any cell with regression or universal failure; ideally the full matrix if edits were global). Compare deltas to the pre-edit run.
@@ -249,4 +262,4 @@ Use this structure:
 
 ## Additional resources
 
-Round log template, worked example, and failure-mode table: [reference.md](reference.md)
+Round log template, worked example, failure-mode table, chain-following, and eval-meta sanitization: [reference.md](reference.md)
