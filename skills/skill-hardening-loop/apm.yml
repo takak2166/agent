@@ -9,5 +9,5 @@ dependencies:
     # Same-repo sibling (inherits parent repo ref)
     - git: parent
       path: skills/audit-skill
-    - mizchi/skills/meta/empirical-prompt-tuning
+    - mizchi/skills/empirical-prompt-tuning
     - mcollina/skills/skills/skill-optimizer
