@@ -1,6 +1,6 @@
 ---
 name: my-grill-me
-description: Relentless design-tree interview of a plan or decision. Asks every unblocked frontier question through the runtime structured-question tool and does not implement until the user explicitly asks.
+description: Relentless design-tree interview of a plan or decision. Classifies each frontier item before asking — look up facts, park empirical forks, ask only preference or product calls no experiment can settle. Does not implement until the user explicitly asks.
 disable-model-invocation: true
 ---
 
@@ -23,32 +23,57 @@ The interview **subject** is the plan, decision, or idea in the user's message. 
 ## Non-negotiables
 
 1. **No action until asked** — do not implement, edit, or otherwise act on the plan until the frontier is empty, the user confirmed shared understanding, **and** they later asked to implement.
-2. **Decisions vs facts** — decisions are the user's. Facts are yours: look them up (tools / sub-agents). Never ask the user for something you can find.
+2. **Classify before you ask** — every frontier item is look-up, empirical, or preference (see **Classification**). Only **preference** goes to the question tool.
 3. **Design tree** — every decision branches into the decisions that hang off it. A question that depends on another question still open in this logical round belongs to a later round.
-4. **Structured questions first** — deliver every frontier question through the runtime question tool when it exists.
-5. **Lookups do not stall the rest** — an in-flight fact lookup only blocks questions that depend on it. Ask the rest of the frontier now.
+4. **Structured questions first** — deliver every preference-frontier question through the runtime question tool when it exists.
+5. **Lookups and parks do not stall the rest** — an in-flight fact lookup or a parked empirical item only blocks questions that depend on it. Ask the rest of the preference frontier now.
+
+## Classification
+
+Classify each frontier item **before** adding it to a question-tool payload. Stop at the first matching class.
+
+| Class | Test | Action |
+|-------|------|--------|
+| **Look-up** | The answer exists in the repo, docs, git history, MCP, or a cheap **read-only** command (how it works today, a type, whether a caller exists, current timing of an existing path) | Look it up (tools / sub-agents). Do not ask. |
+| **Empirical** | Running, measuring, or a throwaway sketch could settle it (behavior, timing, layout, output, perf, whether two approaches actually differ) | Do **not** ask as if the user knows. Do **not** prototype or implement during this skill. **Park** it: what to observe later, and which later decision it unlocks. |
+| **Preference** | No experiment can settle it (taste, priority, risk appetite, who it is for, what "done" means, which users to serve) | Ask via the question tool. |
+
+When class is unclear: try a cheap look-up first. If it is still unsettleable without a product call, class **preference**. Do not default to asking.
+
+Running **existing** code, tests, or traces to learn the current system is look-up. Building a **new** sketch to decide a fork is empirical — park it.
+
+### Integrated example
+
+**Subject:** add virtualization to a slow list.
+
+| Candidate question | Class | What happens |
+|--------------------|-------|----------------|
+| Does the list already virtualize? | Look-up | Read the list code. Do not ask. |
+| Would windowing cut load from ~1s to ~200ms? | Empirical | Park: measure after the grill. Do not ask; do not build a sketch now. |
+| Is ~200ms good enough, or must it feel instant? | Preference | Ask via the question tool. |
 
 ## Expected output
 
 **Each logical round (in order):**
 
 1. Short **settled decisions** list (bullets).
-2. One or more structured-question tool calls covering the full frontier (batched only when the tool caps questions per call).
-3. No implementation, edits, or action on the interview subject.
+2. **Looked-up facts** this round (one line each) and **parked empirical** items (what to observe later, what it unlocks). Omit a subsection when empty.
+3. One or more structured-question tool calls covering the **preference** frontier only (batched only when the tool caps questions per call).
+4. No implementation, edits, prototypes, or other action on the interview subject.
 
-**Session end (frontier empty):**
+**Session end (preference frontier empty):**
 
-1. Summary of all settled decisions.
+1. Summary of all settled decisions, plus remaining parked empirical items (settle those by observation after the grill, not by asking now).
 2. One confirmation question via the question tool (or markdown fallback) with exactly two choices: shared understanding reached, or holes remain. Do **not** offer implement.
 3. Stop and wait.
 
 ## Design tree
 
-Work in **logical rounds**. The **frontier** is every decision whose prerequisites are already settled.
+Work in **logical rounds**. The **frontier** is every **preference** decision whose prerequisites are already settled. Look-ups and parks are not frontier questions; they only delay preference items that depend on them.
 
 Each user answer reshapes the tree: settled decisions push the frontier outward. Recompute the frontier only after **every** question from the current logical round has an answer (including all tool-limit batches).
 
-Session is done when the frontier is empty and the user confirms shared understanding.
+Session is done when the preference frontier is empty and the user confirms shared understanding. Parked empirical items do not keep the session open.
 
 ## Question delivery
 
@@ -68,13 +93,13 @@ If a decision is not naturally closed, still invent at least two honest options.
 
 **After Other / freeform:** accept it in chat. If the boundary is still unclear, resettle that decision in the **next** logical round. Do not immediately fire a replacement form unless the answer was empty.
 
-**Logical round = the full current frontier.** If the tool caps questions per call, split into sequential calls. Do not recompute the tree until that frontier is fully answered.
+**Logical round = the full current preference frontier.** If the tool caps questions per call, split into sequential calls. Do not recompute the tree until that frontier is fully answered.
 
 Each round: follow **Expected output** above.
 
 ### Cursor `AskQuestion`
 
-- One call may include the entire frontier (no question cap).
+- One call may include the entire preference frontier (no question cap).
 - Option count may exceed 4.
 - Set `title` to the grill round (for example `Grill round 2`).
 - Each question needs stable `id`, `prompt`, and `options` (`id`, `label`). Set `allow_multiple` only for set decisions.
@@ -100,9 +125,9 @@ Use only when neither structured-question tool exists:
 
 ## Session end
 
-When the frontier is empty:
+When the preference frontier is empty:
 
-1. Summarize settled decisions.
+1. Summarize settled decisions and list parked empirical items (observation to run later, decision it unlocks).
 2. Ask via the question tool (or markdown fallback): **Shared understanding reached?** with options **Yes — we agree** and **No — holes remain** (localized to the conversation language). Do **not** offer implement.
 3. Stop.
 
@@ -110,8 +135,8 @@ If they report holes, recompute the frontier and continue. Implement only on a l
 
 ## Restrictions
 
-- Do not implement or edit the subject of the interview while this skill is running.
-- Do not ask the user for look-up-able facts.
+- Do not implement, edit, or prototype the subject of the interview while this skill is running.
+- Do not ask the user for look-up-able facts or empirical / observable forks.
 - Do not recompute the design tree mid-round.
 - Do not add a duplicate Other option.
 - Do not start this workflow from ambient chat unless the skill was explicitly attached or `/my-grill-me` was used.
