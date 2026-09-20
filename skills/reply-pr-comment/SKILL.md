@@ -15,7 +15,7 @@ A skill to reply to review comments on a specified PR with resolution results, a
 ## Non-negotiables
 
 1. **Verify local branch matches the PR head** (Step 5) before mapping comments to diffs — exit if mismatch.
-2. **Do not post any reply without user confirmation** (Step 10) — present drafts first.
+2. **Do not post any reply without user confirmation** (Step 10) — present drafts first. **Exception:** when continuing from `check-pr-comment` in the same session, **review-bot** top-level comments (Copilot, CodeRabbit, `*[bot]`, etc.; see that skill’s **Review bots — reply without confirmation**) may be posted without per-reply confirmation; human threads still require confirmation.
 3. **Do not modify code** — this skill only drafts and posts replies.
 4. **Never fake a commit hash** — use **addressed** template only when the specific suggestion is implemented; if hash unknown, treat as not addressed and ask the user.
 5. **Resolution paragraph has no emoji**; **Acknowledgment** may use emoji (addressed replies only).
@@ -169,5 +169,5 @@ This skill assumes that the **current checkout branch** is the **head branch of 
 ## Restrictions
 - Do not execute any commands other than `gh repo view`, `gh pr view`, `gh api`, `git branch --show-current`, `git log`, and `git diff`
   - Exception: `jq` is allowed only for building/slicing JSON bodies for `gh api` (e.g. `jq -n ...`) or summarizing `gh api` output for readability. Do not use it to filter out comments at the API level.
-- Do not post any reply without user confirmation
+- Do not post any reply without user confirmation, except review-bot threads per `check-pr-comment` **Review bots — reply without confirmation** when triage ran in the same session
 - Do not modify any code — this skill only posts replies
