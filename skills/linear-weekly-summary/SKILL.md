@@ -12,12 +12,13 @@ Aggregate last week's Linear activity, build a Markdown report in the **Japanese
 
 1. **Read-only on Linear** — Do **not** create or update Issues, Projects, or Status Updates (report only).
 2. **Format fidelity** — **`Read`** [`reference/output-template.md`](reference/output-template.md) before composing the report. Follow its headings, tables, emoji, and section breaks. The rendered report body is **Japanese**. Exception only when the user explicitly requests a different format.
-3. **Webhook required** — After generating the report, **POST to the webhook** (see §Webhook). If the URL is unset, **do not run** `post-webhook.sh` (it exits 1); skip POST, return the Markdown in chat, and tell the user how to configure `LINEAR_WEEKLY_SUMMARY_WEBHOOK_URL`. Skip POST when the user asks for preview only (see Workflow §5).
+3. **Webhook when configured** — After generating the report, **POST to the webhook** when a URL is available (see §Webhook). If the URL is unset, **do not run** `post-webhook.sh` (it exits 1); skip POST, return the Markdown in chat, and tell the user how to configure `LINEAR_WEEKLY_SUMMARY_WEBHOOK_URL`. Skip POST when the user asks for preview only (see Workflow §5).
 4. **State the period** — Put the aggregation window (JST) in the title line. User-provided dates take precedence.
+5. **📢 Pending exclusion** — Never put Project `status` **Pending** in **Update 投稿が必要** (even if stale or never updated). 📅 schedule rows may still include Pending Projects.
 
 ## Prerequisites and tools
 
-- **Linear MCP** (`plugin-linear-linear`). Call **`GetMcpTools`** first; if status is `needsAuth`, call **`mcp_auth`** then retry. Read each tool descriptor before calling.
+- **Linear MCP** (namespace `plugin-linear-linear`). Discover tools via the host catalog (Cursor: **`GetDynamicTools`** on that namespace; other clients may expose **`GetMcpTools`**). If status is `needsAuth`, authenticate per host (Cursor: **`CallDynamicTool`** with `mcp_auth` on the namespace) then retry. Read each tool descriptor before calling.
 - Primary tools:
   - **`list_teams`** — resolve team
   - **`list_issues`** — collect Issues (`fields` for required columns, `cursor` for paging)
@@ -32,7 +33,7 @@ Aggregate last week's Linear activity, build a Markdown report in the **Japanese
 
 | Setting | Description |
 |---------|-------------|
-| `LINEAR_WEEKLY_SUMMARY_WEBHOOK_URL` | POST target (required). Slack Incoming Webhook, Discord Webhook, etc. |
+| `LINEAR_WEEKLY_SUMMARY_WEBHOOK_URL` | POST target when sending (unset → skip POST per Non-negotiables §3). Slack Incoming Webhook, Discord Webhook, etc. |
 | `LINEAR_WEEKLY_SUMMARY_WEBHOOK_FORMAT` | Optional. `slack` (default) / `discord` / `raw` |
 
 **POST steps** (run from repo/workspace root; adjust path if skill is vendored elsewhere):
@@ -88,6 +89,8 @@ Outside the gate (other org / explicit team) → resolve team with **`list_teams
 
 **Status Updates** — per Project: `get_status_updates` (`type: "project"`, `project: <name|id>`, `limit: 1`, `orderBy: "createdAt"`) for the latest update. Count updates **in the aggregation period** via `get_status_updates` with `createdAt` set to a duration from period start (or `-P7D` when period is one week).
 
+**Update 投稿が必要（📢）の対象 Project** — include only when **7+ days** since last Status Update (or never posted) **and** Project `status` is **not** `Pending` (case-insensitive match on MCP `status`). **Do not** list Pending Projects in the 📢 table even if stale or never updated. Schedule alerts (📅) are unchanged—Pending Projects may still appear there when other rules match.
+
 **Status mismatch** — Projects in Backlog/Planned with In Progress Issues active in the period (`list_issues` + `project` filter).
 
 ### 3. Build the report
@@ -99,7 +102,7 @@ Outside the gate (other org / explicit team) → resolve team with **`list_teams
    - **Started Issues** — bullet list
    - **New Issues** — count + **group by project/theme** (bulk creation may use ranges, e.g. `TAK-108〜119`)
    - **Highlights** — 3–5 bullets (synthesis allowed; do not invent facts)
-   - **Schedule / Update attention** — **only matching Projects**; omit entire subsections when none apply
+   - **Schedule / Update attention** — **only matching Projects**; omit entire subsections when none apply. For **📢 Update 投稿が必要**, exclude **`Pending`** Projects (see §2 Status Updates).
    - Footnote when applicable: `> 先週中の Project Status Update: **N件**`
 3. Use MCP `url` fields as-is for links. Emoji: overdue 🔴, needs review 🟡.
 
@@ -122,8 +125,8 @@ Skip this section when the webhook URL is unset (env and user message) or the us
 
 1. Defaults gate applies → team `Takayuki's time` via `list_teams`
 2. Period → previous Sun–Sat JST; title e.g. `2026/07/26 〜 08/02`
-3. `GetMcpTools` → Linear MCP ready (auth if needed)
-4. `list_issues` / `list_projects` / per-Project `get_status_updates` → filter by period
+3. Discover Linear MCP tools → auth if needed
+4. `list_issues` / `list_projects` / per-Project `get_status_updates` → filter by period; **omit `Pending` Projects from 📢 Update 表**
 5. `Read` `reference/output-template.md` → compose Japanese report
 6. Save `/tmp/linear-weekly-summary.md` → `post-webhook.sh` → short chat confirmation
 
@@ -131,15 +134,11 @@ Skip this section when the webhook URL is unset (env and user message) or the us
 
 ## Usage
 
+Attach this skill or invoke:
+
 ```text
 /linear-weekly-summary
 ```
-
-Trigger phrases (attach or invoke this skill explicitly):
-
-- `先週の Linear サマリを Webhook に送って`
-- `2026-07-26 から 2026-08-02 の週次サマリ`
-- `今週の Update が必要な Project も含めてサマリ`
 
 ## Additional resources
 
