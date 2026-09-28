@@ -1,6 +1,6 @@
 ---
 name: audit-skill
-description: Audits and fixes agent SKILL.md files for discovery, scope, clarity, structure, context efficiency (~500-line cap), and execution safety. Flags prose that does not change a decision and invariants that belong in a check rather than more text. Auto-applies edits for Critical and Major issues; reports Minor as suggestions only.
+description: Audits and fixes agent SKILL.md files for discovery, scope, clarity, structure, context efficiency (~500-line cap), execution safety, named-path accuracy, and conflicts with overlapping always-on rules. Flags prose that does not change a decision and invariants that belong in a check rather than more text. Auto-applies edits for Critical and Major issues; reports Minor as suggestions only.
 disable-model-invocation: true
 ---
 
@@ -86,19 +86,22 @@ Cross-references **Steps §1–§3** mean the **first three items** in this list
    |----------|----------|------------|
    | 1 | Discovery and scope | `name` ≤64 chars, lowercase, hyphenated; `description` states WHAT + WHEN in third person (WHAT-only acceptable when `disable-model-invocation: true`); narrow scope; `disable-model-invocation` matches side-effect vs reference intent |
    | 2 | Structure | YAML frontmatter + Markdown body; not under reserved dirs; headings readable; ~500-line `SKILL.md` cap with progressive disclosure to linked files |
-   | 3 | Instruction quality | Ordered steps; constraints near top; freedom level matches fragility; one default + escape hatch; no contradictions; preserve verbatim user wording; tell the agent to do the thing and skip the reason except when the rule is confusing without one |
+   | 3 | Instruction quality | Ordered steps; constraints near top; freedom level matches fragility; one default + escape hatch; no contradictions inside the skill or with an overlapping always-on rule (a scope-explained difference is an override); all-caps pressure only when it carries the constraint; preserve verbatim user wording; tell the agent to do the thing and skip the reason except when the rule is confusing without one |
    | 4 | Output and examples | Explicit response structure when needed; concrete separated examples; validation loops for quality-critical workflows; a verify or test step when the skill has `scripts/` or a parseable artifact — skip when the work is subjective |
-   | 5 | Tooling and safety | Named tools/commands; forward-slash paths; execute vs read for scripts; restrictions align with steps; workflow feasible |
+   | 5 | Tooling and safety | Named tools/commands; verify a repo path or command a step reads or runs, and flag when it is missing or contradicts the file; forward-slash paths; execute vs read for scripts; restrictions align with steps; workflow feasible |
    | 6 | Context efficiency | No redundant agent-common knowledge; rules near top; progressive disclosure; frontmatter within discovery limits (~1024 chars Cursor / ~1536 Claude Code) |
    | 7 | Authoring anti-patterns | **Minor** only: dated deprecations missing, many equivalent tools with no default, duplicate examples |
    | 8 | Voice and mechanisms | Keep only prose that changes a decision; delegate sibling skills by path instead of restating them; prefer a lint, script, flag, or runtime check over more instruction text |
 
-   When a row is ambiguous, apply the expanded bullet list in [`reference.md`](reference.md) **Audit checklist (expanded)**.
+   When a row is ambiguous, apply the expanded bullet list in [`reference.md`](reference.md) **Audit checklist (expanded)**. Always apply that expanded list for cross-file contradictions, pressure signals (row 3), and named path or command checks (row 5).
 
    **Severity definitions:**
    - `Critical`: likely wrong behavior, unsafe behavior, or failed execution
    - `Major`: materially harms discovery, clarity, maintainability, or audit quality
    - `Minor`: consistency, wording, or optional improvements
+   - **Cross-file contradiction (row 3):** **Critical** when both sides apply to the same action and cannot both be followed. A scope-explained override is not a finding. **Auditing vs executing:** do not weaken the target's Restrictions because the audit session uses shell/tools—the target's bans apply when that skill governs execution, not while it is being read for audit. Auto-fix only inside the target skill, and only when the always-on rule is the invariant; otherwise report under **## Findings** and do not edit outside the skill.
+   - **Pressure signals (row 3):** **Minor**.
+   - **Named path or command (row 5):** **Critical** when a required step's path is missing; **Major** when the file exists but contradicts the skill. Cite the check. Auto-fix by correcting or removing the broken reference in the target skill when the right path is known; if the only remedy is creating a new file, report under **## Findings** with **Suggested fix:** and do not invent the file.
    - **Voice and mechanisms (row 8):** default **Minor**. **Major** when non-decision prose is a large inline block that buries the steps or contributes to the ~500-line problem, or when the body copies another skill's step list instead of linking its path. Encode-in-structure items stay under **## Findings** with **Suggested fix:** (do **not** auto-add lints or scripts — product/scope decision).
 
 1. Apply fixes for **Critical** and **Major** findings (Critical first):
@@ -123,6 +126,7 @@ Requirements here win over [`reference.md`](reference.md) if anything conflicts.
 - **Uncertainty:** Insufficient evidence → do not auto-fix; report under **## Findings** with **cannot determine** / **cannot judge** wording.
 - **Separators:** Between items in the same subsection, use **`Finding 2`**, **`Finding 3`**, … or `---`—do not mix both styles.
 - **## Strengths:** 2–5 bullets; quote short snippets when grounding claims.
+- **After the three sections:** Follow always-on consumer instructions that apply to the audit reply itself (for example confidence rating). Keep **## Changes Applied** → **## Findings** → **## Strengths** in that order; append anything else after **## Strengths**.
 - **Optional prefill:** If the client allows steering the first tokens, prefill with `## Changes Applied` only (no item content)—**full-output path only**; never on early exits (Steps §1–§3).
 
 ## Notes

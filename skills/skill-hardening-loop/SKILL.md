@@ -30,7 +30,7 @@ Orchestrate **audit-skill → empirical-prompt-tuning → skill-optimizer** on o
 - `/skill-hardening-loop @skills/skill-hardening-loop` → self-hardening; logs to `/tmp/skill-hardening-loop/HARDENING.md`.
 
 - Default `--max-rounds`: **5**. At cap, finish all three phases of the **current round**, then stop; do not start the next round.
-- Optional flags from child skills (for example `--audit-only`) are **not** supported unless the user explicitly passes them—this loop always runs the full edit-capable pipeline.
+- Optional flags from child skills (for example `--audit-only`) are **not** supported—this loop always runs the full edit-capable pipeline.
 
 ## Target resolution
 
@@ -243,8 +243,8 @@ Use this structure:
 (Include only when Status is **Converged**. Report Critical/Major status: "clean — no Critical/Major remain" or list issues found. Omit for Max rounds reached / Partial statuses.)
 
 ### Artifacts
-- `/tmp/{skill-name}/HARDENING.md`
-- `/tmp/{skill-name}/BENCHMARKS.md`
+- `/tmp/{skill-name}/HARDENING.md` (always)
+- `/tmp/{skill-name}/BENCHMARKS.md` (only when Phase 2 or Phase 3 created or appended to it; omit for **Partial (dispatch skipped)** and when no benchmark phases ran)
 
 ### Remaining Minor findings
 (when Status is **Converged**: bullets from verification audit **Findings** only—Minor severity; when Status is **Partial (verification audit)**: list unresolved Critical/Major from verification; otherwise from the last round's Phase 1 **Findings**; or "none")

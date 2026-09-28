@@ -35,7 +35,13 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 - Instruction specificity matches task fragility: high freedom for context-dependent work; medium for preferred patterns; low (scripts, exact steps) for fragile or consistency-critical ops
 - Prefer **one default approach with an explicit escape hatch** over many peer options that force discretionary choice
 - Tell the agent to **do the thing**; skip the reason unless the rule is confusing without one. Fragile rules may keep a brief rationale when it changes whether the agent follows the step
-- Instructions do not contradict each other
+- Instructions do not contradict each other inside the skill
+- Compare the skill with always-on instructions that apply to the same action. Read root `CLAUDE.md` and `AGENTS.md` when they exist. For rules under `.claude/rules/`, `.cursor/rules/`, and `.apm/instructions/`, read frontmatter first. Read the body when the rule is unscoped, `alwaysApply: true`, or `applyTo` / `globs` / `paths` is `**/*`. For any other glob, read the body only when it can match the target skill path or a path the skill edits
+- **Critical** when both sides would apply to the same action and the agent cannot follow both. Cite the skill location and the rule location
+- Do not flag a difference the narrower file explains as an override, or a path-scoped rule whose glob cannot match the skill's work
+- Auto-fix only inside the target skill directory, and only when the always-on text is the invariant the skill must follow. If you cannot tell which side wins, report **cannot determine** under **## Findings** and do not edit. Do not edit rule files outside the target skill
+- **Auditing vs executing:** When the target package is under **audit**, the auditor's session may use Read/Glob/shell per client defaults. Do **not** weaken the target's **Restrictions** merely because the audit session uses tools the target would forbid **when that target skill later governs the turn**. Cross-file **Critical** applies when the target text governs the same action as the always-on rule in that same mode (for example the target is the active workflow, not a passive document being reviewed)
+- Grep the files under review for all-caps `MUST`, `NEVER`, `ALWAYS`, `CRITICAL`, and `IMPORTANT`. **Minor** when the caps are emphasis and the sentence already states the action. Do not flag lowercase prohibitions, a caps token that is the only statement of a safety prohibition, these tokens inside fenced examples, or a line that only names this search pattern
 - The skill does not mix too many unrelated objectives
 - User-specified verbatim wording in the target is preserved, not paraphrased or expanded, unless a defect requires changing it
 
@@ -50,6 +56,12 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 ### 5. Tooling, safety, and feasibility
 
 - Required tools or commands are named explicitly
+- When the skill names a repository path, or a command the steps tell the agent to read or run, confirm it with `Read`, `Glob`, `Grep`, or a read-only existence check before scoring this row
+- **Critical** when a required step points at a path that is not there. **Major** when the path or command exists but the skill's claim contradicts what you read — quote both. Ground the finding in that check
+- Auto-fix **Critical** path issues by updating the target skill text when search finds the correct path or the step should be removed. If the only remedy is creating a new file, report under **## Findings** with **Suggested fix:** and do not invent the file
+- If the check could not be run, or the name points outside the workspace, say so. Do not treat the name as verified and do not invent a match
+- If search finds the real path, point the skill at that path in the auto-fix
+- Skip paths the skill marks as hypothetical examples
 - File paths use forward slashes (`scripts/helper.py`), not Windows-style backslashes
 - If `scripts/*` is referenced, the skill states whether the agent should **execute** or **read** each script
 - Restrictions do not conflict with the steps
@@ -396,5 +408,34 @@ Below is a **complete** sample from **## Changes Applied** through **## Strength
 
 - Scope now stops at orchestration instead of duplicating the sibling workflow.
 ```
+
+</example>
+
+<example type="Critical" title="Critical — named path missing (not auto-fixed)">
+
+```markdown
+## Changes Applied
+
+**No edits made.**
+
+## Findings
+
+### Critical
+
+- **Affected section:** Steps
+- **Problem:** Step 2 says to run `scripts/post.sh`, and `Glob` under the skill directory found no `post.sh`. No alternate script exists in the package.
+- **Why it matters:** The step fails on every run. Creating the script would invent behavior the skill does not specify.
+- **Suggested fix:** Remove the step or rewrite it until the script exists; if search finds a different path, auto-fix the target skill to use that path instead of leaving this under **## Findings**.
+
+## Strengths
+
+- The rest of the steps name tools the audit could read.
+```
+
+</example>
+
+<example type="edge" title="Edge — scope override is not a contradiction">
+
+The skill says "This workflow skips the repo's Japanese-reply rule and answers in English." Root `language-usage` says replies are in Japanese. The skill states the narrower override, so both sides are compatible: do not file a contradiction. No finding for this pair.
 
 </example>

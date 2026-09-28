@@ -1,6 +1,6 @@
 # Skill hardening loop — reference
 
-Use when composing round logs, debugging stalls, or validating convergence.
+Reference for round logs, debugging stalls, and convergence validation.
 
 ## HARDENING.md template
 
@@ -76,11 +76,11 @@ No `## Round 2` heading is created — the verification audit is the last block 
 
 ## Worked example (condensed)
 
-**Target:** `skills/draft-pr`
+**Target:** `skills/example-skill` (hypothetical auto-discovered target without `disable-model-invocation: true`)
 
 **Round 1** (condensed narrative below; the actual `HARDENING.md` entry uses the full audit-skill field format per **Phase output**, not this one-line form)
 
-> **Note:** The audit Major below applies to **non-manual-invoke** targets (for example `draft-pr`). For `disable-model-invocation: true` targets, Phase 1 skips discovery WHEN adds per **Manual-invoke targets** in `SKILL.md`.
+> **Note:** The audit Major below applies to **non-manual-invoke** targets only. For `disable-model-invocation: true` targets (for example `skills/draft-pr`), Phase 1 skips discovery WHEN adds per **Manual-invoke targets** in `SKILL.md`.
 
 - Audit: Major fix — add WHEN to `description` *(non-manual-invoke target)*. `audit_edits`: yes
 - Empirical: 3 iterations; executor missed `-adr` option once; fixed with integrated example. `empirical_edits`: yes. Converged: yes
