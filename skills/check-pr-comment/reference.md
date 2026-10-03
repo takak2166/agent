@@ -27,6 +27,8 @@ A **dismiss** summary must name the fact that makes the comment unnecessary, in 
 
 "Looks noisy" or "it's a bot" is not a disproof.
 
+The second read returning the same URL, value, or error is not a disproof of a redundancy claim. That sameness is what the claim asserts. See **Redundant second read**.
+
 ## Recurring skip candidates
 
 Apply a pattern only when **Skip when** holds **and** you can state a disproof. **Do not skip when** always wins.
@@ -46,7 +48,7 @@ Apply a pattern only when **Skip when** holds **and** you can state a disproof. 
 ### Temporary duplication during a parallel path
 
 - Skip when: The PR keeps a short duplicate beside an old path that the same change is deleting, replacing, or proving out
-- Do not skip when: The duplicate changes security, billing, data access, API behavior, or a long-lived shared abstraction would clearly reduce risk
+- Do not skip when: The duplicate changes security, billing, data access, API behavior, or a long-lived shared abstraction would clearly reduce risk. Do not skip when the comment says a second lookup repeats a check the caller already made and the code confirms both reads see the same value — that is **Redundant second read**, not this pattern.
 - Example signal: "Significant duplication" on a local old/new split
 
 ### Existing invariant already covers the warning
@@ -80,6 +82,16 @@ Apply a pattern only when **Skip when** holds **and** you can state a disproof. 
 - Do not skip when: The reply is vague, thanks-only, or off-topic; the claim is ask-by-default and the reply provides no verification; or your code read **contradicts** the reply’s verification claim
 - Example signal: Copilot suggests a different GCS emulator URL path; author replies that local runn passes with the current path and they will align with the existing pattern only if CI fails — thread **dismiss**, not **ask**
 - **Anti-pattern:** listing the reply `id` in coverage or under “返信” but recommending **ask** as if the thread were still undecided
+
+## Redundant second read
+
+Apply when the comment says a lookup, branch, or call is redundant because the caller already checked the same map, flag, or value.
+
+- The claim is **confirmed** when the code shows both reads, and the second read cannot observe a different value than the first (same map, no write between them).
+- Confirmed and local (the second read’s only caller is the branch that already decided): **fix**. Use the first result. Do not keep the second read to preserve identical output.
+- Confirmed but the helper is also called from a path that has **not** already branched on that value: **ask**. Say which call site still needs the check inside the helper.
+- **Dismiss** only when the code shows the two reads are not the same value, or a later edit on the PR already removed the second read.
+- Anti-pattern: “the URL / return value does not change, so dismiss.” Same output confirms the claim.
 
 ## Widen-narrow error conditions
 
