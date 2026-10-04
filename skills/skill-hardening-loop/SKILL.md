@@ -34,15 +34,15 @@ Orchestrate **audit-skill → empirical-prompt-tuning → skill-optimizer** on o
 
 ## Target resolution
 
-Same rules as audit-skill Steps §1–§3:
+Same rules as audit-skill Steps §1–§3 (target path only — **not** the **Child skill paths** resolution list):
 
 1. Directory argument → audit `<directory>/SKILL.md`
 2. File argument → treat as the skill document
 3. Strip a leading `@` from CLI arguments before resolving paths
-4. Missing path → ask and stop
-5. Unresolvable after search → report and stop
+4. **Missing path** (no argument, or empty/whitespace): ask the user for a skill directory or `SKILL.md` path and **stop** — do not create `/tmp/{skill-name}/HARDENING.md`, do not emit **Final report**.
+5. **Unresolvable target** (path given but missing/unreadable after search): use read-only `Glob` / `Grep` in the workspace for candidate `SKILL.md` paths; if still no single readable target, tell the user the path could not be resolved, ask for a corrected path, and **stop** — same as item 4 (no Round 1, no **Final report**).
 
-Use the target's frontmatter `name` as `{skill-name}` for `/tmp/{skill-name}/` logs.
+Use the target's frontmatter `name` as `{skill-name}` for `/tmp/{skill-name}/` logs **only after** a readable target is resolved.
 
 ## Manual-invoke targets (`disable-model-invocation: true`)
 
@@ -208,6 +208,8 @@ After Phase 3:
 | Phase 2 or Phase 3 skipped (no Task) | **Partial stop** — report; do not claim full convergence; `BENCHMARKS.md` is not created; do not start the next round |
 
 **Partial stop (dispatch unavailable):** After Phase 1, skip Phase 2 and Phase 3 entirely. Log both phases as `skipped` in `HARDENING.md`; set Round result `converged this round: no`. Emit Final report immediately with Status **Partial (dispatch skipped)** — include message `empirical/optimizer evaluation skipped: dispatch unavailable` in Notes. Round summary: `skipped` for empirical/optimizer columns. **Artifacts:** list `HARDENING.md` only (note `BENCHMARKS.md` not created). Omit **Verification audit**. **Recommended follow-ups:** rerun in a session where Task dispatch is available.
+
+**Partial-stop Final report fields:** `Rounds completed` is the number of rounds that started (here, 1). **Target** uses the resolved absolute or workspace-relative `SKILL.md` path. Strip template conditional lines such as `(Include only when …)` from output—do not paste them into the report. **Remaining Minor findings** come from that round's Phase 1 **Findings** (Minor only), including manual-invoke discovery skips logged in the round—not from verification audit. List `/tmp/{skill-name}/HARDENING.md` in **Artifacts** only when Phase 1 actually created it; otherwise note the path as not yet created.
 
 **Inner vs outer convergence:** Phase 2 tracks empirical inner-loop convergence (`Converged: yes/no` in its iteration block). Phase 3 runs one measure → edit → re-run cycle per round when gaps exist. Outer-loop convergence is separate: all three phases must make zero edits in one full round.
 
