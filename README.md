@@ -33,7 +33,7 @@ dependencies:
     - takak2166/agent/skills/draft-pr
 ```
 
-All skills: [`apm.yml.example`](./apm.yml.example).
+All skills: [`apm.yml.example`](./apm.yml.example). For post-session skill/rule updates, use **`/my-reflect`** (`skills/my-reflect/`) — aligned with this package's instruction hygiene; do not duplicate [pstack's upstream reflect](https://github.com/cursor/plugins/blob/main/pstack/skills/reflect/SKILL.md).
 
 ## Install rules (APM)
 

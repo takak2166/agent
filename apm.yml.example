@@ -22,6 +22,8 @@ dependencies:
     - takak2166/agent/skills/linear-weekly-summary
     - takak2166/agent/skills/my-grill-me
     - takak2166/agent/skills/ready-pr
+    # /my-reflect — session lessons → skill/rule edits; structure-first via instruction-hygiene (not cursor/plugins pstack reflect)
+    - takak2166/agent/skills/my-reflect
     - takak2166/agent/skills/reply-pr-comment
     - takak2166/agent/skills/audit-skill
     - takak2166/agent/skills/update-doc
