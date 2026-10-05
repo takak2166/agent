@@ -22,5 +22,4 @@ When a recurring mistake or correction emerges:
   2. **Linter / CI checks**: fail on banned APIs or prohibited patterns
   3. **Canonical helper**: provide a single shared implementation
   4. **Runtime assertion**: validate at system boundaries
-- When automated checks reliably prevent the failure across all consumers, delete the redundant instruction text. Keep critical safety prohibitions in instructions even if partially linted.
 - Only keep instructions purely as text when automated evaluation is impossible (e.g. design judgment, subjective quality). In those cases, provide a clear negative example.
