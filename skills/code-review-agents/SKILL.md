@@ -13,20 +13,20 @@ Orchestrate 8 specialist analysis subagents (parallel), then 1 integration subag
 These bullets govern the orchestrator (you):
 
 - Do not modify any file — this skill produces review output only.
-- Do not post review comments to GitHub (use `reply-pr-comment` for that).
+- Do not post review comments to GitHub (use `/reply-pr-comment` for that).
 - Limit shell use to `gh pr diff`, `git diff`, `git log`, `git branch`, `git branch --list`, and `git status --porcelain`. Inspect the workspace with `Read`, `Glob`, and `Grep` only (no `ls`, `cat`, `find`, or similar).
 - Do not create git commits.
 
 Subagents carry their own constraints: copy **Shared: Restrictions** from [agent-prompts.md](agent-prompts.md) verbatim as the first block of every analysis and integration `Task` prompt. Never substitute the bullets above into a `Task` prompt, and never merge the two blocks.
 
-## Before launching subagents
+## Before launching analysis subagents
 
-Confirm all four:
+Confirm all four before the eight parallel analysis `Task` calls (Step 7 integration uses the same **Shared: Restrictions** rule separately):
 
-- [ ] Code Context block for the current round is complete — Changed Files + optional Project Notes + Diff + File Contents (Step 4)
+- [ ] Code Context block for the current round is complete — Changed Files + Diff + File Contents; add **Project Notes** only when Step 2 surfaced structure facts (Step 4)
 - [ ] [agent-prompts.md](agent-prompts.md) read (Step 3)
-- [ ] All 8 analysis `Task` calls go out in a single message (Step 5)
-- [ ] Every `Task` prompt starts with **Shared: Restrictions**
+- [ ] Launch plan ready: all 8 analysis `Task` calls will go in one assistant message (Step 5)
+- [ ] Each of the 8 analysis `Task` prompts starts with **Shared: Restrictions** from [agent-prompts.md](agent-prompts.md)
 
 ## Usage
 
@@ -42,7 +42,7 @@ Confirm all four:
 
 ## Steps
 
-1. **Determine the review target** — run the command for the resolved argument per the table above, then collect the changed files with a one-line summary each (`hunks:<N>, +<A>/-<D>`). In the **no-argument flow**, run `git diff --staged` first, run `git diff HEAD` only when staged output is empty, then run `git status --porcelain` — never run porcelain before the staged/HEAD diff sequence. Run only the commands named in the table and in **Restrictions**: use `git status --porcelain` for working-tree state, not bare `git status` or `git diff --stat`. When the resolved diff has no changed files, tell the user there is nothing to review and stop — never launch subagents on an empty diff. For number-vs-branch ambiguity, untracked files, empty-diff reporting, or unavailable `gh`, follow [reference.md](reference.md) **Target resolution**.
+1. **Determine the review target** — run the command for the resolved argument per the table above, then collect the changed files with a one-line summary each (`hunks:<N>, +<A>/-<D>`). In the **no-argument flow**, run `git diff --staged` first, run `git diff HEAD` only when staged output is empty, then run `git status --porcelain` — never run porcelain before the staged/HEAD diff sequence. Run only the commands named in the table and in **Restrictions**: use `git status --porcelain` for working-tree state, not bare `git status` or `git diff --stat`. Compute each `hunks:<N>, +<A>/-<D>` summary by reading the diff text — never pipe it through `awk`, `grep`, `wc`, or similar. When staged/HEAD diffs are empty **and** porcelain shows no untracked paths to include per [reference.md](reference.md) **Untracked files**, tell the user there is nothing to review and stop — never launch subagents with zero files in scope. When diffs are empty but porcelain lists untracked paths, include those files (not an empty-diff stop). For number-vs-branch ambiguity, empty-diff reporting, or unavailable `gh`, follow [reference.md](reference.md) **Target resolution**.
 
 2. **Gather full context** — `Read` each changed file in full (not only the diff hunk), detect the primary language(s) from file extensions, and optionally `Glob` relevant directories to understand project structure. When the diff is large, group files into rounds before reading (see [reference.md](reference.md) **Context budget and rounds**).
 
@@ -55,16 +55,16 @@ Confirm all four:
    <changed files, one line of summary each>
 
    ## Project Notes
-   <optional: structure facts from Step 2 that change how findings should be read, e.g. "no test directory exists">
+   <optional — omit this heading entirely when Step 2 found nothing: structure facts that change how findings should be read, e.g. "no test directory exists">
 
    ## Diff
-   <diff for the files in this round>
+   <diff for the files in this round; write "(none — untracked files only)" when the round has no diff blocks>
 
    ## File Contents
    <full content of each file in this round, labeled by path>
    ```
 
-   Keep each round's Code Context under ~50 000 characters; the same block is duplicated into 8 prompts, so split at ~35–40k when close to the limit. Grouping, merging, and per-round rules: [reference.md](reference.md) **Context budget and rounds**.
+   Keep each round's Code Context under ~50 000 characters; the same block is duplicated into 8 prompts, so split at ~35–40k when close to the limit. **Multi-round:** list only this round's files under Changed Files; repeat Steps 4–6 per round, then run Step 7 once on concatenated specialist outputs from all rounds ([reference.md](reference.md) **Context budget and rounds**). Grouping, merging, and per-round rules: same section.
 
 5. **Launch the 8 analysis subagents in parallel** — issue 8 `Task` calls in one assistant message so they run concurrently:
 
