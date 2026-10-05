@@ -18,7 +18,7 @@ Interview the user until you share one design. Do not implement the subject of t
 
 Run only when this skill is explicitly attached or the user invokes `/my-grill-me`. If the same turn also asks to implement something, grill first and do not implement.
 
-The interview **subject** is the plan, decision, or idea in the user's message. If none is given, ask once via the question tool what to stress-test, then begin the design tree.
+The interview **subject** is the plan, decision, or idea in the user's message. If none is given, ask once via the question tool what to stress-test, then wait for the reply — do not re-ask the same subject question or start the design tree until a subject exists. That subject-only turn is not a logical round: emit only the single subject question (no **Expected output** round sections yet).
 
 ## Non-negotiables
 
@@ -34,7 +34,7 @@ Classify each frontier item **before** adding it to a question-tool payload. Sto
 
 | Class | Test | Action |
 |-------|------|--------|
-| **Look-up** | The answer exists in the repo, docs, git history, MCP, or a cheap **read-only** command (how it works today, a type, whether a caller exists, current timing of an existing path) | Look it up (tools / sub-agents). Do not ask. |
+| **Look-up** | The answer exists in the repo, docs, git history, MCP, or a cheap **read-only** command (how it works today, a type, whether a caller exists, current timing of an existing path) | Look it up (tools / subagents). Do not ask. If the subject's code is in another repo or not in the workspace, record what you could not verify — do not ask the user for facts a read would answer once the path is known. |
 | **Empirical** | Running, measuring, or a throwaway sketch could settle it (behavior, timing, layout, output, perf, whether two approaches actually differ) | Do **not** ask as if the user knows. Do **not** prototype or implement during this skill. **Park** it: what to observe later, and which later decision it unlocks. |
 | **Preference** | No experiment can settle it (taste, priority, risk appetite, who it is for, what "done" means, which users to serve) | Ask via the question tool. |
 
@@ -56,7 +56,7 @@ Running **existing** code, tests, or traces to learn the current system is look-
 
 **Each logical round (in order):**
 
-1. Short **settled decisions** list (bullets).
+1. Short **settled decisions** list (bullets). On the first logical round after the subject is known, you may seed this list from scope and options the user already stated in their opening message.
 2. **Looked-up facts** this round (one line each) and **parked empirical** items (what to observe later, what it unlocks). Omit a subsection when empty.
 3. One or more structured-question tool calls covering the **preference** frontier only (batched only when the tool caps questions per call).
 4. No implementation, edits, prototypes, or other action on the interview subject.
@@ -118,9 +118,12 @@ Each round: follow **Expected output** above.
 Use only when neither structured-question tool exists:
 
 ```
-❓ **Q1** - **<title>**: <body, including choices>
+❓ **Q1** - **<title>**: <body>
 
-➡️ <recommended answer>
+1. (Recommended) <first option label>
+2. <second option label>
+
+➡️ (Recommended) <first option label>
 ```
 
 ## Session end
