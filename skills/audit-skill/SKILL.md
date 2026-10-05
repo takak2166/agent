@@ -84,8 +84,8 @@ Cross-references **Steps §1–§3** mean the **first three items** in this list
 
    | Priority | Category | Key checks |
    |----------|----------|------------|
-   | 1 | Discovery and scope | `name` ≤64 chars, lowercase, hyphenated; `description` states WHAT + WHEN in third person (WHAT-only acceptable when `disable-model-invocation: true`); narrow scope; `disable-model-invocation` matches side-effect vs reference intent |
-   | 2 | Structure | YAML frontmatter + Markdown body; not under reserved dirs; headings readable; ~500-line `SKILL.md` cap with progressive disclosure to linked files |
+   | 1 | Discovery and scope | `name` ≤64 chars, lowercase, hyphenated, no `anthropic`/`claude`; no XML in `name` or `description`; `description` states WHAT + WHEN in third person (WHAT-only acceptable when `disable-model-invocation: true`); narrow scope; `disable-model-invocation` matches side-effect vs reference intent |
+   | 2 | Structure | YAML frontmatter + Markdown body; not under reserved dirs; headings readable; ~500-line `SKILL.md` cap with progressive disclosure to linked files; TOC at the top of reference files over ~100 lines |
    | 3 | Instruction quality | Ordered steps; constraints near top; freedom level matches fragility; one default + escape hatch; no contradictions inside the skill or with an overlapping always-on rule (a scope-explained difference is an override); all-caps pressure only when it carries the constraint; preserve verbatim user wording; tell the agent to do the thing and skip the reason except when the rule is confusing without one |
    | 4 | Output and examples | Explicit response structure when needed; concrete separated examples; validation loops for quality-critical workflows; a verify or test step when the skill has `scripts/` or a parseable artifact — skip when the work is subjective |
    | 5 | Tooling and safety | Named tools/commands; verify a repo path or command a step reads or runs, and flag when it is missing or contradicts the file; forward-slash paths; execute vs read for scripts; restrictions align with steps; workflow feasible |
@@ -93,7 +93,7 @@ Cross-references **Steps §1–§3** mean the **first three items** in this list
    | 7 | Authoring anti-patterns | **Minor** only: dated deprecations missing, many equivalent tools with no default, duplicate examples |
    | 8 | Voice and mechanisms | Keep only prose that changes a decision; delegate sibling skills by path instead of restating them; prefer a lint, script, flag, or runtime check over more instruction text |
 
-   When a row is ambiguous, apply the expanded bullet list in [`reference.md`](reference.md) **Audit checklist (expanded)**. Always apply that expanded list for cross-file contradictions, pressure signals (row 3), and named path or command checks (row 5).
+   When a row is ambiguous, apply the expanded bullet list in [`reference.md`](reference.md) **Audit checklist (expanded)**. Always apply that expanded list for frontmatter reserved words and XML (row 1), reference-file contents (row 2), cross-file contradictions, pressure signals (row 3), and named path or command checks (row 5).
 
    **Severity definitions:**
    - `Critical`: likely wrong behavior, unsafe behavior, or failed execution

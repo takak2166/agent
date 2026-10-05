@@ -2,6 +2,21 @@
 
 Reference for round logs, debugging stalls, and convergence validation.
 
+## Contents
+
+- HARDENING.md template
+- Worked example (condensed)
+- Failure modes
+- Phase handoff rules
+- Convergence decision tree
+- Relationship to child skills
+- Chain-following and eval-meta sanitization
+  - Transcript scope
+  - `chain_follow` labels
+  - Eval-meta sanitization
+  - Parent read-through
+- Phase 3 anti-leakage example
+
 ## HARDENING.md template
 
 Create `/tmp/{skill-name}/HARDENING.md` on Round 1:

@@ -2,6 +2,27 @@
 
 Use this file when auditing a target skill. Requirements in `SKILL.md` **Audit Output** always win if anything conflicts.
 
+## Contents
+
+- Audit checklist (expanded)
+  - 1. Discovery and scope
+  - 2. Structure and maintainability
+  - 3. Instruction quality
+  - 4. Output and examples
+  - 5. Tooling, safety, and feasibility
+  - 6. Context efficiency
+  - 7. Authoring anti-patterns
+  - 8. Voice and mechanisms
+- Integrated workflow example
+- Audit output — templates and examples
+  - Full template (fixed + suggested)
+  - Empty sections
+  - Multiple items in the same subsection
+  - Iterative re-audit (multi-pass)
+  - Suggested fix — weak vs strong
+  - Fix applied — weak vs strong
+  - Few-shot examples
+
 ## Audit checklist (expanded)
 
 Apply in priority order. For supporting files without YAML frontmatter, skip **Discovery and scope** and bullets that require frontmatter.
@@ -9,6 +30,7 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 ### 1. Discovery and scope
 
 - `name` is specific, lowercase, hyphenated, and not vague; **≤ 64 characters**; avoid generic names such as `helper`, `utils`, or `tools`
+- `name` and `description` contain no XML tags. `name` does not contain the reserved words `anthropic` or `claude`. **Major** when either is present: Claude's loader rejects the skill. Do not auto-rename `name`; it is the install path and the slash command. Report the name under **## Findings** with **Suggested fix:**. Remove XML from `description` when the remaining sentence is unchanged
 - `description` explains both WHAT the skill does and WHEN to use it, in **third person** (not "I can help" or "You can use"); for targets with `disable-model-invocation: true`, factual WHAT-only is acceptable—do not Major-fix absent discovery WHEN
 - Trigger scenarios are specific enough for discovery
 - The skill scope is narrow enough to avoid unrelated tasks
@@ -27,6 +49,7 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
   - **Minor** when the file is roughly **300–500 lines** with blocks that clearly belong in `reference.md` / `examples.md`, or when slightly over 500 lines but progressive disclosure is already used well
   - Do not flag length alone when the file is well under 300 lines
 - Terminology is consistent throughout
+- **Reference-file contents:** A linked reference file longer than ~100 lines has a table of contents at the top, so a partial read still shows the section list. **Minor** when it does not. Skip a file whose body is a paste-verbatim template, such as an output skeleton
 
 ### 3. Instruction quality
 
