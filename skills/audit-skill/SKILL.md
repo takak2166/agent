@@ -62,6 +62,21 @@ Example invocations (`disable-model-invocation` is true; attach or run the skill
 
 Resolve the target and follow **Steps** (constraints above apply to the whole workflow). For a full path-to-reply walkthrough, see the integrated example in [`reference.md`](reference.md).
 
+## Auditor checklist
+
+Copy each pass and mark before composing the final reply:
+
+```
+Audit pass:
+- [ ] Target `SKILL.md` and every directly linked supporting file read
+- [ ] This package's `reference.md` read for output templates (not the target's `reference.md` unless auditing this package)
+- [ ] Checklist rows 1–8 applied; expanded bullets from reference for rows 1–3, 5–6
+- [ ] Always-on rules checked when they can apply to the same action
+- [ ] Critical/Major fixes applied in the target skill directory only; Minor reported only
+- [ ] Final reply order: ## Changes Applied → ## Findings → ## Strengths
+- [ ] Re-audit from supporting-files step when this pass fixed any Critical/Major (repeat-until-Minor mode only)
+```
+
 ## Steps
 
 Cross-references **Steps §1–§3** mean the **first three items** in this list (missing path; not a skill document; resolve target—including unresolvable stop).
@@ -77,7 +92,7 @@ Cross-references **Steps §1–§3** mean the **first three items** in this list
    - Use `Glob` on that parent to list sibling `SKILL.md` paths (for example `*/SKILL.md`).
    - When at least one sibling exists besides the target, `Read` at least one sibling far enough to compare frontmatter (`name`, `description`) and top-level heading structure; read more siblings only when needed for the audit.
    - Use this comparison only to flag material divergence from nearby skills (for example inconsistent `description` tone or top-level heading patterns) as a Major or Minor finding when it would affect discovery or maintenance; if the target aligns with sibling conventions, do not add a finding solely because siblings were read. **Do not use sibling alignment to downgrade or skip checklist-driven Critical or Major items** (for example missing WHEN in `description` stays Major for auto-discovered skills even when a sibling shares the same gap; for targets with `disable-model-invocation: true`, WHAT-only `description` is acceptable per checklist row 1).
-   - If there is no such parent or no sibling exists, skip this step.
+   - If there is no such parent, no sibling exists, or `Glob` on the target's parent finds no other `SKILL.md` (for example a standalone package under `/tmp/`), skip this step.
    - Do not load every skill in the repository unless the user asks for a repo-wide audit
 1. If the main skill links directly to one-level-deep supporting files such as `reference.md`, `examples.md`, or `scripts/*`, read them with `Read` (use `Glob` or `Grep` / ripgrep (`rg`) to locate paths when needed). Validate claims in the main skill **and** audit those files with the same checklist where applicable (the ~500-line cap applies to `SKILL.md` only). Fix Critical/Major issues in supporting files per **Restrictions**.
 1. Audit the target skill package—the primary `SKILL.md` plus any linked supporting files read in the prior step—using the checklist below in priority order. Apply each row to the file under review; for supporting files without YAML frontmatter, skip **Discovery and scope** and any bullet that requires frontmatter.
@@ -135,4 +150,4 @@ Requirements here win over [`reference.md`](reference.md) if anything conflicts.
 - Maintainer eval run history is **local only** at `/tmp/{skill-name}/BENCHMARKS.md` (for this skill: `/tmp/audit-skill/BENCHMARKS.md`). Use the target skill's frontmatter `name` as `{skill-name}`. **Do not read during normal audits**; create or append only after `/empirical-prompt-tuning` or maintainer spot-checks.
 - Optional eval fixtures for maintainer spot-checks live under `/tmp/{skill-name}/fixtures/` (for this skill: `/tmp/audit-skill/fixtures/`). **Do not read during normal audits**; use only when running empirical evals—not as audit targets unless the user explicitly points there.
 - **Restrictions** before **Usage** and **Steps** is intentional—edit-scope and fix-vs-suggest rules must be visible early.
-- After auditing, invoke **`/empirical-prompt-tuning`** explicitly when measured iteration or release hardening is needed; append results to `/tmp/{skill-name}/BENCHMARKS.md`.
+- For **full hardening** (audit → empirical → optimizer rounds), use **`/skill-hardening-loop`** on the target path (`skills/skill-hardening-loop/SKILL.md` in this repo; APM installs transitive child skills). For **empirical iteration only**, invoke **`/empirical-prompt-tuning`** and append results to `/tmp/{skill-name}/BENCHMARKS.md`.
