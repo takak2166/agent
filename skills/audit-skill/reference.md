@@ -44,6 +44,7 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 - Markdown is the default structure for human-maintained sections
 - XML is used only where strict boundaries help the model parse inputs, outputs, or examples
 - The main `SKILL.md` stays concise; move long details to directly linked reference files when needed
+- **Progressive disclosure / reference depth:** Every supporting file the agent must read for the workflow should be **one hop** from `SKILL.md` (direct links to `reference.md`, `examples.md`, `scripts/*`, and similar). **Major** when essential instructions or templates exist only behind a chain (`SKILL.md` → `reference.md` → `other.md`) with no direct link from `SKILL.md`. Cross-links between supporting files (for example `reference.md` ↔ `examples.md`) are fine—the rule is reachability from the entry point, not forbidding sibling links
 - **`SKILL.md` length:** Treat **500 lines** as the recommended upper bound for the main file (Claude Code and Cursor authoring guidance). Count from the `Read` output. This is a soft limit—not a fail-by-default rule:
   - **Major** when the file exceeds ~500 lines and long sections, templates, or examples remain inline instead of linked reference files—or when length likely harms invocation context or maintainability
   - **Minor** when the file is roughly **300–500 lines** with blocks that clearly belong in `reference.md` / `examples.md`, or when slightly over 500 lines but progressive disclosure is already used well
@@ -54,6 +55,7 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 ### 3. Instruction quality
 
 - Steps are clear, direct, and ordered
+- Long multi-step workflows with easily skipped tail steps (final verification, cleanup, status update, comment post) include a **copy-paste checklist** the agent can mark as it goes. **Minor** when omission is likely and the skill relies only on prose numbering; skip when the workflow is short or a single linear path with no optional branches
 - Important constraints appear near the top
 - Instruction specificity matches task fragility: high freedom for context-dependent work; medium for preferred patterns; low (scripts, exact steps) for fragile or consistency-critical ops
 - Prefer **one default approach with an explicit escape hatch** over many peer options that force discretionary choice
@@ -87,6 +89,9 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 - Skip paths the skill marks as hypothetical examples
 - File paths use forward slashes (`scripts/helper.py`), not Windows-style backslashes
 - If `scripts/*` is referenced, the skill states whether the agent should **execute** or **read** each script
+- **Script quality (when `scripts/` ships runnable helpers):** Scripts **solve, don't defer**—handle expected failures with clear messages and recovery hints instead of failing opaquely and leaving interpretation to the agent. **No voodoo constants**—timeouts, retries, limits, and magic numbers include a brief comment on why that value was chosen. Runtime dependencies (interpreters, CLIs, packages) are named in `SKILL.md` (for example a **Prerequisites** section), not only inside script comments. **Minor** when one of these gaps makes failures harder to debug; **Major** when a script is central to the workflow and omits prerequisites or error handling the steps assume
+- **Destructive or batch workflows:** Prefer an explicit **plan → validate (dry-run or read-only check) → execute** sequence when steps delete data, rewrite many files, or send irreversible side effects. **Minor** when the skill jumps straight to execution without a validation gate the environment could support
+- **MCP tools:** Portable docs often show fully qualified names such as `ServerName:tool`. Hosts differ (Cursor: namespace + tool discovery via **`GetDynamicTools`**, then **`CallDynamicTool`**; other clients may use **`GetMcpTools`** or catalog equivalents). The skill should tell the agent to **read tool descriptors before calling** and to use the host's namespace or server id—not a hardcoded name from another product—unless the skill documents a fixed integration. **Minor** when MCP steps cite generic or stale tool ids without a discovery step; **Major** when named tools cannot exist on the stated host and the workflow would fail on every run
 - Restrictions do not conflict with the steps
 - The workflow is executable in the intended environment
 - The skill avoids dangerous, impossible, or underspecified instructions
@@ -96,7 +101,11 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 - The file avoids redundant explanation the agent likely already knows
 - Important rules are near the top
 - Background detail is loaded progressively instead of packed into `SKILL.md`
-- Frontmatter `description` (and `when_to_use` when present) stays within discovery limits—roughly **1024 characters** for Cursor skills and **1536 characters** combined for Claude Code skill listings; flag **Major** when trigger phrases are buried or likely truncated because the text is padded
+- Frontmatter discovery text stays within limits and front-loads trigger phrases:
+  - **Format cap (Anthropic skill spec):** `description` alone **≤ 1024 characters** (applies across hosts that follow the spec)
+  - **Claude Code listing budget:** In skill pickers/listings, **`description` + `when_to_use` combined** are truncated at **1536 characters**—keep WHAT + WHEN in the portion that survives truncation, not only at the end of a long block
+  - **Cursor:** Treat **~1024 characters** on `description` as the practical discovery budget when `when_to_use` is absent or unused
+  - Flag **Major** when trigger phrases are buried or likely truncated because the text is padded; **Minor** when slightly over a limit but WHAT/WHEN remain in the first ~200 characters
 
 ### 7. Authoring anti-patterns (Cursor `create-skill` alignment)
 
