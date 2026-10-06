@@ -1,6 +1,6 @@
 ---
 name: my-reflect
-description: Extracts durable lessons from a finished agent session (transcript or current chat), triages them through Judgment / Tooling / Divergent lenses and a synthesizer, and applies only user-approved updates to Skills or always-on instructions. Routes enforceable fixes to backlog instead of prose.
+description: Extracts durable lessons from a finished agent session (transcript or current chat), triages them through Judgment / Tooling / Divergent lenses and a synthesizer, classifies failure-driven lessons as context, permissions, or model-capability, and applies only user-approved updates to Skills or always-on instructions. Routes enforceable fixes to backlog instead of prose.
 disable-model-invocation: true
 ---
 
@@ -72,7 +72,7 @@ Reflect:
 
 ### Step 0 — Eligibility
 
-Apply **When to run (and when to stop)**. If stopping, say why in one short paragraph.
+Apply **When to run (and when to stop)**. If stopping, reply with **one short user-facing paragraph** (reason only)—do **not** run Steps 1–7, do **not** emit `## Reflect — synthesizer result`, and do **not** produce Step 7's brief report block. An optional progress checklist with only Step 0 marked is fine; skip it when the paragraph alone is enough.
 
 ### Step 1 — Transcript / session source
 
@@ -97,18 +97,21 @@ Each candidate must include:
 - **Principle** — one sentence that should still guide the **next** session
 - **Evidence** — quote or paraphrase the triggering moment
 - **Destination** — skill path, `.apm/instructions/*.instructions.md`, or **Backlog (structure)**
+- **Failure class** — `context` | `permissions` | `model-capability` | `n/a` (see [`reference.md`](reference.md) **Failure class** when the lesson comes from agent failure)
 
 **Destination rule:** prefer a skill the conversation **actually used**. If a skill should have been used but was not, propose a fix in that skill—not a duplicate workflow elsewhere. For **auto-discovered** skills, tune `description` / Usage for activation. For **`disable-model-invocation: true`** destinations, change **Usage / Steps / execution clarity** only—do not add discovery WHEN or trigger lists to `description`.
 
 ### Step 3 — Synthesize
 
-Merge candidates with the **synthesizer criteria** in [`reference.md`](reference.md). Bucket each item:
+Merge candidates with the **synthesizer criteria** and **Failure class gate** in [`reference.md`](reference.md). For each failure-driven candidate, set **Failure class** before bucketing (`context` → skill/rule/Backlog; `permissions` → Backlog or minimal skill note on required permissions; `model-capability` → **Rejected**, no instruction bloat). Before **Rejected** with tag **`model-capability`**, **Read** the cited skill or rule file when the destination is a path and confirm the invariant is already stated—otherwise reclassify as **`context`**.
+
+Bucket each item:
 
 | Bucket | Meaning |
 |--------|---------|
 | **Accepted** | Durable, actionable, correct destination |
-| **Rejected** | With one-line reason |
-| **Backlog** | Enforceable by lint/script/CI or needs a human ticket |
+| **Rejected** | With one-line reason (include tag when applicable, e.g. `model-capability`) |
+| **Backlog** | Enforceable by lint/script/CI, permission or env grant, or needs a human ticket |
 
 ### Step 4 — Structural → Backlog
 
@@ -120,7 +123,7 @@ For Backlog entries, draft a **one-line Linear-style title** and body bullet the
 
 Output **before any edits**. Keep all three subsections below; when a bucket is empty, write `- none` under that heading (do not omit the heading).
 
-**Number every Accepted item** with `1.`, `2.`, `3.`, … (sequential integers starting at 1). The closing line tells the user to reply with those numbers—checkboxes alone are not enough.
+**Number every Accepted item** with `1.`, `2.`, `3.`, … (sequential integers starting at 1). The closing line tells the user to reply with those numbers—checkboxes alone are not enough. Use **`n/a`** for **Failure class** when the lesson is not failure-driven.
 
 ```markdown
 ## Reflect — synthesizer result
@@ -129,19 +132,21 @@ Output **before any edits**. Keep all three subsections below; when a bucket is 
 
 1. **Principle:** …
    - **Evidence:** …
+   - **Failure class:** …
    - **Destination:** …
    - **Proposed change:** …
 
 2. **Principle:** …
    - **Evidence:** …
+   - **Failure class:** …
    - **Destination:** …
    - **Proposed change:** …
 
 ### Backlog (structure / tickets)
-- …
+- … (include **Failure class** when not `n/a`)
 
 ### Rejected
-- … — reason
+- … — reason (tag, e.g. `model-capability`)
 
 Reply with which Accepted items to apply (numbers, e.g. `1`, `1 and 3`, or quotes), or "none".
 ```
@@ -165,7 +170,7 @@ One block:
 
 - Applied (file + one line each)
 - Backlog (titles only)
-- Rejected (count + top reason if any)
+- Rejected (count + top reason if any; note any **`model-capability`** items—no skill edit expected)
 - Source (transcript path or "current chat")
 
 ## Integrated example
@@ -176,9 +181,11 @@ One block:
 2. **Step 2 — Judgment:** "Public repo PR text must not leak internal tracker URLs" → destination `skills/draft-pr/SKILL.md` (already partially covered—propose tightening Non-negotiables).
 3. **Step 2 — Tooling:** "`gh repo view --json visibility` before compose" → same destination, evidence from failed assumption.
 4. **Step 2 — Divergent:** Agent nearly skipped visibility check because template was read first → propose checklist order in Steps.
-5. **Step 3** — both Accepted; nothing to Backlog.
+5. **Step 3** — Judgment and Tooling merge into one Accepted item; Divergent checklist order folds into the same proposal (`Failure class: context`); nothing to Backlog.
 6. **Step 5** — user approves item 1 only.
 7. **Step 6** — edit `draft-pr` Non-negotiables only; report.
+
+**Failure-class example (same session, different lesson):** Agent could not push because sandbox blocked network → **Tooling** candidate with **`permissions`** → **Backlog** title "Grant network for gh push in agent sandbox". User asked to "try harder on the proof" after the skill already required running tests → **`model-capability`** → **Rejected**; Step 7 notes one line, no new rule text.
 
 ## Additional resources
 
