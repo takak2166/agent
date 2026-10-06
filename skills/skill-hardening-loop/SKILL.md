@@ -85,15 +85,41 @@ Read the full `SKILL.md` (and linked files that skill requires) at phase start. 
 | 2 | empirical-prompt-tuning | `SKILL.md` |
 | 3 | skill-optimizer | `SKILL.md`, `rules/benchmark-loop.md`, `rules/activation-design.md`, `rules/regression-triage.md`, `rules/release-gates.md` |
 
-**Path resolution (all phases):** try in order; use the first directory that contains the skill's `SKILL.md`:
+**Path resolution (all phases):** try in order; use the first directory whose `SKILL.md` you **actually read** (or shell `test -r` confirms). **Do not** treat workspace-only `Glob` as proof a path is missing—on many hosts `Glob` does not index `$HOME/.claude/skills/` or other paths outside the workspace even when `Read` succeeds.
 
-1. `.agents/skills/<skill-name>/` — APM default for Cursor, Copilot, Codex, Gemini, Windsurf, OpenCode
-2. `.claude/skills/<skill-name>/` — APM default for Claude Code (project-local)
-3. `skills/<skill-name>/` — source layout in `takak2166/agent` or vendored monorepo skills
-4. `~/.claude/skills/<skill-name>/` — manual global install (Claude Code)
-5. `Glob` search for `<skill-name>/SKILL.md`
+For each candidate below, resolve to `<dir>/SKILL.md` and confirm readability before moving to the next step:
 
-**Unresolved child skill:** If no path yields a readable `SKILL.md` after step 5, stop immediately. Report `child skill unresolved: {skill-name}` and the phase that needed it. Do **not** substitute that child from memory. Do **not** continue phases that depend on it. Do **not** claim outer convergence. Log remaining phases as `skipped` in `HARDENING.md`; emit Final report with Status **Partial (child skill unresolved)**; Artifacts: `HARDENING.md` only (`BENCHMARKS.md` only if Phase 2 already wrote it); Recommended follow-ups: install/restore the child (e.g. `apm deps tree` / install this package) and rerun.
+1. `<workspace>/.agents/skills/<skill-name>/` — APM default for Cursor, Copilot, Codex, Gemini, Windsurf, OpenCode
+2. `<workspace>/.claude/skills/<skill-name>/` — APM default for Claude Code (project-local)
+3. `<workspace>/skills/<skill-name>/` — source layout in `takak2166/agent` or vendored monorepo skills
+4. `$HOME/.claude/skills/<skill-name>/` — global Claude Code install; expand `$HOME` (or `~`) and **`Read` or `test -r`**—never skip this step because workspace `Glob` returned zero
+5. `$HOME/.agents/skills/<skill-name>/` — global APM user scope when present
+6. `Glob` under the **workspace root** for `<skill-name>/SKILL.md` only when steps 1–5 did not resolve
+
+**Shell probe (when unsure):** before **Unresolved child skill**, you may run:
+
+```bash
+for d in \
+  ".agents/skills/<skill-name>" \
+  ".claude/skills/<skill-name>" \
+  "skills/<skill-name>" \
+  "$HOME/.claude/skills/<skill-name>" \
+  "$HOME/.agents/skills/<skill-name>"; do
+  if test -r "$d/SKILL.md"; then echo "$d"; break; fi
+done
+```
+
+Run from the workspace root for relative entries. **`Read`** that `SKILL.md` before starting the phase.
+
+**Phase start log [critical]:** At the start of Phase 1, 2, and 3, append to the current round in `HARDENING.md`:
+
+```text
+Child skill resolved: {skill-name} → {absolute path to skill directory}
+```
+
+Use the directory you actually read for that phase (prefer absolute paths for `$HOME/…` entries). If workspace step 3 and global step 4 both exist, follow the ordered list—do not assume the workspace copy without checking readability.
+
+**Unresolved child skill:** If no path yields a readable `SKILL.md` after steps 1–6 (including explicit `$HOME` reads), stop immediately. Report `child skill unresolved: {skill-name}` and the phase that needed it. Do **not** substitute that child from memory. Do **not** continue phases that depend on it. Do **not** claim outer convergence. Log remaining phases as `skipped` in `HARDENING.md`; emit Final report with Status **Partial (child skill unresolved)**; Artifacts: `HARDENING.md` only (`BENCHMARKS.md` only if Phase 2 already wrote it); Recommended follow-ups: install/restore the child (e.g. `apm deps tree` / install this package) and rerun.
 
 Phase 1–3 child skills are declared as transitive APM dependencies in [`apm.yml`](apm.yml). Installing `takak2166/agent/skills/skill-hardening-loop` resolves them automatically; verify with `apm deps tree`.
 
@@ -122,7 +148,7 @@ Round N:
 
 Skip entirely if Task tool is unavailable (see **Non-negotiables**).
 
-1. Read empirical-prompt-tuning `SKILL.md` in full.
+1. Read empirical-prompt-tuning `SKILL.md` in full. Append **Phase start log** (`Child skill resolved: empirical-prompt-tuning → …`) to **`/tmp/{skill-name}/HARDENING.md`** where `{skill-name}` is the **hardened target's** frontmatter `name`—not the child skill's name.
 2. Run **Iteration 0** (description/body consistency) on the target. For **manual-invoke targets**, reconcile only **factual** WHAT/body gaps—do not add discovery WHEN or trigger phrases to `description`. If Phase 1 already fixed factual WHAT/body gaps, Iteration 0 is a confirmation pass only—do not re-edit unless Phase 1 skipped the fix.
 3. Run the full empirical loop (baseline → dispatch subagents → two-sided evaluation → apply diff → re-evaluate) until **empirical convergence**. Before the first dispatch, apply **eval-meta sanitization** (step 4).
    - **3** consecutive iterations with **zero new unclear points** for orchestrator/meta skills (including this skill); **2** for ordinary targets
@@ -259,6 +285,7 @@ Use this structure:
 
 - **No shortcut phases:** Do not merge audit, empirical, and optimizer into one ad-hoc pass.
 - **One target per invocation:** Multi-skill repo audits are out of scope unless the user lists one target path.
+- **Eval cells stay in scope:** Phase 2/3 Task prompts must tell executors **not to edit** any skill directory except the hardened target (use `/tmp/…` fixtures for scenario artifacts). Revert accidental edits to non-target skills before the next phase.
 - **Preserve intentional design:** Same as audit-skill—verbatim user wording and `disable-model-invocation` choices stay unless a child skill's fix requires changing them. Manual-invoke targets: see **Manual-invoke targets**—WHAT-only `description`; no discovery WHEN / `## Triggers` adds; trimming discovery WHEN is allowed.
 - **Divergence escape hatch:** If empirical shows unclear points not decreasing across 3+ iterations (empirical **Divergence** criterion), stop the loop, report structural rewrite needed, and do not patch indefinitely.
 

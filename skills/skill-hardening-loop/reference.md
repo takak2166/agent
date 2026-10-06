@@ -30,6 +30,11 @@ Create `/tmp/{skill-name}/HARDENING.md` on Round 1:
 
 ## Round 1
 
+**Child paths (log at phase start):**
+- Phase 1: audit-skill → …
+- Phase 2: empirical-prompt-tuning → …
+- Phase 3: skill-optimizer → …
+
 ```
 Round 1:
 - [ ] Phase 1 — audit-skill
@@ -126,6 +131,7 @@ No `## Round 2` heading is created — the verification audit is the last block 
 | Optimizer edits every round | Chasing metrics without audit stability | Compare optimizer benchmark deltas round-over-round; one salience theme per Phase 3 cycle |
 | Phase 2 or Phase 3 skipped | Task tool unavailable | Partial stop; user reruns in session with dispatch |
 | Child skill `SKILL.md` unresolved | Not installed / wrong path / APM deps missing | Stop; Status **Partial (child skill unresolved)**; install child and rerun — never substitute from memory |
+| Child skill falsely unresolved | Workspace `Glob` returned 0 but `$HOME/.claude/skills/<name>/SKILL.md` exists | Re-run path resolution with **`Read` or `test -r` on step 4–5**—do not trust workspace-only `Glob` for global installs |
 | Max rounds without convergence | Complex skill or conflicting child fixes | Final report lists last round deltas; user decides ship or rewrite |
 
 ## Phase handoff rules
