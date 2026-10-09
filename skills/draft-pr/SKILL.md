@@ -52,7 +52,7 @@ Mark each item before Step 7:
 - [ ] Step 2 — visibility: public vs non-public
 - [ ] Step 3 — template read (and README / recent PR sample if needed)
 - [ ] Step 4 — branch pushed
-- [ ] Steps 5–6 — body file written at /tmp/<branch-slug>.md (public: no ticket IDs or internal tracker links)
+- [ ] Steps 5–6 — body file written at /tmp/<branch-slug>.md (public: no ticket IDs or internal tracker links; Review Deadline section, if any, set to next business day same HH:MM JST)
 - [ ] Step 7–8 — draft created; @copilot on PR
 ```
 
@@ -78,7 +78,12 @@ Mark each item before Step 7:
      - **Notion**: link format `https://www.notion.so/<org-name>/<page-id>` — use `<page-id>` exactly as it appears in the branch name (no title slug) and infer `<org-name>` from repo context or existing PR templates (from a README URL take only the org name, never its page ID or slug)
      - If the ticket system cannot be determined, write `- Ticket: <ticket-id> [TODO: fill in URL]` and do not invent a workspace
      - Format **Reference** as bullets: ticket line as `- Ticket: [<ticket-id>](<url>)` when the URL is known; ADR line as `- ADR: <url>` when `-adr` was passed, otherwise `- ADR: None`
-   - Leave optional sections (e.g., Debug List, screenshots) with placeholder text or "N/A" for the user to fill in later
+   - **Review Deadline — only when the template has a heading matching `Review Deadline` or `レビュー期限` (case-insensitive):** fill it instead of `N/A` with the PR creation time in JST plus 24 hours counted on business days only, i.e. the **next business day at the same `HH:MM`**. Business days exclude Saturday, Sunday, and Japanese public holidays:
+     - Current time: `TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M %a'`
+     - Holidays: `curl -fsS https://holidays-jp.github.io/api/v1/date.json` (keys are `YYYY-MM-DD`); skip every candidate day that is a key. If the fetch fails, skip weekends only and report that holidays were not checked
+     - Format: follow the template's example (e.g. `(例) 2024年12月10日 17:00` → `2026年10月13日 14:53`); with no example, `YYYY-MM-DD HH:MM (JST)`
+     - Example: created Fri 2026-10-09 14:53 → Sat/Sun skipped, Mon 2026-10-12 is スポーツの日 → `2026年10月13日 14:53`
+   - Leave other optional sections (e.g., Debug List, screenshots) with placeholder text or "N/A" for the user to fill in later
 7. Create the draft PR and request a Copilot code review using:
    ```bash
    gh pr create --draft --title "<concise title>" --body-file /tmp/<branch-slug>.md --reviewer @copilot
@@ -90,7 +95,7 @@ Mark each item before Step 7:
 
 ## Expected output
 
-**Created:** draft PR URL, title, and that `@copilot` was requested as reviewer.
+**Created:** draft PR URL, title, and that `@copilot` was requested as reviewer; when a Review Deadline was filled, its value (and a note if the holiday fetch failed).
 
 **Stopped early:** existing PR (`number`, `url`, `isDraft`), missing/unreadable template, or push/create failure — state what blocked progress and do not create a duplicate PR.
 
@@ -102,6 +107,6 @@ Mark each item before Step 7:
 - Copilot as reviewer requires GitHub CLI v2.88.0 or later and a plan that includes Copilot code review
 
 ## Restrictions
-- Do not execute shell commands other than `gh pr list`, `gh repo view`, `git push`, `git branch --show-current`, `gh pr create`, and `gh pr edit` (the `$(git branch --show-current)` inside those commands is covered by this list; no `ls`, `cat`, or `git diff`)
+- Do not execute shell commands other than `gh pr list`, `gh repo view`, `git push`, `git branch --show-current`, `gh pr create`, and `gh pr edit` — plus, only when the template has a Review Deadline section, `TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M %a'` and `curl -fsS https://holidays-jp.github.io/api/v1/date.json` (the `$(git branch --show-current)` inside those commands is covered by this list; no `ls`, `cat`, or `git diff`)
 - Use the Read tool for `.github/PULL_REQUEST_TEMPLATE` and README when inferring ticket links or template structure; use `gh pr list --limit 5 --json title,body` (allowed) to sample recent PR bodies — not `git diff`, `gh pr view`, or other disallowed commands
 - Linear MCP (`get_issue`) may be used on **non-public** repos when available to confirm the Linear workspace; never paste MCP output (IDs or URLs) into a public PR
