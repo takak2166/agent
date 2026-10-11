@@ -66,7 +66,7 @@ Resolve **Project** and **`list_milestones`**. Load requirements + ADR content f
 
 Rules:
 
-- **One row = one PR** — title must name a single shippable increment mergeable as **one draft PR** (e.g. “Add login API endpoint”, not “Build entire auth”). Split until each row is one review cycle.
+- **One row = one PR** — title must name a single shippable increment mergeable as **one draft PR** (e.g. “Add login API endpoint”, not “Build entire auth”). Split until each row is one review cycle. **Epic-sized titles** in the user input must be **split in the draft table** before Devin/user review — do not leave a single “build everything” row unless the user explicitly limits scope to one PR.
 - Every row has a **milestone** (name from step 1).
 - Actionable titles; 1–2 line acceptance hint (full body via **`linear-create-issue`**).
 

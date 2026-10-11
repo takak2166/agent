@@ -33,7 +33,7 @@ Do not renumber published ADRs. New decision → new number.
 
 ## Non-negotiables
 
-1. **One ADR per design decision** — never combine unrelated decisions in one ADR; use sequential numbers in the product (`ADR-001`, `ADR-002`, …).
+1. **One ADR per design decision** — never combine unrelated decisions in one ADR; use sequential numbers in the product (`ADR-001`, `ADR-002`, …). If the user asks for **one ADR covering multiple unrelated choices** (e.g. database **and** UI framework), **decline the merge**, explain the rule, and propose **separate ADRs** (batch approval OK).
 2. **No overwrite** — new ADR = new page; deprecating an old ADR is an explicit update step after user confirms.
 3. **No secrets** in ADR body or chat logs.
 4. **No implementation** — design record only.
