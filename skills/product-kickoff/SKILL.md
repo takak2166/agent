@@ -1,6 +1,6 @@
 ---
 name: product-kickoff
-description: Orchestrates new-product planning in order — Linear Project (linear-create-project), milestones (linear-plan-milestones), requirements (product-requirements), ADR (write-adr), milestone review (linear-plan-milestones review mode), Issue decomposition (linear-decompose-project). User confirmation between phases; no product implementation. Use when starting a new product or /product-kickoff. Child skills also work standalone.
+description: Orchestrates new-product planning in six ordered phases (Project, milestones, requirements, ADR, milestone review, Issue decomposition) by delegating to child skills with user confirmation gates. No product implementation. Child skills also work standalone.
 disable-model-invocation: true
 ---
 
@@ -66,12 +66,36 @@ Collect if missing: **product name**, **goal**, **Linear team** (or me-time/TAK 
 
 ### 1 → 6
 
+**Kickoff checklist (full run):**
+
+```
+- [ ] Step 1 linear-create-project — Project URL + user gate
+- [ ] Step 2 linear-plan-milestones create — milestones + user gate
+- [ ] Step 3 product-requirements — 7-section doc + user gate
+- [ ] Step 4 write-adr — ADR(s) + user gate
+- [ ] Step 5 linear-plan-milestones review — change set + user gate
+- [ ] Step 6 linear-decompose-project — Devin + Issues only after OK
+```
+
 Run each child skill in order. Pass forward: Project URL, milestone names, requirements title, ADR ids.
 
 - **Step 5:** invoke **`linear-plan-milestones`** in **review mode** (see that skill). Inputs: Project, requirements doc title, ADR list, current `list_milestones`.
 - **Step 6:** invoke **`linear-decompose-project`** with updated milestones.
 
 Between steps, output a short **status block**: completed step, artifact links/titles, next step preview.
+
+### Integrated example (abbreviated)
+
+**User:** `/product-kickoff` for “Acme Widget”, me-time/TAK defaults.
+
+1. **`linear-create-project`** → gate → Project URL.
+2. **`linear-plan-milestones`** create → gate.
+3. **`product-requirements`** → gate → requirements page title.
+4. **`write-adr`** (e.g. data store, API style) → gate.
+5. **`linear-plan-milestones`** review → gate (maybe shift MVP date).
+6. **`linear-decompose-project`** → Devin → gate → Issues.
+
+Stop after any gate if user says no; do not implement product code.
 
 ### Out of scope
 

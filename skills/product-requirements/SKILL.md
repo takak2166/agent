@@ -1,6 +1,6 @@
 ---
 name: product-requirements
-description: Interviews product requirements using my-grill-me, then writes a requirements document (purpose, users, functional/non-functional requirements, out of scope, acceptance criteria, open questions) to the configured storage destination. Use during product kickoff or when the user runs /product-requirements. Does not implement the product or create Linear Issues.
+description: Interviews product requirements via my-grill-me, then writes a seven-section requirements document to the configured storage destination. Does not implement the product or create Linear Issues.
 disable-model-invocation: true
 ---
 
@@ -37,7 +37,26 @@ After the grill, the saved document must include these sections (see template):
 3. **No overwrite** — follow storage rules: existence check before create; never silently replace an existing page.
 4. **Secrets** — never print `COSENSE_SID` or other credentials.
 
+## Integrated example
+
+**User:** `/product-requirements` for “Acme Widget” — storage title `Acme Widget/要件定義`.
+
+1. Confirm product name + title.
+2. Run **`my-grill-me`** until shared understanding confirmed.
+3. Fill template (7 sections) → show full draft → user approves write.
+4. Cosense: `persistent == false` for title → import with `Origin` header → report page title only.
+
 ## Workflow
+
+**Checklist:**
+
+```
+- [ ] Product name, goal, storage title confirmed
+- [ ] my-grill-me completed with user confirmation
+- [ ] Draft has all 7 sections; user approved write
+- [ ] Storage existence check passed; no overwrite
+- [ ] Write succeeded; handoff summary
+```
 
 ### 1. Scope the product
 

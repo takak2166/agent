@@ -1,11 +1,18 @@
 ---
 name: linear-plan-milestones
-description: Proposes Linear Project milestone plans (name, completion criteria, target date) for user confirmation, then creates or updates via Linear MCP. Supports create mode and post-requirements/ADR review mode. Standalone or within product-kickoff. Does not create Projects or Issues.
+description: Proposes Linear Project milestone plans (name, completion criteria, target date) for user confirmation, then creates or updates milestones via Linear MCP. Supports create and post-requirements/ADR review modes. Does not create Projects or Issues.
 ---
 
 # Plan Linear milestones
 
 Add or adjust **milestones** on an **existing** Linear Project. The **Bot proposes** a table (names, completion criteria, target dates, order); the **user confirms or edits** before any **`save_milestone`** create or update.
+
+## Non-negotiables
+
+1. **User OK before write** — no `save_milestone` until the user approves the draft table or review change set.
+2. **No Project or Issue create** — use **`linear-create-project`** / **`linear-create-issue`** (or **`linear-decompose-project`**) instead.
+3. **Review mode** — after requirements + ADR are settled; propose changes before any update.
+4. **Standalone** — if Project or context is missing, ask the user; do not invent a Project.
 
 ## Modes
 
@@ -39,7 +46,26 @@ Works without **`product-kickoff`**. Required from user when not passed from a p
 - **No changes without user OK** — especially in Review mode: present the full change set before any `save_milestone` call.
 - **Do not embed** Linear issue IDs in committed repo files.
 
+## Integrated example (create mode)
+
+**User:** `/linear-plan-milestones` for Project `https://linear.app/example/project/acme-app` — “MVP in Q2, beta Q3.”
+
+1. **`get_project`** → resolve `acme-app`.
+2. Propose table: Discovery / MVP / Beta / GA with criteria + proposed dates (labeled as proposals).
+3. **Ask user** to confirm order and dates — do **not** call `save_milestone` yet.
+4. User OK → **`list_milestones`** → no duplicate names.
+5. **`save_milestone`** create each row in order → report table + Project URL.
+
 ## Workflow — Create mode
+
+**Checklist (mark before `save_milestone` create):**
+
+```
+- [ ] Project resolved
+- [ ] Draft table shown; user approved names, order, dates, criteria
+- [ ] list_milestones — no unintended duplicates
+- [ ] save_milestone create per approved row
+```
 
 ### 1. Resolve Project
 
@@ -72,6 +98,15 @@ For each approved row in order: **`save_milestone`** create with `project`, `nam
 Table of created milestones + Project URL.
 
 ## Workflow — Review mode
+
+**Checklist (mark before any `save_milestone` update/create):**
+
+```
+- [ ] Review mode confirmed (requirements + ADR inputs present)
+- [ ] list_milestones current state captured
+- [ ] Change-set table shown; user approved full set
+- [ ] Updates/creates applied; drops only if user explicitly accepted
+```
 
 ### 1. Load context
 

@@ -1,6 +1,6 @@
 ---
 name: write-adr
-description: Writes Architecture Decision Records (context, decision, options, consequences, status) to the storage destination with numbered ADR-NNN titles and Deprecated/Superseded rules. Use after requirements exist or when the user runs /write-adr. Does not implement code or create Linear Issues.
+description: Writes one Architecture Decision Record per design decision to the storage destination with ADR-NNN numbering and Deprecated/Superseded lifecycle rules. Does not implement code or create Linear Issues.
 disable-model-invocation: true
 ---
 
@@ -38,7 +38,25 @@ Do not renumber published ADRs. New decision → new number.
 3. **No secrets** in ADR body or chat logs.
 4. **No implementation** — design record only.
 
+## Integrated example
+
+**User:** `/write-adr` — “Use PostgreSQL for primary store” (requirements page already exists).
+
+1. Clarify decision scope → draft options table + recommendation.
+2. Allocate **ADR-003** (after storage scan).
+3. User approves draft → Cosense import (new page only) → report `ADR-003` title.
+
 ## Workflow
+
+**Checklist:**
+
+```
+- [ ] Single design decision scoped (split if multiple)
+- [ ] ≥2 options + recommendation drafted
+- [ ] NNN allocated; user approved write
+- [ ] Storage rules (no overwrite); status set
+- [ ] Supersedes/Deprecated handled if replacing old ADR
+```
 
 ### 1. Clarify the decision
 

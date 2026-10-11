@@ -35,7 +35,25 @@ Do not create Issues until the user approves the final table (step 4 below).
 5. **No secrets** in Devin prompts.
 6. **Do not embed** Linear issue keys in committed repo files.
 
+## Integrated example
+
+**User:** `/linear-decompose-project` — Project URL, 3 milestones, pasted requirements summary, ADR-001/002 titles.
+
+1. Draft table: each row = **one PR** (e.g. “Add auth API routes”, not “Build auth”).
+2. Devin on **ubuntu24** reviews granularity → revise table.
+3. User OK → **`linear-create-issue`** per row with milestone name.
+
 ## Workflow
+
+**Checklist:**
+
+```
+- [ ] Project + milestones + requirements + ADRs loaded
+- [ ] Draft table: one Issue = one PR; every row has milestone
+- [ ] Devin review on ubuntu24 (or documented skip)
+- [ ] User approved final table
+- [ ] linear-create-issue per row only after OK
+```
 
 ### 1. Load context
 
@@ -48,7 +66,7 @@ Resolve **Project** and **`list_milestones`**. Load requirements + ADR content f
 
 Rules:
 
-- **One row = one PR** — title should name a single shippable increment (e.g. “Add login API endpoint”, not “Build entire auth”).
+- **One row = one PR** — title must name a single shippable increment mergeable as **one draft PR** (e.g. “Add login API endpoint”, not “Build entire auth”). Split until each row is one review cycle.
 - Every row has a **milestone** (name from step 1).
 - Actionable titles; 1–2 line acceptance hint (full body via **`linear-create-issue`**).
 
