@@ -6,7 +6,11 @@ disable-model-invocation: true
 
 # Write ADR
 
-Record **one architecture decision** (or a tightly related set) as an **ADR** at the **storage destination**. Numbering and lifecycle (**Deprecated**, **Superseded**) are defined here.
+Record **exactly one design decision per ADR** at the **storage destination**. If several decisions are unrelated, write **multiple ADRs** (separate invocations or explicit user-approved batch). Numbering and lifecycle (**Deprecated**, **Superseded**) are defined here.
+
+## Standalone invocation
+
+Works without **`product-kickoff`**. If requirements context is missing, ask for a short summary or storage title — do not block on Linear Project.
 
 ## Prerequisites
 
@@ -29,7 +33,7 @@ Do not renumber published ADRs. New decision → new number.
 
 ## Non-negotiables
 
-1. **One ADR per decision thread** — split unrelated decisions into separate ADRs.
+1. **One ADR per design decision** — never combine unrelated decisions in one ADR; use sequential numbers in the product (`ADR-001`, `ADR-002`, …).
 2. **No overwrite** — new ADR = new page; deprecating an old ADR is an explicit update step after user confirms.
 3. **No secrets** in ADR body or chat logs.
 4. **No implementation** — design record only.

@@ -8,6 +8,22 @@ disable-model-invocation: true
 
 Produce a **requirements document** at the **storage destination** (not in the git repo). Interview via **`my-grill-me`**; do not implement the product in this skill.
 
+## Standalone invocation
+
+Works without **`product-kickoff`**. If the product name, goal, or storage page title is missing, **ask the user** (or use what they provide in the same message). Do not require a Linear Project for this step.
+
+## Document sections (required seven)
+
+After the grill, the saved document must include these sections (see template):
+
+1. 目的  
+2. 利用者  
+3. 機能要件  
+4. 非機能要件  
+5. 範囲外  
+6. 受け入れ条件  
+7. 未決事項  
+
 ## Prerequisites
 
 - **`my-grill-me`** — read and follow that skill for the interview. Subject = this product’s requirements.

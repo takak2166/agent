@@ -1,83 +1,86 @@
 ---
 name: linear-decompose-project
-description: Decomposes requirements and ADRs into a milestone-linked Linear Issue plan, reviews the draft with Devin on an ubuntu24 self-hosted worker (not the cloud VM), reflects feedback, gets user approval, then creates Issues via linear-create-issue. Never creates Issues before user OK. Use in product kickoff or /linear-decompose-project.
+description: Decomposes requirements and ADRs into milestone-linked Linear Issues at one-PR-per-Issue granularity; Devin review on ubuntu24 worker; user approval before linear-create-issue. Standalone or product-kickoff step 6. Never creates Issues before user OK.
 disable-model-invocation: true
 ---
 
 # Decompose project into Linear Issues
 
-Turn **requirements** + **ADRs** (titles or storage links from the user) into a **draft Issue breakdown** mapped to **Linear milestones**, run a **Devin** review on an **ubuntu24** worker, revise, get **user approval**, then create Issues with **`linear-create-issue`** only.
+Turn **requirements** + **ADRs** into a **draft Issue breakdown** mapped to **Linear milestones**, run **Devin** review on **ubuntu24**, revise, get **user approval**, then create Issues with **`linear-create-issue`** only.
+
+## Standalone invocation
+
+Works without **`product-kickoff`**. If inputs are missing, **ask in one batch**:
+
+- Linear **Project** (URL or id)
+- **Milestone** names (from user or `list_milestones`)
+- **Requirements** doc title or pasted 7-section summary
+- **ADR** ids/titles (and one-line decision each)
+- Optional: team, default priority/state
+
+Do not create Issues until the user approves the final table (step 4 below).
 
 ## Prerequisites
 
-- **Linear MCP** — `get_project`, `list_milestones`, `list_issues` (duplicate check context only; do not create here).
-- **`linear-create-issue`** — read and follow for **each** Issue after approval (one Issue per invocation path; no bulk `save_issue` bypass).
-- **Inputs** — Linear Project URL/id; milestone names; requirements doc title; ADR ids/titles; optional priority/state defaults from user.
+- **Linear MCP** — `get_project`, `list_milestones`, `list_issues` (duplicate context only).
+- **`linear-create-issue`** — read and follow for **each** Issue after approval (no bulk `save_issue` bypass).
+- **Inputs** — as above.
 
 ## Restrictions
 
-1. **No Issue create before user OK** — no `save_issue` create, no `linear-create-issue` execution, until the user explicitly approves the final breakdown table.
-2. **No Devin on cloud VM** — run Devin CLI only on a **self-hosted worker** whose `machineDisplayName` is **`ubuntu24`** (Cursor `Task` / subagent with that worker target, or user-run commands on that machine). If no worker is available, stop and ask the user to run Devin locally on ubuntu24 and paste the review output.
-3. **No secrets** in Devin prompts (paste structure and titles, not `COSENSE_SID`).
-4. **Do not embed** Linear issue keys in committed repo files.
+1. **No Issue create before user OK** — no `save_issue` create, no **`linear-create-issue`**, until explicit approval of the final breakdown table.
+2. **Granularity** — **one Issue = one PR’s worth of work** (mergeable in a single draft PR; completable in one review cycle). Split epics; do not bundle unrelated FRs. Spikes get their own Issue when they are separate PRs.
+3. **Milestone link** — every row maps to a **milestone name** from the Project (or user-approved `Unassigned` exception).
+4. **No Devin on cloud VM** — Devin CLI only on a self-hosted worker with **`machineDisplayName` `ubuntu24`**. If unavailable, ask the user to run Devin on ubuntu24 and paste output.
+5. **No secrets** in Devin prompts.
+6. **Do not embed** Linear issue keys in committed repo files.
 
 ## Workflow
 
 ### 1. Load context
 
-- Resolve **Project** and **`list_milestones`**.
-- User supplies requirements + ADR **titles** (and milestone mapping intent). Read storage pages only when credentials exist and user asked; otherwise use summaries the user pasted in chat.
+Resolve **Project** and **`list_milestones`**. Load requirements + ADR content from user paste or storage (when credentialed and asked).
 
 ### 2. Draft breakdown
-
-Produce a markdown table (chat or artifact):
 
 | # | Issue title | Milestone | Team (if not default) | Priority | Notes / AC summary |
 |---|-------------|-----------|------------------------|----------|-------------------|
 
 Rules:
 
-- One Issue = one deliverable or one vertical slice; split large FRs.
-- Every row links to a **milestone name** from step 1 (or `Unassigned` only if user allows).
-- Titles are actionable (“Implement …”, “Design …”, “Spike …”).
-- Include 1–2 line acceptance hint per row (full description filled in **`linear-create-issue`** step).
+- **One row = one PR** — title should name a single shippable increment (e.g. “Add login API endpoint”, not “Build entire auth”).
+- Every row has a **milestone** (name from step 1).
+- Actionable titles; 1–2 line acceptance hint (full body via **`linear-create-issue`**).
 
 ### 3. Devin review (ubuntu24)
 
-On **ubuntu24** worker only, non-interactive:
+Non-interactive on **ubuntu24** only:
 
 ```bash
 devin -p "<PROMPT>" --model swe-2-max
 ```
 
-Follow-up turns:
+Follow-up:
 
 ```bash
 devin -c -p "<PROMPT>"
 ```
 
-**PROMPT** must include: Project goal, milestone list, draft table, requirements/ADR summaries, and ask for gaps (missing work, wrong granularity, dependency order, risk). Ask Devin **not** to create Issues—review only.
+**PROMPT** includes: goal, milestones, draft table, requirements/ADR summaries; ask to check **PR-sized granularity**, missing work, dependencies, milestone fit. Review only — no Issue creation.
 
-Capture Devin output; apply reasonable edits to the draft table. If Devin is unreachable, document the skip and proceed to user review with that caveat.
+Apply reasonable edits to the table. If Devin skipped, note caveat before user review.
 
 ### 4. User confirmation (required)
 
-Present **revised table** + summary of Devin changes. Ask explicit approval to create **N** Issues on Linear.
+Present revised table + Devin summary. Explicit approval to create **N** Issues.
 
 ### 5. Create Issues
 
-For **each approved row**, run **`linear-create-issue`** workflow:
-
-- Pass title, team, project, milestone association (per Linear MCP descriptor—`save_issue` / project fields as supported), description from [`linear-create-issue/reference/issue-description.md`](../linear-create-issue/reference/issue-description.md).
-- Map milestone: use fields the schema supports (e.g. project milestone link); if MCP cannot set milestone, put milestone name in description **Milestone:** line and tell the user to link manually.
-
-After each create, record returned Issue URL in the final report (chat only).
+For each approved row, run **`linear-create-issue`** (title, team, project, milestone per MCP schema, description from [`linear-create-issue/reference/issue-description.md`](../linear-create-issue/reference/issue-description.md)). If milestone cannot be set via MCP, **Milestone:** line in description + tell user to link in UI.
 
 ### 6. Report
 
-- Count created vs skipped duplicates.
-- List Issue URLs and milestone mapping.
-- Note any manual follow-ups (milestone link, Devin skip).
+Created count, Issue URLs, milestone mapping, manual follow-ups.
 
 ## Usage
 
@@ -85,7 +88,7 @@ After each create, record returned Issue URL in the final report (chat only).
 /linear-decompose-project
 ```
 
-Provide Linear Project, milestones, requirements + ADR references.
+Provide Project, milestones, requirements + ADR references.
 
 ## Additional resources
 

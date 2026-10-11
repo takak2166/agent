@@ -1,80 +1,117 @@
 ---
 name: linear-plan-milestones
-description: Plans and creates Linear Project milestones (name, completion criteria, target date) via Linear MCP after user confirms order and dates. Use when kicking off a product, scheduling a Linear Project, or when the user runs /linear-plan-milestones. Does not create Projects (linear-create-project) or Issues (linear-create-issue).
+description: Proposes Linear Project milestone plans (name, completion criteria, target date) for user confirmation, then creates or updates via Linear MCP. Supports create mode and post-requirements/ADR review mode. Standalone or within product-kickoff. Does not create Projects or Issues.
 ---
 
 # Plan Linear milestones
 
-Add **milestones** to an **existing** Linear Project. Names, **completion criteria** (in `description`), **target dates**, and **order** are agreed with the user **before** any `save_milestone` create.
+Add or adjust **milestones** on an **existing** Linear Project. The **Bot proposes** a table (names, completion criteria, target dates, order); the **user confirms or edits** before any **`save_milestone`** create or update.
+
+## Modes
+
+| Mode | When | Outcome |
+|------|------|---------|
+| **Create** (default) | After Project exists; early kickoff (step 2) | Propose draft → user OK → **`save_milestone` create** |
+| **Review** | Requirements + ADR are settled; kickoff step 5 or user asks to revisit schedule | Compare milestones to reqs/ADR → propose **change set** → user OK → **`save_milestone` update** (or create only for new names) |
+
+Activate **Review** when the user says “milestone review”, “見直し”, “after ADR”, or **`product-kickoff`** step 5. If mode is unclear, ask once.
+
+## Standalone invocation
+
+Works without **`product-kickoff`**. Required from user when not passed from a prior step:
+
+- Linear **Project** (URL, name, or id)
+- **Create mode:** rough themes or dates (optional — Bot may propose 3–7 milestones)
+- **Review mode:** requirements doc title/summary and ADR titles (or paste); existing milestones from **`list_milestones`**
 
 ## Prerequisites and tools
 
 - **Linear MCP** — read descriptors for **`get_project`**, **`list_milestones`**, **`save_milestone`** before calling.
 - **`save_milestone` create** (no `id`): requires **`project`** and **`name`**; optional **`description`**, **`targetDate`** (ISO date; `null` removes).
-- **`save_milestone` update** (`id` set): use when the user explicitly asks to change an existing milestone.
+- **`save_milestone` update** (`id` set): use in **Review** mode after user approves each change.
 
 ## Restrictions
 
-- **No Project create** — resolve the Project first (`get_project`, URL, name, or slug). For new Projects use **`linear-create-project`**.
+- **No Project create** — resolve the Project first. For new Projects use **`linear-create-project`** (do not modify that skill).
 - **No Issue create** — use **`linear-create-issue`** or **`linear-decompose-project`**.
-- **No silent dates** — do not invent `targetDate` or milestone order; confirm with the user (question tool when available).
-- **No duplicates** — `list_milestones` for the Project; skip or update only when the user asks.
-- **Do not embed** Linear issue IDs or internal-only tracker URLs in skill edits or committed repo files (chat/report URLs to the user is fine).
+- **No silent dates or order** — Bot proposes; user confirms (question tool when available).
+- **No duplicate creates** — **`list_milestones`** before create; in Review, prefer **update** over duplicate names.
+- **No changes without user OK** — especially in Review mode: present the full change set before any `save_milestone` call.
+- **Do not embed** Linear issue IDs in committed repo files.
 
-## Workflow
+## Workflow — Create mode
 
 ### 1. Resolve Project
 
-- From user input: Project URL, name, slug, or ID.
-- **`get_project`** when needed. Record **Project HTTPS URL** and identifier used in `save_milestone` **`project`** field (per descriptor).
+From user input: Project URL, name, slug, or ID. **`get_project`** when needed.
 
-### 2. Gather milestone candidates
+### 2. Bot proposes milestone draft
 
-From user notes, Cosense links, or chat:
-
-| Field | Source |
-|-------|--------|
+| Field | Bot fills |
+|-------|-----------|
 | `name` | Short, unique within the Project |
-| Completion criteria | Bullet list → `description` (Markdown) |
-| `targetDate` | User-confirmed ISO date or “none” |
+| Completion criteria | Bullets → future `description` (Markdown) |
+| `targetDate` | Proposed ISO date or “none” — label as proposal |
 
-Propose **3–7 milestones** typical for a new product (e.g. discovery, MVP, beta, GA) only as a **draft list** — not as created milestones.
+Propose **3–7 milestones** when the user gave little detail (e.g. discovery, MVP, beta, GA). This is **not** created yet.
 
 ### 3. User confirmation (required)
 
-Confirm in one round (or sequential questions if the tool limits batch size):
-
-1. Milestone **names** and **order** (first → last).
-2. **Target date** per milestone (or explicitly “no date”).
-3. **Completion criteria** per milestone (one-liner each is enough for confirmation; expand in `description` on create).
-
-Do not call **`save_milestone` create** until the user approves the table.
+User confirms or edits: **names**, **order**, **target dates**, **completion criteria** (per row). No **`save_milestone` create** until approved.
 
 ### 4. Check existing milestones
 
-- **`list_milestones`** with the resolved **`project`**.
-- If a **same or same-intent name** exists: stop create; return existing milestone info and ask whether to **update** (`save_milestone` with `id`) or rename.
+**`list_milestones`**. Same or same-intent name → stop create; ask update vs rename.
 
 ### 5. Create milestones
 
-For each approved row **in order**:
-
-- **`save_milestone`**: `project`, `name`, `description` (criteria + optional links to storage docs), `targetDate` when set.
-- Use **literal newlines** in Markdown `description`.
+For each approved row in order: **`save_milestone`** create with `project`, `name`, `description`, `targetDate` as agreed.
 
 ### 6. Report
 
-Return a table: milestone name, target date, and how criteria were recorded. Include Project URL. List any skipped duplicates.
+Table of created milestones + Project URL.
+
+## Workflow — Review mode
+
+### 1. Load context
+
+- Resolve **Project**; **`list_milestones`** (current state).
+- Inputs: **requirements** (title + summary or pasted sections) and **ADR** list (ids + decision one-liners).
+
+### 2. Bot proposes change set
+
+Diff mentally against milestones. Output a table:
+
+| Action | Milestone | Change (name / date / criteria) | Rationale (req or ADR) |
+|--------|-----------|----------------------------------|-------------------------|
+| keep / add / update / merge / drop | … | … | … |
+
+**Drop** or **merge** only as proposals — user must explicitly accept (prefer update over delete when unsure).
+
+### 3. User confirmation (required)
+
+User approves the **entire change set** (or edits and re-presents). No **`save_milestone`** until approved.
+
+### 4. Apply changes
+
+- **update** — `save_milestone` with `id`
+- **add** — create (check duplicates first)
+- **drop** — only if user confirmed; if Linear has no delete in MCP, document manual cleanup and remove from plan
+
+### 5. Report
+
+Before/after summary; note milestones unchanged if change set was empty.
 
 ## Usage
 
 ```text
 /linear-plan-milestones
+/linear-plan-milestones review
 ```
 
-Provide a Linear **Project** reference and rough schedule themes. Run after **`linear-create-project`** when the Project already exists.
+Provide Project reference. For **review**, also provide requirements + ADR pointers or pasted summaries.
 
 ## Additional resources
 
-- Project creation: **`linear-create-project`** (this skill does not create Projects).
-- Parent workflow: **`product-kickoff`**.
+- Project creation: **`linear-create-project`**
+- Parent workflow: **`product-kickoff`**
