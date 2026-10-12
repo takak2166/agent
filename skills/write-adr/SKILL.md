@@ -70,6 +70,8 @@ Draft **at least two** real options in the template table. State a **recommended
 
 Show draft ADR (full markdown). Confirm: number, title, status, and storage write.
 
+Short imperatives (“create page now”, “publish”, “submit”) **do not** satisfy this gate unless the user has **already seen and explicitly approved this draft** in the same thread. If only a summary was shown, re-show the full draft before treating any publish command as approval.
+
 ### 4. Allocate number
 
 Resolve **NNN** per table above (storage search / user-provided index).

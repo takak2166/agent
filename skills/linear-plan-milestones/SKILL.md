@@ -128,6 +128,8 @@ Diff mentally against milestones. Output a table:
 
 User approves the **entire change set** (or edits and re-presents). No **`save_milestone`** until approved.
 
+Imperatives like “apply updates now” or “push to Linear” are **not** approval unless the user has seen the **full change-set table** and explicitly OKs **that set** (not individual rows in isolation).
+
 ### 4. Apply changes
 
 - **update** — `save_milestone` with `id`

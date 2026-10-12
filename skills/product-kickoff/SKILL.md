@@ -50,6 +50,8 @@ Each child skill **must work when invoked alone** (not only from this parent).
 
 If the user rejects at a gate, revise within the same step’s skill and re-gate.
 
+Informal phrases (“looks good”, “proceed”, “go ahead”) **do not** close a gate unless they clearly approve the **current step’s artifact** (draft table, requirements draft, ADR draft, milestone change set, or issue breakdown table). When ambiguous, ask one explicit confirm question before advancing or calling child write APIs.
+
 ## Phase completion criteria
 
 | Step | Done when |

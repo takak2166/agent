@@ -77,6 +77,8 @@ Confirm **product name**, **one-line goal**, and **storage page title** (or acce
 
 Show the **full draft** in chat (or attached artifact). Ask explicit approval to write to the storage destination with the agreed **title**.
 
+“Publish now” or “upload to Cosense” **does not** replace this gate unless the **full seven-section draft** was just shown and the user explicitly approves **that text** and the **title**. Otherwise ask for approval again; do not call `previewEdit` / `submitEdit`.
+
 ### 5. Write to storage
 
 - Follow **storage-destination** + **storage-cosense** (or future provider file).
