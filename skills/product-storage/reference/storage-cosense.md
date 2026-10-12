@@ -6,9 +6,11 @@ Upstream skill (read the installed copy after `apm install`): [helpfeel/cosense-
 
 ## Prerequisites
 
+**Node.js:** `@helpfeel/cosense-cli` requires **Node.js >= 24**. Confirm the runtime before install or CI steps (`node -v`).
+
 | Requirement | Detail |
 |-------------|--------|
-| CLI | `npm install -g @helpfeel/cosense-cli` (Node 24+) |
+| CLI | `npm install -g @helpfeel/cosense-cli` (requires Node.js >= 24) |
 | APM skill | `helpfeel/cosense-cli/skills/cosense` (declared in [`../apm.yml`](../apm.yml) for **`product-storage`**) |
 | Agent workflow | Read and follow the installed **`cosense`** skill (`edit-page.md`, `read-page.md`, `login.md` as needed) |
 
@@ -17,7 +19,7 @@ Upstream skill (read the installed copy after `apm install`): [helpfeel/cosense-
 | Variable | Purpose |
 |----------|---------|
 | `COSENSE_PROJECT` | Project name (`<project>` in `https://scrapbox.io/<project>`) |
-| `COSENSE_PAT` | Personal Access Token; the CLI reads it from the environment (overrides saved credentials). Never display, commit, or log the value. |
+| `COSENSE_PAT` | Personal Access Token for CLI auth; the CLI reads it from the environment (overrides saved credentials). Never display, commit, or log the value. |
 
 - **Project URL** for CLI args: `https://scrapbox.io/$COSENSE_PROJECT`
 - **Page URL** for a titled page: `https://scrapbox.io/$COSENSE_PROJECT/<url-encoded-title>`
@@ -46,8 +48,8 @@ Default for first-time **requirements** and **ADR** pages:
 2. Build **plain-text body** for `previewEdit --new`:
    - **Line 1** = full page title (exact string).
    - Following lines = Cosense body (see **Body format**).
-3. `cosense previewEdit --new '<projectUrl>'` with stdin = that plain text (or `previewEdit --input-file <path>` on Windows — see **`cosense`** `edit-page.md`).
-4. Review preview output; then `cosense submitEdit '<projectUrl>' <previewId>`.
+3. `cosense previewEdit --new '<projectUrl>'` with **plain text on stdin** (line 1 = page title; following lines = body). Returns a **`previewId`**. On Windows you may use `previewEdit --input-file <path>` instead — see **`cosense`** `edit-page.md`.
+4. Review preview output; then `cosense submitEdit '<projectUrl>' <previewId>` (same `projectUrl` + `previewId` from step 3).
 5. Do not reuse the same `previewId` after a successful submit.
 
 For **`previewEdit --new`**, do **not** prepend the title twice: line 1 is the title; do not add a separate title field in JSON.

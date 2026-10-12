@@ -16,7 +16,12 @@ Interview the user until you share one design. Do not implement the subject of t
 /my-grill-me
 ```
 
-Run only when this skill is explicitly attached or the user invokes `/my-grill-me`. If the same turn also asks to implement something, grill first and do not implement.
+Run when any of these applies:
+
+- The user explicitly attaches this skill or invokes `/my-grill-me`.
+- A **parent skill** (for example **`product-requirements`**) explicitly delegates by instructing the agent to **Read** and follow this `SKILL.md` — treat that as invocation; do not wait for `/my-grill-me` or a separate attach.
+
+If the same turn also asks to implement something, grill first and do not implement.
 
 The interview **subject** is the plan, decision, or idea in the user's message. If none is given, ask once via the question tool what to stress-test, then begin the design tree.
 
@@ -139,4 +144,4 @@ If they report holes, recompute the frontier and continue. Implement only on a l
 - Do not ask the user for look-up-able facts or empirical / observable forks.
 - Do not recompute the design tree mid-round.
 - Do not add a duplicate Other option.
-- Do not start this workflow from ambient chat unless the skill was explicitly attached or `/my-grill-me` was used.
+- Do not start this workflow from ambient chat unless the skill was explicitly attached, `/my-grill-me` was used, or a parent skill delegated by **Read**-and-follow as in **Usage**.

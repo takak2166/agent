@@ -21,7 +21,7 @@ Kickoff child skills (including **`linear-plan-milestones`**, **`product-require
 | 5 | **`linear-plan-milestones`** | **Review mode** — revisit milestones after requirements + ADR |
 | 6 | **`linear-decompose-project`** | Devin-reviewed Issue breakdown → **`linear-create-issue`** |
 
-**Auto-discoverable skills:** **`linear-create-project`** (step 1) and **`linear-create-issue`** (step 6, via decomposition) may load without `disable-model-invocation`. Still **Read** their installed `SKILL.md` and obey kickoff **Confirmation gates** — do **not** call `save_project` or `save_issue` before the step’s gate closes, even if those skills are auto-invoked.
+**Auto-discoverable skills:** **`linear-create-project`** (step 1) and **`linear-create-issue`** (step 6, via decomposition) may load without `disable-model-invocation`. Still **Read** their installed `SKILL.md` and obey kickoff **Confirmation gates**. **Step 1:** call `save_project` only **after** the user approves Project **name** and **summary** (and any creation fields the child shows); the returned **Linear Project URL** is confirmed to **advance to step 2**, not as a precondition for `save_project`. **Step 6:** do **not** call `save_issue` until the user approves the **issue breakdown table** after Devin review — even if **`linear-create-issue`** auto-loads.
 
 ## Installed child skill resolution
 
@@ -55,7 +55,8 @@ Each child skill **must work when invoked alone** (not only from this parent).
 
 | After step | Gate — user must confirm before next step |
 |------------|---------------------------------------------|
-| 1 | Project name/summary and **Linear Project URL** |
+| 1 (pre-create) | Project **name** and **summary** (and description draft if shown) — **before** `save_project` |
+| 1 (post-create) | Returned **Linear Project URL** (new or acknowledged duplicate) — **before step 2** |
 | 2 | Milestone **draft table** (names, dates, completion criteria) then created milestones |
 | 3 | Requirements draft, then **written page title** at storage |
 | 4 | Each ADR draft (or batch) and **written ADR id/title** |
@@ -64,7 +65,7 @@ Each child skill **must work when invoked alone** (not only from this parent).
 
 If the user rejects at a gate, revise within the same step’s skill and re-gate.
 
-Informal phrases (“looks good”, “proceed”, “go ahead”, “proceed to requirements”) **do not** close a gate unless they clearly approve the **current step’s artifact** (draft table, requirements draft, ADR draft, milestone change set, or issue breakdown table). Advancing to step *n+1* requires explicit OK on step *n*’s artifact — not intent to move on. When ambiguous, ask one explicit confirm question before advancing or calling child write APIs.
+Informal phrases (“looks good”, “proceed”, “go ahead”, “proceed to requirements”) **do not** close a gate unless they clearly approve the **current gate’s artifact** (step 1 pre-create: name/summary; step 1 post-create: Project URL; milestone draft table; requirements draft; ADR draft; milestone change set; issue breakdown table). Advancing to step *n+1* requires explicit OK on step *n*’s **post-create** gate (or final gate for that step) — not intent to move on. When ambiguous, ask one explicit confirm question before `save_project`, `save_issue`, or advancing.
 
 ## Dry-run and sandbox
 
@@ -87,7 +88,7 @@ When the user or harness says **SANDBOX**, **dry-run**, or **mandatory sandbox**
 
 **Preflight (stop if unresolved):** Resolve installed `SKILL.md` for **`linear-create-project`**, **`linear-plan-milestones`**, **`product-requirements`**, **`write-adr`**, **`linear-decompose-project`**, **`linear-create-issue`**, **`product-storage`**, **`cosense`**, and **`my-grill-me`** per **Installed child skill resolution**. Confirm Linear MCP tool descriptors are readable for the planned steps. For step 6, confirm a **ubuntu24** Devin worker is available or the user accepts a documented Devin skip.
 
-**Environment (names only — never collect token values):** Confirm **`COSENSE_PROJECT`** is known or will be asked. Verify **`COSENSE_PAT`** is **set in the user’s environment** (or the user will run `cosense login`) — do **not** ask the user to paste the PAT. Confirm **`cosense`** CLI is available when storage steps will run.
+**Environment (names only — never collect token values):** Confirm **`COSENSE_PROJECT`** is known or will be asked. Verify **`COSENSE_PAT`** is **set in the user’s environment** (or the user will run `cosense login`) — do **not** ask the user to paste the PAT. When storage steps will run, confirm **`@helpfeel/cosense-cli`** is available (**Node.js >= 24** per [`../product-storage/reference/storage-cosense.md`](../product-storage/reference/storage-cosense.md)).
 
 Collect if still missing: **product name**, **goal**, **Linear team** (or me-time/TAK defaults per child skills).
 
