@@ -1,6 +1,6 @@
 ---
 name: product-kickoff
-description: Orchestrates new-product planning in six ordered phases (Project, milestones, requirements, ADR, milestone review, Issue decomposition) by delegating to child skills with user confirmation gates. No product implementation. Child skills also work standalone.
+description: Orchestrates six-phase new-product planning (Linear Project, milestones, requirements, ADRs, milestone review, issue decomposition) by delegating to child skills with user confirmation gates. Use when the user runs `/product-kickoff` or asks for gated planning-only kickoff without product implementation. Child skills also work standalone.
 disable-model-invocation: true
 ---
 
@@ -19,7 +19,7 @@ Kickoff child skills (including **`linear-plan-milestones`**, **`product-require
 | 3 | **`product-requirements`** | Grill + requirements doc at storage |
 | 4 | **`write-adr`** | ADR(s) at storage (one decision per ADR) |
 | 5 | **`linear-plan-milestones`** | **Review mode** — revisit milestones after requirements + ADR |
-| 6 | **`linear-decompose-project`** | Devin-reviewed Issue breakdown → **`linear-create-issue`** |
+| 6 | **`linear-decompose-project`** | Devin-reviewed breakdown; **`linear-create-issue`** only after user OK |
 
 **Auto-discoverable skills:** **`linear-create-project`** (step 1) and **`linear-create-issue`** (step 6, via decomposition) may load without `disable-model-invocation`. Still **Read** their installed `SKILL.md` and obey kickoff **Confirmation gates**. **Step 1:** call `save_project` only **after** the user approves Project **name** and **summary** (and any creation fields the child shows); the returned **Linear Project URL** is confirmed to **advance to step 2**, not as a precondition for `save_project`. **Step 6:** do **not** call `save_issue` until the user approves the **issue breakdown table** after Devin review — even if **`linear-create-issue`** auto-loads.
 
@@ -116,16 +116,7 @@ Between steps, output a short **status block**: completed step, artifact links/t
 
 ### Integrated example (abbreviated)
 
-**User:** `/product-kickoff` for “Acme Widget”, me-time/TAK defaults.
-
-1. **`linear-create-project`** (installed `SKILL.md`) → gate → Project URL.
-2. **`linear-plan-milestones`** create (installed `SKILL.md`) → gate.
-3. **`product-requirements`** (installed `SKILL.md`) → gate → requirements page title.
-4. **`write-adr`** (installed `SKILL.md`; e.g. data store, API style) → gate.
-5. **`linear-plan-milestones`** review (installed `SKILL.md`) → gate (maybe shift MVP date).
-6. **`linear-decompose-project`** (installed `SKILL.md`) → Devin → gate → Issues.
-
-Stop after any gate if user says no; do not implement product code.
+**User:** `/product-kickoff` for “Acme Widget”, me-time/TAK defaults — follow the checklist; at each step read the child `SKILL.md`, close **Confirmation gates** (step 1: name/summary before `save_project`, then Project URL before step 2), output a status block, and stop on rejection. No product code.
 
 ### Out of scope
 

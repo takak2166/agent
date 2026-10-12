@@ -1,14 +1,12 @@
 ---
 name: my-grill-me
-description: Relentless design-tree interview of a plan or decision. Classifies each frontier item before asking — look up facts, park empirical forks, ask only preference or product calls no experiment can settle. Does not implement until the user explicitly asks.
+description: Stress-tests a plan or decision through a classified design-tree interview (look up facts, park empirical forks, ask only preference questions). Use when the user runs `/my-grill-me`, attaches this skill, or a parent skill delegates by Read-and-follow (e.g. product-requirements). Does not implement until the user explicitly asks.
 disable-model-invocation: true
 ---
 
 # My Grill Me
 
-A skill to stress-test a plan, decision, or idea through structured questioning until you share one design.
-
-Interview the user until you share one design. Do not implement the subject of the interview during this skill.
+Stress-test a plan, decision, or idea through structured questioning until **shared design understanding** is confirmed. Do not implement the interview subject during this skill.
 
 ## Usage
 
@@ -82,61 +80,15 @@ Session is done when the preference frontier is empty and the user confirms shar
 
 ## Question delivery
 
-Preference order:
-
-1. Cursor `AskQuestion` when that tool exists
-2. Claude `AskUserQuestion` when that tool exists
-3. Markdown fallback below
-
-Ask in the **conversation language**. Default to single-select. Use multi-select only when the decision is a set.
-
-Do **not** add an Other option; the host already provides one.
-
-**Recommended answer:** put it first. Tag the label `(推奨)` when the conversation is Japanese, `(Recommended)` when it is English.
-
-If a decision is not naturally closed, still invent at least two honest options. Freeform goes through host Other.
-
-**After Other / freeform:** accept it in chat. If the boundary is still unclear, resettle that decision in the **next** logical round. Do not immediately fire a replacement form unless the answer was empty.
-
-**Logical round = the full current preference frontier.** If the tool caps questions per call, split into sequential calls. Do not recompute the tree until that frontier is fully answered.
-
-Each round: follow **Expected output** above.
-
-### Cursor `AskQuestion`
-
-- One call may include the entire preference frontier (no question cap).
-- Option count may exceed 4.
-- Set `title` to the grill round (for example `Grill round 2`).
-- Each question needs stable `id`, `prompt`, and `options` (`id`, `label`). Set `allow_multiple` only for set decisions.
-- Put the recommended tag on the first option's label.
-
-### Claude `AskUserQuestion`
-
-- 1–4 questions per call, 2–4 options each. `header` ≤ 12 characters.
-- Each option needs `label` + `description` (rationale / recommendation note goes in `description`).
-- Collapse to 4 options; leftover candidates go through Other.
-- Not available in subagents — ask from the parent agent only.
-- Same logical round: issue another call for leftover frontier questions after the previous call returns.
-
-### Markdown fallback
-
-Use only when neither structured-question tool exists:
-
-```
-❓ **Q1** - **<title>**: <body, including choices>
-
-➡️ <recommended answer>
-```
+Deliver preference-frontier questions per [`reference/question-delivery.md`](reference/question-delivery.md). Each round: follow **Expected output** above.
 
 ## Session end
 
-When the preference frontier is empty:
+When the preference frontier is empty, follow **Expected output** → **Session end** (confirmation question only; do **not** offer implement). If holes remain, recompute the frontier and continue. Implement only on a later explicit request.
 
-1. Summarize settled decisions and list parked empirical items (observation to run later, decision it unlocks).
-2. Ask via the question tool (or markdown fallback): **Shared understanding reached?** with options **Yes — we agree** and **No — holes remain** (localized to the conversation language). Do **not** offer implement.
-3. Stop.
+## Additional resources
 
-If they report holes, recompute the frontier and continue. Implement only on a later explicit request.
+- Question tools: [`reference/question-delivery.md`](reference/question-delivery.md)
 
 ## Restrictions
 

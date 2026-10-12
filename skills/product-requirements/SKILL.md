@@ -1,6 +1,6 @@
 ---
 name: product-requirements
-description: Interviews product requirements via my-grill-me, then writes a seven-section requirements document to the configured storage destination. Does not implement the product or create Linear Issues.
+description: Runs a requirements interview via my-grill-me, then writes a seven-section requirements document to the configured Cosense storage destination. Use when the user runs `/product-requirements`, product-kickoff step 3, or asks for a requirements doc without implementation or Linear Issues.
 disable-model-invocation: true
 ---
 

@@ -19,3 +19,9 @@ Rubric (5 items, orchestrator-only): pre-create gate, post-create URL gate, SAND
 | S2 step 6 create them | with | PK-OPT-S2-WS | bc-7ac18dde-39f9-5bdd-8ad4-6a7fbbaccf95 | 100 | |
 
 **Mean with-skill:** 100% · **Mean without-skill:** 90% · **Δ (with − without):** +10pp (S2 without weaker)
+
+## Empirical — Round 2 (create-skill)
+
+| Scenario | Run ID | Agent ID | [critical] |
+|----------|--------|----------|------------|
+| Step 1 gates after description trim | PK-R2-A | bc-8e19d9ee-2594-50bb-9659-83e563d6ed7b | pass |

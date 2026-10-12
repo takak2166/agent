@@ -52,3 +52,8 @@ Findings: none Critical/Major. Minor: same as Phase 1 table wording nit.
 | Round | Audit edits | Empirical edits | Optimizer edits | Notes |
 |-------|-------------|-----------------|-----------------|-------|
 | 1 | no | no | no | Post-fix gate deadlock validation |
+| 2 | no | no | no | create-skill pass (description WHEN, step 6 wording) |
+
+## Round 2 (create-skill)
+
+`audit_edits` / `empirical_edits` / `optimizer_edits`: no. Empirical: PK-R2-A (`bc-8e19d9ee-2594-50bb-9659-83e563d6ed7b`) — critical pass on gate ordering.

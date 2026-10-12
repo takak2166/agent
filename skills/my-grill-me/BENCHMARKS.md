@@ -15,3 +15,9 @@
 | Ambient Redis question | with | MG-OPT-WS | bc-75e7a752-7b50-5dc0-816f-3c61b6ff982b | 100 |
 
 **Mean with:** 100% · **Mean without:** 100% · **Δ:** 0pp
+
+## Empirical — Round 2
+
+| Scenario | Run ID | Agent ID | [critical] |
+|----------|--------|----------|------------|
+| Parent delegation + question-delivery ref | MG-R2-A | bc-dd22a71d-8a0e-5ed1-98f1-10989d6e997e | pass |

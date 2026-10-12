@@ -1,6 +1,6 @@
 ---
 name: product-storage
-description: Defines the default Cosense storage destination and write procedures for product requirements and ADRs. Swappable provider details live in reference files. Does not run kickoff or create Linear artifacts.
+description: Defines the default Cosense storage destination and write procedures for product requirements and ADRs. Use when product-requirements, write-adr, or product-kickoff need storage rules, or the user asks where planning docs are stored. Swappable provider details live in reference files. Does not run kickoff or create Linear artifacts.
 disable-model-invocation: true
 ---
 

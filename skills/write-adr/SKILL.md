@@ -1,6 +1,6 @@
 ---
 name: write-adr
-description: Writes one Architecture Decision Record per design decision to the storage destination with ADR-NNN numbering and Deprecated lifecycle rules. Does not implement code or create Linear Issues.
+description: Writes one Architecture Decision Record per design decision to storage with ADR-NNN numbering and Deprecated lifecycle rules. Use when the user runs `/write-adr`, product-kickoff step 4, or asks to record a single design decision at storage. Does not implement code or create Linear Issues.
 disable-model-invocation: true
 ---
 
@@ -18,7 +18,7 @@ Resolve **`product-storage`** and **`cosense`** `SKILL.md` per the path order in
 
 ## Prerequisites
 
-- **Storage** — [`../product-storage/reference/storage-destination.md`](../product-storage/reference/storage-destination.md), default Cosense: [`../product-storage/reference/storage-cosense.md`](../product-storage/reference/storage-cosense.md).
+- **Storage** — [`../product-storage/reference/storage-destination.md`](../product-storage/reference/storage-destination.md), default Cosense: [`../product-storage/reference/storage-cosense.md`](../product-storage/reference/storage-cosense.md) (**Node.js >= 24** for `@helpfeel/cosense-cli`).
 - **Template** — [`reference/adr-template.md`](reference/adr-template.md).
 - **Inputs** — requirements doc title/URL from user or prior **`product-requirements`** step; optional tech constraints from chat.
 
