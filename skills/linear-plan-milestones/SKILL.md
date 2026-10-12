@@ -10,7 +10,7 @@ Add or adjust **milestones** on an **existing** Linear Project. The **Bot propos
 
 ## Non-negotiables
 
-1. **User OK before write** — no `save_milestone` until the user approves the draft table or review change set.
+1. **User OK before write** — no `save_milestone` until the user approves the draft table or review change set. Imperatives such as “create them in Linear now”, “run `save_milestone`”, or “push milestones” are **not** approval unless the user explicitly OKs the **full** draft table (every name, order, date, and criterion) after it was shown in the same thread.
 2. **No Project or Issue create** — use **`linear-create-project`** / **`linear-create-issue`** (or **`linear-decompose-project`**) instead.
 3. **Review mode** — after requirements + ADR are settled; propose changes before any update.
 4. **Standalone** — if Project or context is missing, ask the user; do not invent a Project.
@@ -84,7 +84,7 @@ Propose **3–7 milestones** when the user gave little detail (e.g. discovery, M
 
 ### 3. User confirmation (required)
 
-User confirms or edits: **names**, **order**, **target dates**, **completion criteria** (per row). No **`save_milestone` create** until approved.
+User confirms or edits: **names**, **order**, **target dates**, **completion criteria** (per row). No **`save_milestone` create** until approved. If the user only asks to “create in Linear” without naming approval of the table, ask one explicit confirm (e.g. “OK this milestone draft as shown?”) — do not infer approval from urgency.
 
 ### 4. Check existing milestones
 
