@@ -14,15 +14,15 @@ Works without **`product-kickoff`**. If the product name, goal, or storage page 
 
 ## Document sections (required seven)
 
-After the grill, the saved document must include these sections (see template):
+After the grill, the saved document must include these sections (see template). Use the **Japanese headings** below in the stored document; they match [`reference/requirements-template.md`](reference/requirements-template.md):
 
-1. 目的  
-2. 利用者  
-3. 機能要件  
-4. 非機能要件  
-5. 範囲外  
-6. 受け入れ条件  
-7. 未決事項  
+1. 目的 — purpose  
+2. 利用者 — users / stakeholders  
+3. 機能要件 — functional requirements  
+4. 非機能要件 — non-functional requirements  
+5. 範囲外 — out of scope  
+6. 受け入れ条件 — acceptance criteria  
+7. 未決事項 — open questions  
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ After the grill, the saved document must include these sections (see template):
 
 ## Integrated example
 
-**User:** `/product-requirements` for “Acme Widget” — storage title `Acme Widget/要件定義`.
+**User:** `/product-requirements` for “Acme Widget” — storage title `Acme Widget/要件定義` (Japanese requirements page suffix).
 
 1. Confirm product name + title.
 2. Run **`my-grill-me`** until shared understanding confirmed.
@@ -71,7 +71,7 @@ Confirm **product name**, **one-line goal**, and **storage page title** (or acce
 ### 3. Compose the document
 
 - Fill [`reference/requirements-template.md`](reference/requirements-template.md) from settled decisions.
-- Keep **未決事項** for parked empirical items and unresolved product calls.
+- Keep content under **未決事項** (open questions) for parked empirical items and unresolved product calls.
 
 ### 4. User review (required before write)
 

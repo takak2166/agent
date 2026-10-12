@@ -1,23 +1,23 @@
-# 保存先（抽象）
+# Storage destination (abstract)
 
-要件定義書・ADR の本文は **リポジトリにコミットしない**（秘密・未公開のプロダクト情報を避ける）。スキル本文では「**保存先に書く**」とだけ述べ、具体的なプロダクトや API は `reference/storage-*.md` に分離する。
+Do **not** commit requirements or ADR body text to the git repo (avoid secrets and unreleased product information). Skill bodies say only **write to the storage destination**; provider-specific product names and APIs live in `reference/storage-*.md`.
 
-## エージェントが守ること
+## Agent rules
 
-1. **書く前に存在確認** — 同じタイトル／スラッグのページ・ファイルが既にある場合は **上書きしない**。更新が必要ならユーザーに確認し、追記・別タイトル・明示的な更新手順に切り替える。
-2. **秘密を出さない** — 認証トークン・セッション ID・Cookie の値をチャット、コミット、PR、スクリーンショットに載せない。環境変数の **名前** だけ参照する。
-3. **差し替え可能** — 実装は保存先プロバイダごとの reference に書く。スキル本体は「テンプレートを埋めて保存先に書く」フローのみを固定する。
+1. **Existence check before write** — if a page or file with the same title or slug already exists, **do not overwrite**. If an update is needed, confirm with the user and switch to append, a different title, or an explicit update procedure.
+2. **No secrets in output** — never put authentication tokens, session IDs, or Cookie values in chat, commits, PRs, or screenshots. Reference only the **names** of environment variables.
+3. **Swappable providers** — implementation details go in per-provider reference files. Skill bodies fix only the flow: fill the template and write to the storage destination.
 
-## ドキュメント種別と推奨タイトル規則
+## Document types and suggested title patterns
 
-| 種別 | 推奨ページ／ファイル名の例 | 本文テンプレ |
-|------|---------------------------|--------------|
-| 要件定義 | `<プロダクト名>/要件定義` またはユーザー指定 | `product-requirements` スキル |
-| ADR | `ADR/<連番>-<短いスラッグ>` | `write-adr` スキル |
+| Type | Suggested page / file title | Body template skill |
+|------|----------------------------|---------------------|
+| Requirements | `<product-name>/要件定義` (Japanese: “requirements definition”) or user-specified | `product-requirements` |
+| ADR | `ADR/<NNN>-<short-slug>` | `write-adr` |
 
-プロダクト名・親ページはキックオフ時にユーザーと合意する。
+Agree product name and parent page with the user during kickoff.
 
-## 現在のデフォルト実装
+## Default implementation today
 
-- **Cosense（旧 Scrapbox）**: [`storage-cosense.md`](storage-cosense.md) — 2026-10 実地検証済み（**非公式 API** のため将来変わりうる）
-- 将来別ストレージに移すときは、新しい `storage-<provider>.md` を追加し、各スキルの **Additional resources** を差し替える（スキル本文のワークフローは変えない）。
+- **Cosense (formerly Scrapbox)**: [`storage-cosense.md`](storage-cosense.md) — verified 2026-10 (**unofficial API**; may change).
+- To move to another storage later, add `storage-<provider>.md` and update each skill’s **Additional resources** (do not change skill workflow bodies).

@@ -21,7 +21,7 @@ Add or adjust **milestones** on an **existing** Linear Project. The **Bot propos
 | **Create** (default) | After Project exists; early kickoff (step 2) | Propose draft → user OK → **`save_milestone` create** |
 | **Review** | Requirements + ADR are settled; kickoff step 5 or user asks to revisit schedule | Compare milestones to reqs/ADR → propose **change set** → user OK → **`save_milestone` update** (or create only for new names) |
 
-Activate **Review** when the user says “milestone review”, “見直し”, “after ADR”, or **`product-kickoff`** step 5. If mode is unclear, ask once.
+Activate **Review** when the user says “milestone review”, “review” / Japanese **見直し** (revisit schedule), “after ADR”, or **`product-kickoff`** step 5. If mode is unclear, ask once.
 
 ## Standalone invocation
 
