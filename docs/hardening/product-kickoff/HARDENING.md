@@ -1,6 +1,7 @@
 # Skill Hardening Loop — product-kickoff
 
 **Target:** `skills/product-kickoff/SKILL.md`  
+**Artifacts:** `docs/hardening/product-kickoff/` (not shipped with APM install)  
 **Model:** composer-2.5 (all eval cells)  
 **Round 1**
 
