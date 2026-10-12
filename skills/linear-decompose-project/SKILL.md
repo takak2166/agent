@@ -30,9 +30,13 @@ Resolve **`linear-create-issue`**, **`product-storage`**, and **`cosense`** (whe
 - **`linear-create-issue`** — read and follow for **each** Issue after approval (no bulk `save_issue` bypass).
 - **Inputs** — as above.
 
+## Dry-run and sandbox
+
+When the user or harness says **SANDBOX**, **dry-run**, or **mandatory sandbox**: **do not** call `save_issue`, **`linear-create-issue`**, or other Linear writes — even if the user approved a table or said “create now”. Describe mock issue titles/count only.
+
 ## Restrictions
 
-1. **No Issue create before user OK** — no `save_issue` create, no **`linear-create-issue`**, until explicit approval of the final breakdown table.
+1. **No Issue create before user OK** — no `save_issue` create, no **`linear-create-issue`**, until explicit approval of the final breakdown table **after** Devin review (step 3) unless the user explicitly documents a Devin skip with caveat.
 2. **Granularity** — **one Issue = one PR’s worth of work** (mergeable in a single draft PR; completable in one review cycle). Split epics; do not bundle unrelated FRs. Spikes get their own Issue when they are separate PRs.
 3. **Milestone link** — every row maps to a **milestone name** from the Project (or user-approved `Unassigned` exception).
 4. **No Devin on cloud VM** — Devin CLI only on a self-hosted worker with **`machineDisplayName` `ubuntu24`**. If unavailable, ask the user to run Devin on ubuntu24 and paste output.

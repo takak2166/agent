@@ -64,7 +64,11 @@ Each child skill **must work when invoked alone** (not only from this parent).
 
 If the user rejects at a gate, revise within the same step’s skill and re-gate.
 
-Informal phrases (“looks good”, “proceed”, “go ahead”) **do not** close a gate unless they clearly approve the **current step’s artifact** (draft table, requirements draft, ADR draft, milestone change set, or issue breakdown table). When ambiguous, ask one explicit confirm question before advancing or calling child write APIs.
+Informal phrases (“looks good”, “proceed”, “go ahead”, “proceed to requirements”) **do not** close a gate unless they clearly approve the **current step’s artifact** (draft table, requirements draft, ADR draft, milestone change set, or issue breakdown table). Advancing to step *n+1* requires explicit OK on step *n*’s artifact — not intent to move on. When ambiguous, ask one explicit confirm question before advancing or calling child write APIs.
+
+## Dry-run and sandbox
+
+When the user or harness says **SANDBOX**, **dry-run**, or **mandatory sandbox**: **do not** call Linear MCP (`save_project`, `save_issue`, `save_milestone`, …), Cosense `submitEdit` / `previewEdit` against production, or GitHub writes. Report **mock** URLs/titles only. Step 6 “Issues created” means the user approved the breakdown in chat — still **no** `save_issue` in sandbox.
 
 ## Phase completion criteria
 
