@@ -1,0 +1,25 @@
+# Hybrid skill package: SKILL.md + transitive child-skill dependencies.
+# Consumer installs only: takak2166/agent/skills/product-kickoff
+name: product-kickoff
+version: 1.0.0
+type: hybrid
+
+dependencies:
+  apm:
+    - git: parent
+      path: skills/product-storage
+    - git: parent
+      path: skills/linear-create-project
+    - git: parent
+      path: skills/linear-plan-milestones
+    - git: parent
+      path: skills/product-requirements
+    - git: parent
+      path: skills/write-adr
+    - git: parent
+      path: skills/linear-decompose-project
+    - git: parent
+      path: skills/linear-create-issue
+    - git: parent
+      path: skills/my-grill-me
+    - helpfeel/cosense-cli/skills/cosense
