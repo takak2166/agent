@@ -72,17 +72,23 @@ Rules:
 
 ### 3. Devin review (ubuntu24)
 
-Non-interactive on **ubuntu24** only:
+Non-interactive on **ubuntu24** only. **Never** embed user-provided requirements or ADR text inside a double-quoted shell string (injection risk). Write the full prompt to a private temp file, then pass it to Devin without shell interpolation of the file contents.
 
 ```bash
-devin -p "<PROMPT>" --model swe-2-max
+PROMPT_FILE=$(mktemp)
+trap 'rm -f "$PROMPT_FILE"' EXIT
+# Write PROMPT body with the agent/editor (not: echo "$VAR" or devin -p "$VAR").
+# Devin CLI: --prompt-file loads the initial prompt; combine with -p for print mode.
+devin -p --prompt-file "$PROMPT_FILE" --model swe-2-max
 ```
 
-Follow-up:
+Follow-up (new prompt file or reuse after rewriting the same path):
 
 ```bash
-devin -c -p "<PROMPT>"
+devin -c -p --prompt-file "$PROMPT_FILE"
 ```
+
+If `devin --help` on the worker shows a different file flag, use that instead of `--prompt-file` — still use `mktemp`, no inline quoted prompt, and `trap` cleanup.
 
 **PROMPT** includes: goal, milestones, draft table, requirements/ADR summaries; ask to check **PR-sized granularity**, missing work, dependencies, milestone fit. Review only — no Issue creation.
 

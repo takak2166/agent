@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Product requirements
 
-Produce a **requirements document** at the **storage destination** (not in the git repo). Interview via **`my-grill-me`**; do not implement the product in this skill.
+Produce a **requirements document** at the **storage destination** (not in the git repo). Run the requirements interview using the **`my-grill-me`** workflow (read that skill’s installed `SKILL.md` — it is not auto-invoked); do not implement the product in this skill.
 
 ## Standalone invocation
 
@@ -26,25 +26,25 @@ After the grill, the saved document must include these sections (see template). 
 
 ## Prerequisites
 
-- **`my-grill-me`** — read and follow that skill for the interview. Subject = this product’s requirements.
+- **`my-grill-me`** — read the installed `SKILL.md` and follow its interview workflow (`disable-model-invocation: true`; the user may attach `/my-grill-me` explicitly). Subject = this product’s requirements.
 - **Storage** — read [`../product-kickoff/reference/storage-destination.md`](../product-kickoff/reference/storage-destination.md) and the active provider doc (default: [`../product-kickoff/reference/storage-cosense.md`](../product-kickoff/reference/storage-cosense.md)).
 - **Template** — [`reference/requirements-template.md`](reference/requirements-template.md).
 
 ## Non-negotiables
 
-1. **Grill before write** — run **`my-grill-me`** until shared understanding is confirmed (per that skill’s session end). Do not draft the final doc during the grill.
+1. **Grill before write** — complete the **`my-grill-me`** workflow until shared understanding is confirmed (per that skill’s session end). Do not draft the final doc during the grill.
 2. **No implementation** — no product code, infra, or Linear Issue create in this skill.
 3. **No overwrite** — follow storage rules: existence check before create; never silently replace an existing page.
-4. **Secrets** — never print `COSENSE_SID` or other credentials.
+4. **Secrets** — never print `COSENSE_PAT` or other credentials.
 
 ## Integrated example
 
 **User:** `/product-requirements` for “Acme Widget” — storage title `Acme Widget/要件定義` (Japanese requirements page suffix).
 
 1. Confirm product name + title.
-2. Run **`my-grill-me`** until shared understanding confirmed.
+2. Follow installed **`my-grill-me`** `SKILL.md` until shared understanding confirmed.
 3. Fill template (7 sections) → show full draft → user approves write.
-4. Cosense: `persistent == false` for title → import with `Origin` header → report page title only.
+4. Cosense: `readPage` → `persistent == false` → `previewEdit --new` + `submitEdit` per **storage-cosense** → report page title only.
 
 ## Workflow
 
@@ -64,9 +64,9 @@ Confirm **product name**, **one-line goal**, and **storage page title** (or acce
 
 ### 2. Requirements interview
 
-- Invoke **`my-grill-me`** with subject: requirements for `<product name>`.
+- Read the installed **`my-grill-me`** `SKILL.md` and follow its workflow (subject: requirements for `<product name>`). Do not assume nested skill auto-invocation.
 - Cover at least: users, core workflows, non-goals, acceptance definition, constraints, open empirical items (parked per grill rules).
-- Stop when **`my-grill-me`** completes with user confirmation of shared understanding.
+- Stop when the grill session completes with user confirmation of shared understanding (per **`my-grill-me`**).
 
 ### 3. Compose the document
 
@@ -80,7 +80,7 @@ Show the **full draft** in chat (or attached artifact). Ask explicit approval to
 ### 5. Write to storage
 
 - Follow **storage-destination** + **storage-cosense** (or future provider file).
-- Cosense: `persistent == false` on GET before import; new pages via **import API** + `Origin` header; convert template lines to Cosense format (no `#` headings).
+- Cosense: **`cosense`** skill + CLI — `readPage` (`persistent`), new pages via **`previewEdit --new`** + **`submitEdit`**; convert template lines to Cosense format (no `#` headings).
 - Existence check → create only when absent.
 - On success: return **page title** and **how to open it** (public URL pattern without secrets), not cookie values.
 

@@ -1,103 +1,110 @@
-# Writing to Cosense (formerly Scrapbox)
+# Cosense storage (via cosense-cli)
 
-Summarizes procedures verified on a private project on 2026-10-11. Cosense has **no official write REST API**. The methods here are **unofficial** and may change.
+Product kickoff skills read and write requirements and ADRs on **Cosense** (formerly Scrapbox) only through the **`cosense`** skill and **`@helpfeel/cosense-cli`** — not via raw HTTP, curl, jq, import API, or Deno.
+
+Upstream skill (read the installed copy after `apm install`): [helpfeel/cosense-cli `skills/cosense`](https://github.com/helpfeel/cosense-cli/tree/main/skills/cosense). Command details: `cosense <command> --help`.
+
+## Prerequisites
+
+| Requirement | Detail |
+|-------------|--------|
+| CLI | `npm install -g @helpfeel/cosense-cli` (Node 24+) |
+| APM skill | `helpfeel/cosense-cli/skills/cosense` (declared in [`../apm.yml`](../apm.yml) for **`product-kickoff`**) |
+| Agent workflow | Read and follow the installed **`cosense`** skill (`edit-page.md`, `read-page.md`, `login.md` as needed) |
 
 ## Environment variables
 
 | Variable | Purpose |
 |----------|---------|
-| `COSENSE_PROJECT` | Target project name (`<project>` in `https://scrapbox.io/<project>`) |
-| `COSENSE_SID` | Browser Cookie `connect.sid` value (session for a project member) |
+| `COSENSE_PROJECT` | Project name (`<project>` in `https://scrapbox.io/<project>`) |
+| `COSENSE_PAT` | Personal Access Token; the CLI reads it from the environment (overrides saved credentials). Never display, commit, or log the value. |
 
-- Never **display, commit, or log** the SID value. In curl use only `-H "Cookie: connect.sid=$COSENSE_SID"` (value from the environment).
-- Login check: `curl -s -H "Cookie: connect.sid=$COSENSE_SID" https://scrapbox.io/api/users/me | jq .isGuest` must be `false`.
-- Project membership list: `curl -s -H "Cookie: connect.sid=$COSENSE_SID" https://scrapbox.io/api/projects | jq '.projects[].name'`
+- **Project URL** for CLI args: `https://scrapbox.io/$COSENSE_PROJECT`
+- **Page URL** for a titled page: `https://scrapbox.io/$COSENSE_PROJECT/<url-encoded-title>`
+- Auth failures (401/403): see **`cosense`** skill `login.md` (user runs `cosense login` in their terminal; agents do not paste tokens into chat).
 
-## CSRF and Origin (as of 2026-10)
+## Non-negotiables (kickoff skills)
 
-- Legacy `X-CSRF-TOKEN` (`csrfToken` from `/api/users/me`) is **no longer returned**.
-- Write REST calls require **`Origin: https://scrapbox.io`**. Without it: `403` `CrossOriginWriteNotAllowedError`.
-- CSRF token is **not required** (Origin is sufficient).
+1. **No overwrite without approval** — if `readPage` reports `persistent: true`, **abort** create and ask the user (different title, explicit update workflow, or cancel).
+2. **No secrets in output** — reference env var **names** only; never paste `COSENSE_PAT`.
+3. **All reads/writes via CLI** — use the commands below; do not duplicate low-level API steps in kickoff skill bodies.
 
-## Prevent overwrites (mandatory)
+## Existence check
 
-| Fact | Agent action |
-|------|----------------|
-| `GET /api/pages/<project>/<title>` returns **200** even when the page does not exist | Use **`.persistent`** only (`true` = exists, `false` = not created) |
-| **import** with the same title **replaces the full page** (line creation times reset) | Before create, require `persistent == false`. If exists, **abort** and propose another title |
-| Title must be URL-encoded | `jq -rn --arg t "$TITLE" '$t|@uri'` |
+Before creating a page:
 
-```sh
-ENC=$(jq -rn --arg t "$TITLE" '$t|@uri')
-curl -s -H "Cookie: connect.sid=$COSENSE_SID" \
-  "https://scrapbox.io/api/pages/$COSENSE_PROJECT/$ENC" \
-  | jq -e '.persistent == false' >/dev/null \
-  || { echo "Page already exists; aborting"; exit 1; }
-```
+1. `cosense readPage '<pageUrl>'` (quote URLs that contain spaces or non-ASCII).
+2. Inspect **`persistent`**: `false` → safe to create; `true` → page exists — **do not** create or replace without explicit user approval for an update.
 
-## Method A — new page (recommended): Import API
+`GET` returning 200 for missing pages is handled by the CLI; trust **`persistent`**, not HTTP status alone.
 
-`POST https://scrapbox.io/api/page-data/import/<project>.json` (multipart, field name **`import-file`**).
+## New page (requirements, ADR)
 
-Body JSON shape: `{"pages":[{"title":"<title>","lines":["<title>","line2",...]}]}`.
+Default for first-time **requirements** and **ADR** pages:
 
-```sh
-jq -n --arg t "$TITLE" --rawfile body body.txt \
-  '{pages:[{title:$t, lines:([$t] + ($body | rtrimstr("\n") | split("\n")))}]}' > /tmp/import.json
-curl -s -w "\nHTTP %{http_code}\n" -X POST \
-  "https://scrapbox.io/api/page-data/import/$COSENSE_PROJECT.json" \
-  -H "Cookie: connect.sid=$COSENSE_SID" \
-  -H "Origin: https://scrapbox.io" \
-  -F "import-file=@/tmp/import.json;type=application/octet-stream"
-```
+1. Confirm `persistent == false` via `readPage`.
+2. Build **plain-text body** for `previewEdit --new`:
+   - **Line 1** = full page title (exact string).
+   - Following lines = Cosense body (see **Body format**).
+3. `cosense previewEdit --new '<projectUrl>'` with stdin = that plain text (or `previewEdit --input-file <path>` on Windows — see **`cosense`** `edit-page.md`).
+4. Review preview output; then `cosense submitEdit '<projectUrl>' <previewId>`.
+5. Do not reuse the same `previewId` after a successful submit.
 
-- Success: HTTP 200, body like `{"message":"import succeeded! - 1 pages"}`.
-- After create: same GET with `persistent == true` and check `.lines[].text`.
-- The UI also calls `POST .../import-finish/<project>.json`; in verification, **pages appeared without that call**.
-- Multiple pages per request via the `pages` array.
+For **`previewEdit --new`**, do **not** prepend the title twice: line 1 is the title; do not add a separate title field in JSON.
 
-**Use method A for first-time requirements and ADR pages** (default for the kickoff skill set).
+## Update existing page (append, replace, status)
 
-## Method B — append, partial update, delete: @cosense/std (Deno)
+Only after the user approves changing an existing page:
 
-Verified version: **`jsr:@cosense/std@0.31.0`** (websocket). No delete REST API.
+1. `readPage` → note top-level page `id` and line `id`s.
+2. `cosense previewEdit '<projectUrl>' <pageId>` with stdin = **ops JSON** (`insertBefore`, `replace`, `delete` per `cosense previewEdit --help`).
+3. Append at end: use anchor `_end` (or `insertBefore` before trailing blank lines if that reads better — see **`cosense`** `edit-page.md`).
+4. `cosense submitEdit '<projectUrl>' <previewId>`.
 
-| Operation | API |
-|-----------|-----|
-| Append / line-level patch | `patch(project, title, (lines) => ..., { sid })` |
-| Delete | `deletePage(project, title, { sid })` |
+Use this path for **Deprecated** / **Superseded** status blocks on old ADRs after user confirmation — not for silent full-page replacement.
 
-- Return value is `Result` — check `r.ok`.
-- Prefer **method B** for appends to existing pages (preserves history and other lines’ creation times).
-- Appending via import is possible but **full overwrite**. Do not use import-append on pages you did not create in this session.
-- For create-only via `patch`, still check `persistent == false` beforehand (`undefined` from the callback is a safety net only).
+## Delete page
 
-Do not embed long Deno scripts in skill bodies. Run a temporary `.ts` in the working directory with `deno run -A` when needed.
+Only when the user explicitly requests deletion:
 
-## Page body format
+1. `cosense previewDelete '<projectUrl>' <pageId>`
+2. `cosense submitEdit '<projectUrl>' <previewId>`
+
+## Listing ADR numbers
+
+Page titles use **`ADR-<NNN>-<slug>`** (three-digit `NNN`, ASCII slug). To allocate the next number:
+
+- Use `cosense listPages '<projectUrl>'` and/or `cosense searchFullText` (and `cosense readPage` when needed) to find existing titles matching `ADR-` + three digits.
+- **Next NNN** = max existing NNN + 1, or `001` if none.
+
+Do not scan a separate `ADR/` path prefix; titles are flat `ADR-001-...` style.
+
+## Body format (Cosense lines)
 
 | Rule | Detail |
 |------|--------|
-| First line | Title (`lines[0]`) |
-| Indent | Count of **half-width spaces** (no tabs) |
-| Headings | Cosense form `[** …]` / `[*** …]` (e.g. `[** 目的]` for the template section “purpose”) — Markdown `#` is a **tag** (`#foo` becomes a link), not a heading |
-| Code | `code:name.ext` then one indent level of lines |
-| Table | `table:name` then indented tab-separated lines |
+| First line | Page title (same as agreed storage title) |
+| Indent | Half-width spaces only (no tabs) |
+| Section headings | Cosense `[** …]` / `[*** …]` — not Markdown `#` ( `#word` becomes a tag link) |
+| Code | `code:name.ext` then one indent level of body lines |
+| Tables | `table:name` then indented tab-separated lines |
 | Links | `[text]` is a page link — avoid accidental `[`, `]`, `#` |
-| ADR / requirements | Numbering and status in title or body lines (e.g. `ADR-001 ...`, `ステータス: 承認済み` — Japanese: “status: approved”) |
+| ADR / requirements | Status and ids in title or body (e.g. `ステータス: 承認済み` — Japanese “status: approved”) |
 
-Do not paste template Markdown `##` headings as-is. Convert `product-requirements` / `write-adr` templates to Cosense lines before import.
+Convert [`product-requirements`](../../product-requirements/reference/requirements-template.md) and [`write-adr`](../../write-adr/reference/adr-template.md) templates to Cosense lines before `previewEdit --new`. Templates stay in Japanese where noted; stored headings may be Japanese per those files.
 
-## Read helpers (CLI)
+## Errors
 
-When `cosense` CLI (`helpfeel/cosense-cli`) is available, you may use its read flow for existence checks and body fetch. Prefer methods A/B above for writes (if CLI edit conflicts with this reference, **this verified reference wins**).
+| Symptom | Action |
+|---------|--------|
+| 401 / 403 | PAT, project membership, origin — **`cosense`** `login.md` |
+| 409 `DuplicateTitle` | `readPage` on conflicting title; user chooses append vs new title |
+| 409 `NotFastForward` | Page changed since preview — `readPage` and new `previewEdit` |
 
-## Common errors
+Report status and error names only (no tokens). On success, hand back **page title** and public URL pattern (no secrets).
 
-| Symptom | Fix |
-|---------|-----|
-| 403 `CrossOriginWriteNotAllowedError` | Add `Origin: https://scrapbox.io` |
-| `isGuest: true` / 401 | Refresh SID |
-| 403 NotMember | SID user is not a project member — confirm membership |
+## What not to use
 
-On failure, report status and error name only (not Cookie values). If the user created the page manually, pass **page title** (and public URL pattern) to later steps.
+- Scrapbox import API, curl, jq pipelines, `/tmp/import.json`
+- `@cosense/std`, Deno, `deno run -A`
+- Browser cookie `COSENSE_SID` (replaced by **`COSENSE_PAT`** + CLI)

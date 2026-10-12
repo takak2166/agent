@@ -13,11 +13,11 @@ Do **not** commit requirements or ADR body text to the git repo (avoid secrets a
 | Type | Suggested page / file title | Body template skill |
 |------|----------------------------|---------------------|
 | Requirements | `<product-name>/要件定義` (Japanese: “requirements definition”) or user-specified | `product-requirements` |
-| ADR | `ADR/<NNN>-<short-slug>` | `write-adr` |
+| ADR | `ADR-<NNN>-<short-slug>` | `write-adr` |
 
 Agree product name and parent page with the user during kickoff.
 
 ## Default implementation today
 
-- **Cosense (formerly Scrapbox)**: [`storage-cosense.md`](storage-cosense.md) — verified 2026-10 (**unofficial API**; may change).
+- **Cosense (formerly Scrapbox)**: [`storage-cosense.md`](storage-cosense.md) — via **`@helpfeel/cosense-cli`** and the **`cosense`** skill (`helpfeel/cosense-cli/skills/cosense`).
 - To move to another storage later, add `storage-<provider>.md` and update each skill’s **Additional resources** (do not change skill workflow bodies).

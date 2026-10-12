@@ -23,7 +23,7 @@ Works without **`product-kickoff`**. If requirements context is missing, ask for
 | Rule | Detail |
 |------|--------|
 | **Format** | `ADR-<NNN>` — three-digit zero-padded (`ADR-001`, `ADR-012`). |
-| **Next number** | List existing pages under prefix `ADR/` (or project convention) at storage; **max(NNN)+1**. If none, start at `001`. |
+| **Next number** | List existing pages whose titles match `ADR-<NNN>-…` at storage (`listPages` / search per **storage-cosense**); **max(NNN)+1**. If none, start at `001`. |
 | **Title** | Page title: `ADR-<NNN>-<kebab-or-short-slug>` (slug ASCII; decision title may be Japanese in body H1). |
 | **Status** | Start as **Proposed** unless the user says Accepted. |
 | **Deprecated** | Mark old ADR **Deprecated**; set **Superseded by** to the new ADR id. Update the **old** page in storage only when user confirms (no silent overwrite — follow storage rules; prefer adding status block at top with user approval). |
@@ -44,7 +44,7 @@ Do not renumber published ADRs. New decision → new number.
 
 1. Clarify decision scope → draft options table + recommendation.
 2. Allocate **ADR-003** (after storage scan).
-3. User approves draft → Cosense import (new page only) → report `ADR-003` title.
+3. User approves draft → Cosense `previewEdit --new` + `submitEdit` (new page only) → report `ADR-003-…` title.
 
 ## Workflow
 
@@ -76,7 +76,7 @@ Resolve **NNN** per table above (storage search / user-provided index).
 
 ### 5. Write to storage
 
-- Create page per **storage-cosense** rules (`persistent` check, import + `Origin`, Cosense line format).
+- Create page per **storage-cosense** rules (`readPage` / `persistent`, **`previewEdit --new`** + **`submitEdit`**, Cosense line format).
 - If **Supersedes** an older ADR: after create, plan an update to the old page’s status (user-confirmed).
 
 ### 6. Report

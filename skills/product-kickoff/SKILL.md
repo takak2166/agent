@@ -32,7 +32,7 @@ Each child skill **must work when invoked alone** (not only from this parent).
 2. **No product implementation** — no app code, deploy, or “build MVP” in this skill.
 3. **User gates** — see **Confirmation gates**; do not advance without explicit OK at each gate.
 4. **Storage** — requirements and ADRs go to the storage destination ([`reference/storage-destination.md`](reference/storage-destination.md), Cosense: [`reference/storage-cosense.md`](reference/storage-cosense.md)). Do not commit product docs to the agent repo.
-5. **Secrets** — never log `COSENSE_SID` or paste into PRs.
+5. **Secrets** — never log `COSENSE_PAT` or paste into PRs.
 6. **No Issue creation in this skill** — do not call `save_issue`, **`linear-create-issue`**, or create “planning/meta” Issues when the user asks to skip ahead. Step 6 delegates to **`linear-decompose-project`** only after steps 1–5 gates; Issues appear only after that child’s final OK.
 
 ## Confirmation gates
@@ -63,7 +63,7 @@ If the user rejects at a gate, revise within the same step’s skill and re-gate
 
 ### 0. Kickoff brief
 
-Collect if missing: **product name**, **goal**, **Linear team** (or me-time/TAK defaults per child skills), **`COSENSE_PROJECT`** / **`COSENSE_SID`** availability for storage steps.
+Collect if missing: **product name**, **goal**, **Linear team** (or me-time/TAK defaults per child skills), **`COSENSE_PROJECT`** / **`COSENSE_PAT`** (and **`cosense`** CLI + skill per [`reference/storage-cosense.md`](reference/storage-cosense.md)) for storage steps.
 
 ### 1 → 6
 
@@ -115,4 +115,5 @@ Optional: backlog notes, storage brainstorm link, target ship themes.
 ## Additional resources
 
 - Storage (abstract): [`reference/storage-destination.md`](reference/storage-destination.md)
-- Storage (Cosense, verified 2026-10): [`reference/storage-cosense.md`](reference/storage-cosense.md)
+- Storage (Cosense via cosense-cli): [`reference/storage-cosense.md`](reference/storage-cosense.md)
+- Transitive APM deps (child skills + cosense): [`apm.yml`](apm.yml)

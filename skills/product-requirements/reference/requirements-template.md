@@ -2,7 +2,7 @@
 
 保存先に書く本文の骨子。見出しはプロダクトの言語に合わせてよい（日本語推奨）。
 
-**Cosense に書くとき** — Markdown の `#` 見出しは使わず、[`storage-cosense.md`](../../product-kickoff/reference/storage-cosense.md) の `[** 見出し]` 記法に変換してから import する。1 行目はページタイトル。
+**Cosense に書くとき** — Markdown の `#` 見出しは使わず、[`storage-cosense.md`](../../product-kickoff/reference/storage-cosense.md) の `[** 見出し]` 記法に変換してから `previewEdit --new` に渡すプレーンテキストにする。1 行目はページタイトル（タイトル行の二重付与はしない）。
 
 ```markdown
 # <プロダクト名> 要件定義

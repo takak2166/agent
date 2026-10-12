@@ -20,7 +20,9 @@ dependencies:
     - takak2166/agent/skills/linear-create-issue
     - takak2166/agent/skills/linear-create-project
     - takak2166/agent/skills/linear-plan-milestones
+    # Transitive deps (child skills, my-grill-me, cosense) — see skills/product-kickoff/apm.yml
     - takak2166/agent/skills/product-kickoff
+    - helpfeel/cosense-cli/skills/cosense
     - takak2166/agent/skills/product-requirements
     - takak2166/agent/skills/write-adr
     - takak2166/agent/skills/linear-decompose-project
