@@ -45,7 +45,7 @@ Works without **`product-kickoff`**. Required from user when not passed from a p
 - **No silent dates or order** — Bot proposes; user confirms (question tool when available).
 - **No duplicate creates** — **`list_milestones`** before create; in Review, prefer **update** over duplicate names.
 - **No changes without user OK** — especially in Review mode: present the full change set before any `save_milestone` call.
-- **Do not embed** Linear issue IDs in committed repo files.
+- **Do not embed** Linear issue identifiers in committed repo files.
 
 ## Integrated example (create mode)
 
@@ -89,6 +89,8 @@ User confirms or edits: **names**, **order**, **target dates**, **completion cri
 ### 4. Check existing milestones
 
 **`list_milestones`**. Same or same-intent name → stop create; ask update vs rename.
+
+If **`list_milestones` errors** or duplicate detection is **still incomplete**, **do not `save_milestone` create** — narrow filters, retry, or confirm with the user (same pattern as **`linear-create-issue`** before `save_issue` create).
 
 ### 5. Create milestones
 
@@ -134,7 +136,8 @@ Imperatives like “apply updates now” or “push to Linear” are **not** app
 
 - **update** — `save_milestone` with `id`
 - **add** — create (check duplicates first)
-- **drop** — only if user confirmed; if Linear has no delete in MCP, document manual cleanup and remove from plan
+- **drop** — only if user confirmed; if Linear has no delete in MCP, document manual cleanup and remove from plan. Before drop/merge, **`list_issues`** filtered by project/milestone when the descriptor supports it — show the user which Issues still reference the milestone.
+- **merge** (proposal label only) — Linear has no single “merge milestones” MCP op. When the user OKs a **merge** row, apply as: **update** the surviving milestone (name/date/criteria), **relink or note** Issues on the dropped milestone (manual UI or issue updates per MCP), then **drop** the absorbed milestone only if the user accepted that drop in the full change set.
 
 ### 5. Report
 

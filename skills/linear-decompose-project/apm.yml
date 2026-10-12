@@ -1,0 +1,10 @@
+name: linear-decompose-project
+version: 1.0.0
+type: hybrid
+
+dependencies:
+  apm:
+    - git: parent
+      path: skills/linear-create-issue
+    - git: parent
+      path: skills/product-storage

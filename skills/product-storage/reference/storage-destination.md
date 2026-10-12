@@ -1,6 +1,6 @@
 # Storage destination (abstract)
 
-Do **not** commit requirements or ADR body text to the git repo (avoid secrets and unreleased product information). Skill bodies say only **write to the storage destination**; provider-specific product names and APIs live in `reference/storage-*.md`.
+Do **not** commit requirements or ADR body text to the git repo (avoid secrets and unreleased product information). Workflow skills say only **write to the storage destination**; provider mechanics live in `reference/storage-*.md`.
 
 ## Agent rules
 
@@ -17,7 +17,8 @@ Do **not** commit requirements or ADR body text to the git repo (avoid secrets a
 
 Agree product name and parent page with the user during kickoff.
 
-## Default implementation today
+## Default provider (explicit)
 
-- **Cosense (formerly Scrapbox)**: [`storage-cosense.md`](storage-cosense.md) — via **`@helpfeel/cosense-cli`** and the **`cosense`** skill (`helpfeel/cosense-cli/skills/cosense`).
-- To move to another storage later, add `storage-<provider>.md` and update each skill’s **Additional resources** (do not change skill workflow bodies).
+**Cosense** (formerly Scrapbox) is the **default storage provider** for this repo’s product-planning skills. All Cosense-specific commands, env vars, and line format rules are in [`storage-cosense.md`](storage-cosense.md) — read that file when writing or reading pages.
+
+To adopt another provider later, add `storage-<provider>.md` beside this file and point each skill’s **Additional resources** at the new provider doc (keep workflow bodies provider-agnostic).

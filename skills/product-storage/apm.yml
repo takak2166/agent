@@ -1,0 +1,9 @@
+# Hybrid reference package: storage rules + Cosense provider doc.
+# Consumer: takak2166/agent/skills/product-storage
+name: product-storage
+version: 1.0.0
+type: hybrid
+
+dependencies:
+  apm:
+    - helpfeel/cosense-cli/skills/cosense

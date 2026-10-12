@@ -20,9 +20,9 @@ dependencies:
     - takak2166/agent/skills/linear-create-issue
     - takak2166/agent/skills/linear-create-project
     - takak2166/agent/skills/linear-plan-milestones
-    # Transitive deps (child skills, my-grill-me, cosense) — see skills/product-kickoff/apm.yml
+    - takak2166/agent/skills/product-storage
+    # Orchestrator + transitive child skills — see skills/product-kickoff/apm.yml
     - takak2166/agent/skills/product-kickoff
-    - helpfeel/cosense-cli/skills/cosense
     - takak2166/agent/skills/product-requirements
     - takak2166/agent/skills/write-adr
     - takak2166/agent/skills/linear-decompose-project
@@ -34,5 +34,5 @@ dependencies:
     - takak2166/agent/skills/reply-pr-comment
     - takak2166/agent/skills/audit-skill
     - takak2166/agent/skills/update-doc
-    # Transitive deps (audit-skill, empirical-prompt-tuning, skill-optimizer) — see skills/skill-hardening-loop/apm.yml
+    # Transitive deps for skill-hardening-loop — see skills/skill-hardening-loop/apm.yml (audit-skill, empirical-prompt-tuning, skill-optimizer)
     - takak2166/agent/skills/skill-hardening-loop

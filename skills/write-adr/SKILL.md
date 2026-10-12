@@ -1,20 +1,24 @@
 ---
 name: write-adr
-description: Writes one Architecture Decision Record per design decision to the storage destination with ADR-NNN numbering and Deprecated/Superseded lifecycle rules. Does not implement code or create Linear Issues.
+description: Writes one Architecture Decision Record per design decision to the storage destination with ADR-NNN numbering and Deprecated lifecycle rules. Does not implement code or create Linear Issues.
 disable-model-invocation: true
 ---
 
 # Write ADR
 
-Record **exactly one design decision per ADR** at the **storage destination**. If several decisions are unrelated, write **multiple ADRs** (separate invocations or explicit user-approved batch). Numbering and lifecycle (**Deprecated**, **Superseded**) are defined here.
+Record **exactly one design decision per ADR** at the **storage destination**. If several decisions are unrelated, write **multiple ADRs** (separate invocations or explicit user-approved batch). Numbering and lifecycle (**Deprecated**, **Supersedes** / **Superseded by**) are defined here.
 
 ## Standalone invocation
 
 Works without **`product-kickoff`**. If requirements context is missing, ask for a short summary or storage title — do not block on Linear Project.
 
+## Installed skill resolution
+
+Resolve **`product-storage`** and **`cosense`** `SKILL.md` per the path order in **`product-requirements`** (**Installed skill resolution**). If **`product-storage`** is missing, **stop** and ask the user to `apm install takak2166/agent/skills/write-adr` (see [`apm.yml`](apm.yml)).
+
 ## Prerequisites
 
-- **Storage** — [`../product-kickoff/reference/storage-destination.md`](../product-kickoff/reference/storage-destination.md), provider: [`../product-kickoff/reference/storage-cosense.md`](../product-kickoff/reference/storage-cosense.md).
+- **Storage** — [`../product-storage/reference/storage-destination.md`](../product-storage/reference/storage-destination.md), default Cosense: [`../product-storage/reference/storage-cosense.md`](../product-storage/reference/storage-cosense.md).
 - **Template** — [`reference/adr-template.md`](reference/adr-template.md).
 - **Inputs** — requirements doc title/URL from user or prior **`product-requirements`** step; optional tech constraints from chat.
 
@@ -25,9 +29,9 @@ Works without **`product-kickoff`**. If requirements context is missing, ask for
 | **Format** | `ADR-<NNN>` — three-digit zero-padded (`ADR-001`, `ADR-012`). |
 | **Next number** | List existing pages whose titles match `ADR-<NNN>-…` at storage (`listPages` / search per **storage-cosense**); **max(NNN)+1**. If none, start at `001`. |
 | **Title** | Page title: `ADR-<NNN>-<kebab-or-short-slug>` (slug ASCII; decision title may be Japanese in body H1). |
-| **Status** | Start as **Proposed** unless the user says Accepted. |
+| **Status** | **Proposed**, **Accepted**, or **Deprecated** only (no separate **Superseded** status). |
 | **Deprecated** | Mark old ADR **Deprecated**; set **Superseded by** to the new ADR id. Update the **old** page in storage only when user confirms (no silent overwrite — follow storage rules; prefer adding status block at top with user approval). |
-| **Superseded** | New ADR references **Supersedes: ADR-xxx** when replacing a decision. |
+| **Supersedes** | New ADR references **Supersedes: ADR-xxx** when replacing a decision. |
 
 Do not renumber published ADRs. New decision → new number.
 
@@ -66,15 +70,15 @@ Ask briefly if unclear: what choice is being recorded (stack, boundary, data mod
 
 Draft **at least two** real options in the template table. State a **recommended** option with rationale (user may override before write).
 
-### 3. User confirmation
+### 3. Allocate number
 
-Show draft ADR (full markdown). Confirm: number, title, status, and storage write.
+Resolve **NNN** per table above (storage search / user-provided index) **before** the approval gate text references a final id.
+
+### 4. User confirmation
+
+Show draft ADR (full markdown) including **ADR-<NNN>-<slug>** title. Confirm: number, title, status, and storage write.
 
 Short imperatives (“create page now”, “publish”, “submit”) **do not** satisfy this gate unless the user has **already seen and explicitly approved this draft** in the same thread. If only a summary was shown, re-show the full draft before treating any publish command as approval.
-
-### 4. Allocate number
-
-Resolve **NNN** per table above (storage search / user-provided index).
 
 ### 5. Write to storage
 
@@ -96,5 +100,5 @@ Pass decision topic, requirements link, or “ADR for &lt;decision&gt;”.
 ## Additional resources
 
 - Template: [`reference/adr-template.md`](reference/adr-template.md)
-- Storage: [`../product-kickoff/reference/storage-destination.md`](../product-kickoff/reference/storage-destination.md), [`../product-kickoff/reference/storage-cosense.md`](../product-kickoff/reference/storage-cosense.md)
-- Parent: **`product-kickoff`**
+- Storage: **`product-storage`** — [`../product-storage/reference/storage-destination.md`](../product-storage/reference/storage-destination.md), [`../product-storage/reference/storage-cosense.md`](../product-storage/reference/storage-cosense.md)
+- Transitive deps: [`apm.yml`](apm.yml)

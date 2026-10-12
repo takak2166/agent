@@ -12,6 +12,18 @@ Produce a **requirements document** at the **storage destination** (not in the g
 
 Works without **`product-kickoff`**. If the product name, goal, or storage page title is missing, **ask the user** (or use what they provide in the same message). Do not require a Linear Project for this step.
 
+## Installed skill resolution
+
+Resolve **`my-grill-me`**, **`product-storage`**, and **`cosense`** `SKILL.md` using the first readable path:
+
+1. `<workspace>/.agents/skills/<name>/SKILL.md`
+2. `<workspace>/.claude/skills/<name>/SKILL.md`
+3. `<workspace>/skills/<name>/SKILL.md`
+4. `$HOME/.claude/skills/<name>/SKILL.md`
+5. `$HOME/.agents/skills/<name>/SKILL.md`
+
+If **`product-storage`** or **`my-grill-me`** is missing, **stop** and ask the user to `apm install takak2166/agent/skills/product-requirements` (pulls transitive deps per [`apm.yml`](apm.yml)).
+
 ## Document sections (required seven)
 
 After the grill, the saved document must include these sections (see template). Use the **Japanese headings** below in the stored document; they match [`reference/requirements-template.md`](reference/requirements-template.md):
@@ -27,7 +39,7 @@ After the grill, the saved document must include these sections (see template). 
 ## Prerequisites
 
 - **`my-grill-me`** — read the installed `SKILL.md` and follow its interview workflow (`disable-model-invocation: true`; the user may attach `/my-grill-me` explicitly). Subject = this product’s requirements.
-- **Storage** — read [`../product-kickoff/reference/storage-destination.md`](../product-kickoff/reference/storage-destination.md) and the active provider doc (default: [`../product-kickoff/reference/storage-cosense.md`](../product-kickoff/reference/storage-cosense.md)).
+- **Storage** — read installed **`product-storage`** references: [`../product-storage/reference/storage-destination.md`](../product-storage/reference/storage-destination.md) and default Cosense provider [`../product-storage/reference/storage-cosense.md`](../product-storage/reference/storage-cosense.md).
 - **Template** — [`reference/requirements-template.md`](reference/requirements-template.md).
 
 ## Non-negotiables
@@ -101,6 +113,6 @@ Optional context: product name, Cosense project (`COSENSE_PROJECT` already set),
 ## Additional resources
 
 - Interview: **`my-grill-me`**
-- Storage (abstract): [`../product-kickoff/reference/storage-destination.md`](../product-kickoff/reference/storage-destination.md)
-- Storage (Cosense): [`../product-kickoff/reference/storage-cosense.md`](../product-kickoff/reference/storage-cosense.md)
+- Storage: **`product-storage`** — [`../product-storage/reference/storage-destination.md`](../product-storage/reference/storage-destination.md), [`../product-storage/reference/storage-cosense.md`](../product-storage/reference/storage-cosense.md)
+- Transitive deps: [`apm.yml`](apm.yml)
 - Template: [`reference/requirements-template.md`](reference/requirements-template.md)

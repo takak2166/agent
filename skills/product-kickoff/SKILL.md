@@ -21,6 +21,20 @@ Kickoff child skills (including **`linear-plan-milestones`**, **`product-require
 | 5 | **`linear-plan-milestones`** | **Review mode** — revisit milestones after requirements + ADR |
 | 6 | **`linear-decompose-project`** | Devin-reviewed Issue breakdown → **`linear-create-issue`** |
 
+**Auto-discoverable skills:** **`linear-create-project`** (step 1) and **`linear-create-issue`** (step 6, via decomposition) may load without `disable-model-invocation`. Still **Read** their installed `SKILL.md` and obey kickoff **Confirmation gates** — do **not** call `save_project` or `save_issue` before the step’s gate closes, even if those skills are auto-invoked.
+
+## Installed child skill resolution
+
+Before each step, resolve and **Read** the child’s `SKILL.md` using the first readable path:
+
+1. `<workspace>/.agents/skills/<skill-name>/SKILL.md`
+2. `<workspace>/.claude/skills/<skill-name>/SKILL.md`
+3. `<workspace>/skills/<skill-name>/SKILL.md` (source repo)
+4. `$HOME/.claude/skills/<skill-name>/SKILL.md`
+5. `$HOME/.agents/skills/<skill-name>/SKILL.md`
+
+If none resolve, **stop** and ask the user to install the missing skill (see [`apm.yml`](apm.yml)). Do not substitute workflows from memory.
+
 ## Standalone use (child skills)
 
 Each child skill **must work when invoked alone** (not only from this parent).
@@ -33,7 +47,7 @@ Each child skill **must work when invoked alone** (not only from this parent).
 1. **Order** — in a full kickoff, complete step *n* before step *n+1* unless the user explicitly skips (record what was skipped).
 2. **No product implementation** — no app code, deploy, or “build MVP” in this skill.
 3. **User gates** — see **Confirmation gates**; do not advance without explicit OK at each gate.
-4. **Storage** — requirements and ADRs go to the storage destination ([`reference/storage-destination.md`](reference/storage-destination.md), Cosense: [`reference/storage-cosense.md`](reference/storage-cosense.md)). Do not commit product docs to the agent repo.
+4. **Storage** — requirements and ADRs go to the storage destination via **`product-storage`** ([`../product-storage/reference/storage-destination.md`](../product-storage/reference/storage-destination.md), default Cosense: [`../product-storage/reference/storage-cosense.md`](../product-storage/reference/storage-cosense.md)). Do not commit product docs to the agent repo.
 5. **Secrets** — never log `COSENSE_PAT` or paste into PRs.
 6. **No Issue creation in this skill** — do not call `save_issue`, **`linear-create-issue`**, or create “planning/meta” Issues when the user asks to skip ahead. Step 6 delegates to **`linear-decompose-project`** only after steps 1–5 gates; Issues appear only after that child’s final OK.
 
@@ -65,15 +79,20 @@ Informal phrases (“looks good”, “proceed”, “go ahead”) **do not** cl
 
 ## Workflow
 
-### 0. Kickoff brief
+### 0. Preflight and kickoff brief
 
-Collect if missing: **product name**, **goal**, **Linear team** (or me-time/TAK defaults per child skills), **`COSENSE_PROJECT`** / **`COSENSE_PAT`** (and **`cosense`** CLI + skill per [`reference/storage-cosense.md`](reference/storage-cosense.md)) for storage steps.
+**Preflight (stop if unresolved):** Resolve installed `SKILL.md` for **`linear-create-project`**, **`linear-plan-milestones`**, **`product-requirements`**, **`write-adr`**, **`linear-decompose-project`**, **`linear-create-issue`**, **`product-storage`**, **`cosense`**, and **`my-grill-me`** per **Installed child skill resolution**. Confirm Linear MCP tool descriptors are readable for the planned steps. For step 6, confirm a **ubuntu24** Devin worker is available or the user accepts a documented Devin skip.
+
+**Environment (names only — never collect token values):** Confirm **`COSENSE_PROJECT`** is known or will be asked. Verify **`COSENSE_PAT`** is **set in the user’s environment** (or the user will run `cosense login`) — do **not** ask the user to paste the PAT. Confirm **`cosense`** CLI is available when storage steps will run.
+
+Collect if still missing: **product name**, **goal**, **Linear team** (or me-time/TAK defaults per child skills).
 
 ### 1 → 6
 
 **Kickoff checklist (full run):**
 
 ```
+- [ ] Preflight passed
 - [ ] Step 1 linear-create-project — Project URL + user gate
 - [ ] Step 2 linear-plan-milestones create — milestones + user gate
 - [ ] Step 3 product-requirements — 7-section doc + user gate
@@ -119,6 +138,5 @@ Optional: backlog notes, storage brainstorm link, target ship themes.
 
 ## Additional resources
 
-- Storage (abstract): [`reference/storage-destination.md`](reference/storage-destination.md)
-- Storage (Cosense via cosense-cli): [`reference/storage-cosense.md`](reference/storage-cosense.md)
-- Transitive APM deps (child skills + cosense): [`apm.yml`](apm.yml)
+- Storage package: **`product-storage`** — [`../product-storage/reference/storage-destination.md`](../product-storage/reference/storage-destination.md), [`../product-storage/reference/storage-cosense.md`](../product-storage/reference/storage-cosense.md)
+- Transitive APM deps: [`apm.yml`](apm.yml)

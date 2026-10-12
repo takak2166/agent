@@ -1,6 +1,6 @@
 # Cosense storage (via cosense-cli)
 
-Product kickoff skills read and write requirements and ADRs on **Cosense** (formerly Scrapbox) only through the **`cosense`** skill and **`@helpfeel/cosense-cli`** — not via raw HTTP, curl, jq, import API, or Deno.
+Product planning skills read and write requirements and ADRs on **Cosense** (formerly Scrapbox) only through the **`cosense`** skill and **`@helpfeel/cosense-cli`** — not via raw HTTP, curl, jq, import API, or Deno.
 
 Upstream skill (read the installed copy after `apm install`): [helpfeel/cosense-cli `skills/cosense`](https://github.com/helpfeel/cosense-cli/tree/main/skills/cosense). Command details: `cosense <command> --help`.
 
@@ -9,7 +9,7 @@ Upstream skill (read the installed copy after `apm install`): [helpfeel/cosense-
 | Requirement | Detail |
 |-------------|--------|
 | CLI | `npm install -g @helpfeel/cosense-cli` (Node 24+) |
-| APM skill | `helpfeel/cosense-cli/skills/cosense` (declared in [`../apm.yml`](../apm.yml) for **`product-kickoff`**) |
+| APM skill | `helpfeel/cosense-cli/skills/cosense` (declared in [`../apm.yml`](../apm.yml) for **`product-storage`**) |
 | Agent workflow | Read and follow the installed **`cosense`** skill (`edit-page.md`, `read-page.md`, `login.md` as needed) |
 
 ## Environment variables
@@ -23,11 +23,11 @@ Upstream skill (read the installed copy after `apm install`): [helpfeel/cosense-
 - **Page URL** for a titled page: `https://scrapbox.io/$COSENSE_PROJECT/<url-encoded-title>`
 - Auth failures (401/403): see **`cosense`** skill `login.md` (user runs `cosense login` in their terminal; agents do not paste tokens into chat).
 
-## Non-negotiables (kickoff skills)
+## Non-negotiables (planning skills)
 
 1. **No overwrite without approval** — if `readPage` reports `persistent: true`, **abort** create and ask the user (different title, explicit update workflow, or cancel).
 2. **No secrets in output** — reference env var **names** only; never paste `COSENSE_PAT`.
-3. **All reads/writes via CLI** — use the commands below; do not duplicate low-level API steps in kickoff skill bodies.
+3. **All reads/writes via CLI** — use the commands below; do not duplicate low-level API steps in workflow skill bodies.
 
 ## Existence check
 
@@ -61,7 +61,7 @@ Only after the user approves changing an existing page:
 3. Append at end: use anchor `_end` (or `insertBefore` before trailing blank lines if that reads better — see **`cosense`** `edit-page.md`).
 4. `cosense submitEdit '<projectUrl>' <previewId>`.
 
-Use this path for **Deprecated** / **Superseded** status blocks on old ADRs after user confirmation — not for silent full-page replacement.
+Use this path for **Deprecated** status blocks on old ADRs (and **Superseded by** / **Supersedes** fields per **`write-adr`**) after user confirmation — not for silent full-page replacement. Do not use a separate **Superseded** page status; mark the old ADR **Deprecated** and link the replacement ADR id.
 
 ## Delete page
 
@@ -89,7 +89,7 @@ Do not scan a separate `ADR/` path prefix; titles are flat `ADR-001-...` style.
 | Code | `code:name.ext` then one indent level of body lines |
 | Tables | `table:name` then indented tab-separated lines |
 | Links | `[text]` is a page link — avoid accidental `[`, `]`, `#` |
-| ADR / requirements | Status and ids in title or body (e.g. `ステータス: 承認済み` — Japanese “status: approved”) |
+| ADR status in body | Use English values aligned with **`write-adr`** template: `Status: Proposed`, `Accepted`, `Deprecated` (not a separate **Superseded** status — use **Deprecated** + **Superseded by** on the old page) |
 
 Convert [`product-requirements`](../../product-requirements/reference/requirements-template.md) and [`write-adr`](../../write-adr/reference/adr-template.md) templates to Cosense lines before `previewEdit --new`. Templates stay in Japanese where noted; stored headings may be Japanese per those files.
 

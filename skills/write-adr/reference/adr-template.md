@@ -1,11 +1,11 @@
 # ADR テンプレート
 
-Cosense 保存時は [`storage-cosense.md`](../../product-kickoff/reference/storage-cosense.md) の行記法に変換する（`#` 見出しは使わない。タイトル行 = `ADR-<NNN>-<slug>`）。
+Cosense 保存時は [`storage-cosense.md`](../../product-storage/reference/storage-cosense.md) の行記法に変換する（`#` 見出しは使わない。タイトル行 = `ADR-<NNN>-<slug>`）。
 
 ```markdown
 # ADR-<NNN>: <短いタイトル>
 
-- **Status**: Proposed | Accepted | Deprecated | Superseded
+- **Status**: Proposed | Accepted | Deprecated
 - **Date**: YYYY-MM-DD
 - **Deciders**: （役割または名前）
 

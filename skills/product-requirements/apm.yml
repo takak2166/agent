@@ -1,0 +1,11 @@
+name: product-requirements
+version: 1.0.0
+type: hybrid
+
+dependencies:
+  apm:
+    - git: parent
+      path: skills/my-grill-me
+    - git: parent
+      path: skills/product-storage
+    - helpfeel/cosense-cli/skills/cosense

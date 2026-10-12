@@ -7,6 +7,8 @@ type: hybrid
 dependencies:
   apm:
     - git: parent
+      path: skills/product-storage
+    - git: parent
       path: skills/linear-create-project
     - git: parent
       path: skills/linear-plan-milestones
