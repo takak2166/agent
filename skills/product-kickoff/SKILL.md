@@ -14,7 +14,7 @@ Kickoff child skills (including **`linear-plan-milestones`**, **`product-require
 
 | Step | Skill | Purpose |
 |------|--------|---------|
-| 1 | **`linear-create-project`** | Linear Project (unchanged; use as-is) |
+| 1 | **`linear-create-project`** | Linear Project — read installed `SKILL.md` and follow it |
 | 2 | **`linear-plan-milestones`** | Initial milestones (create mode) |
 | 3 | **`product-requirements`** | Grill + requirements doc at storage |
 | 4 | **`write-adr`** | ADR(s) at storage (one decision per ADR) |
