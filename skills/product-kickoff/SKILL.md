@@ -6,9 +6,11 @@ disable-model-invocation: true
 
 # Product kickoff
 
-Run **planning only** for a new product in a fixed order. Delegate to child skills; do not duplicate their workflows inline.
+Run **planning only** for a new product in a fixed order. Delegate to child skills by **reading each child’s installed `SKILL.md`** and following its workflow; do not duplicate their workflows inline.
 
 ## Child skills (use by reference)
+
+Kickoff child skills (including **`linear-plan-milestones`**, **`product-requirements`**, **`write-adr`**, **`linear-decompose-project`**) use **`disable-model-invocation: true`** — they are **not** auto-invoked from this parent. At each step, read the installed child `SKILL.md` (the user may attach that skill explicitly) and execute per that document.
 
 | Step | Skill | Purpose |
 |------|--------|---------|
@@ -78,10 +80,11 @@ Collect if missing: **product name**, **goal**, **Linear team** (or me-time/TAK 
 - [ ] Step 6 linear-decompose-project — Devin + Issues only after OK
 ```
 
-Run each child skill in order. Pass forward: Project URL, milestone names, requirements title, ADR ids.
+Run each step in order using the matching child’s installed `SKILL.md`. Pass forward: Project URL, milestone names, requirements title, ADR ids.
 
-- **Step 5:** invoke **`linear-plan-milestones`** in **review mode** (see that skill). Inputs: Project, requirements doc title, ADR list, current `list_milestones`.
-- **Step 6:** invoke **`linear-decompose-project`** with updated milestones.
+- **Step 2:** follow **`linear-plan-milestones`** **create** mode (installed skill).
+- **Step 5:** follow **`linear-plan-milestones`** **review** mode (installed skill; see its Review-mode triggers). Inputs: Project, requirements doc title, ADR list, current `list_milestones`.
+- **Step 6:** follow **`linear-decompose-project`** (installed skill) with updated milestones.
 
 Between steps, output a short **status block**: completed step, artifact links/titles, next step preview.
 
@@ -89,12 +92,12 @@ Between steps, output a short **status block**: completed step, artifact links/t
 
 **User:** `/product-kickoff` for “Acme Widget”, me-time/TAK defaults.
 
-1. **`linear-create-project`** → gate → Project URL.
-2. **`linear-plan-milestones`** create → gate.
-3. **`product-requirements`** → gate → requirements page title.
-4. **`write-adr`** (e.g. data store, API style) → gate.
-5. **`linear-plan-milestones`** review → gate (maybe shift MVP date).
-6. **`linear-decompose-project`** → Devin → gate → Issues.
+1. **`linear-create-project`** (installed `SKILL.md`) → gate → Project URL.
+2. **`linear-plan-milestones`** create (installed `SKILL.md`) → gate.
+3. **`product-requirements`** (installed `SKILL.md`) → gate → requirements page title.
+4. **`write-adr`** (installed `SKILL.md`; e.g. data store, API style) → gate.
+5. **`linear-plan-milestones`** review (installed `SKILL.md`) → gate (maybe shift MVP date).
+6. **`linear-decompose-project`** (installed `SKILL.md`) → Devin → gate → Issues.
 
 Stop after any gate if user says no; do not implement product code.
 

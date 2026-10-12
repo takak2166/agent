@@ -1,6 +1,7 @@
 ---
 name: linear-plan-milestones
 description: Proposes Linear Project milestone plans (name, completion criteria, target date) for user confirmation, then creates or updates milestones via Linear MCP. Supports create and post-requirements/ADR review modes. Does not create Projects or Issues.
+disable-model-invocation: true
 ---
 
 # Plan Linear milestones
