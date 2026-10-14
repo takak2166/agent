@@ -3,6 +3,7 @@
 Read this file when Step 1 of [SKILL.md](SKILL.md) hits an edge case, or when Step 2/4 needs round splitting. Requirements in `SKILL.md` win if anything conflicts.
 
 - [Target resolution](#target-resolution)
+- [Stated intent](#stated-intent)
 - [Context budget and rounds](#context-budget-and-rounds)
 
 ## Target resolution
@@ -44,9 +45,38 @@ Summarize each file mechanically as `hunks:<N>, +<A>/-<D>`:
 - `D`: lines starting with `-`, excluding the `--- a/<path>` header
 - Binary and submodule diffs with no hunks: `hunks:0, +0/-0`
 
+## Stated intent
+
+Specialists and the integration agent review **whether the change serves stated intent**, not whether every line is ideal in isolation ([Anthropic — redesigning source control](https://www.anthropic.com/engineering/redesigning-source-control): engineering review shifts toward intent; adversarial review can over-react to hypothetical concerns and push over-engineering).
+
+### PR number target
+
+After resolving a bare integer as a PR number (see **Target resolution**), run:
+
+```bash
+gh pr view <N> --json title,body,closingIssuesReferences
+```
+
+Assemble **Stated Intent** for the Code Context block (Step 4):
+
+1. **PR** — `title` on its own line, then the full `body` (or `(empty)`).
+2. **Linked issues** — for each entry in `closingIssuesReferences`, append `### Issue: <title>` (`<number>`) and the issue body when `gh issue view <number> --json title,body` succeeds; on failure, list title/number only and note the fetch gap.
+
+Repeat the same **Stated Intent** text in every round of a multi-round review.
+
+### Branch or working-tree targets
+
+No PR body is available by default. Use:
+
+```text
+(unavailable — not a PR review; infer goal from recent commit subjects only, and treat intent alignment as low confidence)
+```
+
+Optionally append the output of `git log -5 --format=%s` on the reviewed range (`<base>...HEAD`, or recent commits for working-tree flow) as a weak hint — do not treat it as authoritative product intent.
+
 ## Context budget and rounds
 
-Estimate the budget by treating the assembled Code Context block (Changed Files + Diff + File Contents) as a single string and using its character length; approximate from file sizes when an exact count is unavailable. Split into multiple review rounds when one round would exceed ~50 000 characters.
+Estimate the budget by treating the assembled Code Context block (Changed Files + Stated Intent + Diff + File Contents) as a single string and using its character length; approximate from file sizes when an exact count is unavailable. Split into multiple review rounds when one round would exceed ~50 000 characters.
 
 - **Grouping heuristic**, in order: directory or module → language → size, keeping each group under the limit.
 - **Diff per round**: include only the `diff --git ...` blocks for that round's files.

@@ -20,6 +20,8 @@ Include this block verbatim at the start of every analysis (1–8) and integrati
 - Read and Grep are allowed to explore surrounding code for context beyond the diff.
 - Produce review text only — no edits, no commits, no GitHub comments.
 - Stay within your designated expertise area.
+- When **Code Context** includes **Stated Intent**, weigh findings against that intent; do not treat line-by-line polish as the primary goal when it conflicts with serving the stated goal.
+- Do not recommend extra layers, abstractions, or defenses for purely hypothetical failure modes without a plausible, proportionate risk in this change's scope; downgrade or omit such suggestions rather than inflating severity.
 ```
 
 ## Shared: Finding Format
@@ -52,6 +54,8 @@ Every analysis agent (1–8) must return findings in this structure:
 | **Major** | Design violations, maintainability risks, missing critical tests |
 | **Minor** | Style, naming, minor optimizations, nice-to-have suggestions |
 
+Treat findings driven only by unproven "what if" scenarios (no realistic trigger in scope) as **Minor** at most, or omit them.
+
 ## Shared: Final Report Format
 
 The integration agent (9) must produce the report in this structure:
@@ -60,7 +64,7 @@ The integration agent (9) must produce the report in this structure:
 # Code Review Report
 
 ## Overview
-(2-3 sentence executive summary: scope, risk level, overall assessment)
+(2-3 sentence executive summary: scope, risk level, overall assessment. When **Stated Intent** was provided, lead with whether the change fulfills that intent — not a file-by-file walkthrough.)
 
 ## Coverage Gap (optional)
 (If any specialist failed/timed out/was skipped, list which agent(s) and why, in 1-3 bullets)
@@ -191,6 +195,8 @@ You are a **refactoring and design patterns specialist**, grounded in **Martin F
 - Distinguish "refactor now" from "watch this area"
 - Respect YAGNI — do not recommend patterns for speculative future needs
 - Check whether existing codebase patterns are followed consistently
+- Flag **author-side** over-engineering: extra abstraction, indirection, or defensive code added mainly for hypothetical concerns that are not supported by the stated PR/Issue intent or a plausible near-term risk
+- Apply the same bar to **review-side** suggestions: do not ask the author to build for distant "what if" scenarios when a simpler change satisfies the stated intent
 
 ### Output
 
@@ -405,6 +411,8 @@ You receive outputs from these specialists:
    - Blast radius (how many components affected)
    - Fix effort (quick wins first at equal severity)
 6. **Highlight positives** — Consolidate good practices noted by any agent.
+7. **Intent alignment** — When **Stated Intent** is present in specialist inputs (via Code Context echoed in their reports), judge whether the diff as a whole serves that intent. Surface gaps (missing behavior, scope creep, or unrelated changes) in **Overview** and **Major Issues**; do not re-litigate intent as a line-by-line checklist.
+8. **Calibrate hypothetical-risk noise** — Downgrade or discard specialist findings that demand extra implementation for unproven scenarios, or that read as adversarial "what if" stacking. Credit **Refactoring & Patterns** when it flagged author-side over-engineering for hypothetical concerns.
 
 ### Output
 
@@ -413,6 +421,6 @@ Produce the report using the **Final Report Format** above. Write in the user's 
 ### Guidelines
 
 - Do not invent new findings — only synthesize specialist outputs
-- When discarding a finding, briefly explain why
+- When discarding a finding, briefly explain why (especially intent mismatch or hypothetical-risk overreach)
 - Keep the report actionable: each issue should have a clear next step
-- The Overview should help a busy reviewer decide: merge / request changes / needs discussion
+- The Overview should help a busy reviewer decide: merge / request changes / needs discussion — prioritize intent fit and material risk over exhaustive nitpicks
