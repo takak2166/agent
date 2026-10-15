@@ -30,8 +30,8 @@ Use when the user asks to create a draft PR, open a draft pull request, or invok
 1. `gh pr list --head "$(git branch --show-current)" --json number,url,isDraft` → `[]`
 2. `gh repo view --json visibility` → not `PUBLIC`; read `.github/PULL_REQUEST_TEMPLATE` (before any push)
 3. `git push -u origin $(git branch --show-current)`
-4. Ticket `TAK-123`; Write tool creates `/tmp/feature-TAK-123-add-widget.md` from the template sections; Reference links the Linear issue URL inferred from repo context
-5. `gh pr create --draft --title "Add widget (TAK-123)" --body-file /tmp/feature-TAK-123-add-widget.md --reviewer @copilot` → report PR URL
+4. Template has **Review Deadline** → run Step 6 anchor `date` and holiday `curl`, compute next business day at anchor hour with **`HH:00`** (JST); ticket `TAK-123`; Write tool creates `/tmp/feature-TAK-123-add-widget.md` (Reference + Review Deadline filled)
+5. `gh pr create --draft --title "Add widget (TAK-123)" --body-file /tmp/feature-TAK-123-add-widget.md --reviewer @copilot` → report PR URL and Review Deadline value (note if holiday fetch failed)
 
 **User:** same repo, PR `#7` already open for current branch.
 
@@ -52,7 +52,7 @@ Mark each item before Step 7:
 - [ ] Step 2 — visibility: public vs non-public
 - [ ] Step 3 — template read (and README / recent PR sample if needed)
 - [ ] Step 4 — branch pushed
-- [ ] Steps 5–6 — body file written at /tmp/<branch-slug>.md (public: no ticket IDs or internal tracker links)
+- [ ] Steps 5–6 — body file written at /tmp/<branch-slug>.md (public: no ticket IDs or internal tracker links; when the template has a `Review Deadline` / `レビュー期限` heading, fill per Step 6)
 - [ ] Step 7–8 — draft created; @copilot on PR
 ```
 
@@ -68,7 +68,7 @@ Mark each item before Step 7:
    - Example: branch `feature/TAK-123-some-description` → issue key `TAK-123`
    - No ticket ID found: write `- Ticket: [TODO: fill in ticket ID and URL]` in Reference, and drop the `(<ticket-key>)` part of the title
    - **Public repos:** skip this step for PR text — do not copy ticket IDs from the branch into the title or body
-6. Compose the PR body with the Write tool (not shell) at `/tmp/<branch-slug>.md` following the template structure, where `<branch-slug>` is the current branch name with `/` replaced by `-` (for example, branch `feature/TAK-123-fix` → `/tmp/feature-TAK-123-fix.md`):
+6. When the template includes **Review Deadline** (`Review Deadline` or `レビュー期限`), run the anchor `date` and holiday `curl` from the bullet below **before** writing the body file. Compose the PR body with the Write tool (not shell) at `/tmp/<branch-slug>.md` following the template structure, where `<branch-slug>` is the current branch name with `/` replaced by `-` (for example, branch `feature/TAK-123-fix` → `/tmp/feature-TAK-123-fix.md`):
    - Keep the template's headings and checklist items; fill each section with a concise one-line summary and replace HTML comments and empty checklist items with content or `N/A`; when the changes are unknown (see Notes), write the Test plan item as `- [ ] N/A (to be filled in)` rather than inventing checks
    - **Non-public repos only:** write every spot the user must fill in as visible text such as `[TODO: fill in ticket URL]`, never as an HTML comment
    - **Reference — public repo:** omit any ticket / tracking bullet (no issue keys, no Linear / Notion / Scrapbox URLs). If the template expects a ticket line, use `- Ticket: N/A` with no link and no ID. For **ADR**, include `- ADR: <url>` only when `-adr` was passed **and** the URL is not Linear, Notion, or Scrapbox; otherwise `- ADR: None`
@@ -78,7 +78,13 @@ Mark each item before Step 7:
      - **Notion**: link format `https://www.notion.so/<org-name>/<page-id>` — use `<page-id>` exactly as it appears in the branch name (no title slug) and infer `<org-name>` from repo context or existing PR templates (from a README URL take only the org name, never its page ID or slug)
      - If the ticket system cannot be determined, write `- Ticket: <ticket-id> [TODO: fill in URL]` and do not invent a workspace
      - Format **Reference** as bullets: ticket line as `- Ticket: [<ticket-id>](<url>)` when the URL is known; ADR line as `- ADR: <url>` when `-adr` was passed, otherwise `- ADR: None`
-   - Leave optional sections (e.g., Debug List, screenshots) with placeholder text or "N/A" for the user to fill in later
+   - **Review Deadline — only when the template has a heading matching `Review Deadline` or `レビュー期限` (case-insensitive):** fill it instead of `N/A` using the **anchor time** sampled in Step 6 (immediately before computing the deadline — not `gh pr create`’s `createdAt`):
+     - **Anchor time (run immediately before computing the deadline, still in Step 6):** `TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M %a'`
+     - **Deadline rule:** from the **calendar day after** the anchor date (JST), advance one day at a time until the first **business day**; write that date at **`HH:00`** (JST), where `HH` is the anchor’s hour — minutes are always `:00` (ignore anchor minutes). A business day is neither Saturday, Sunday, nor a Japanese public holiday.
+     - **Japanese holidays:** `curl -fsS --connect-timeout 5 --max-time 10 https://holidays-jp.github.io/api/v1/date.json` — keys are `YYYY-MM-DD`. Treat a candidate day as a holiday when its date is a key. **Fetch failed** when `curl` exits non-zero **or** the response body is not a JSON object parseable as a map of `YYYY-MM-DD` keys (e.g. HTML from a proxy). On failure, treat holidays as unknown: skip weekends only and report that holidays were not checked.
+     - **Format:** follow the template's example (e.g. `(例) 2024年12月10日 17:00` → `2026年10月13日 14:00`); with no example, `YYYY-MM-DD HH:00 (JST)`
+     - **Example:** anchor Fri 2026-10-09 14:53 → deadline clock **14:00** (not 14:53); candidates from Sat 2026-10-10; Sat/Sun skipped, Mon 2026-10-12 is スポーツの日 → `2026年10月13日 14:00`
+   - Leave other optional sections (e.g., Debug List, screenshots) with placeholder text or "N/A" for the user to fill in later
 7. Create the draft PR and request a Copilot code review using:
    ```bash
    gh pr create --draft --title "<concise title>" --body-file /tmp/<branch-slug>.md --reviewer @copilot
@@ -90,7 +96,7 @@ Mark each item before Step 7:
 
 ## Expected output
 
-**Created:** draft PR URL, title, and that `@copilot` was requested as reviewer.
+**Created:** draft PR URL, title, and that `@copilot` was requested as reviewer; when a Review Deadline was filled, its value (and a note if the holiday fetch failed).
 
 **Stopped early:** existing PR (`number`, `url`, `isDraft`), missing/unreadable template, or push/create failure — state what blocked progress and do not create a duplicate PR.
 
@@ -102,6 +108,6 @@ Mark each item before Step 7:
 - Copilot as reviewer requires GitHub CLI v2.88.0 or later and a plan that includes Copilot code review
 
 ## Restrictions
-- Do not execute shell commands other than `gh pr list`, `gh repo view`, `git push`, `git branch --show-current`, `gh pr create`, and `gh pr edit` (the `$(git branch --show-current)` inside those commands is covered by this list; no `ls`, `cat`, or `git diff`)
+- Do not execute shell commands other than `gh pr list`, `gh repo view`, `git push`, `git branch --show-current`, `gh pr create`, and `gh pr edit` — plus, when Step 6 fills **Review Deadline** (template heading `Review Deadline` or `レビュー期限`, case-insensitive), the `date` and `curl` invocations in that Step 6 bullet only (verbatim; the `$(git branch --show-current)` inside allowed commands is covered by this list; no `ls`, `cat`, or `git diff`)
 - Use the Read tool for `.github/PULL_REQUEST_TEMPLATE` and README when inferring ticket links or template structure; use `gh pr list --limit 5 --json title,body` (allowed) to sample recent PR bodies — not `git diff`, `gh pr view`, or other disallowed commands
 - Linear MCP (`get_issue`) may be used on **non-public** repos when available to confirm the Linear workspace; never paste MCP output (IDs or URLs) into a public PR
