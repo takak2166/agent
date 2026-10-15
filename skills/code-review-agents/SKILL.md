@@ -21,12 +21,20 @@ Subagents carry their own constraints: copy **Shared: Restrictions** from [agent
 
 ## Before launching analysis subagents
 
-Confirm all four before the eight parallel analysis `Task` calls (Step 7 integration uses the same **Shared: Restrictions** rule separately):
+Confirm all four before the eight parallel analysis `Task` calls (Step 8 integration uses the same **Shared: Restrictions** rule separately):
 
 - [ ] Code Context block for the current round is complete — Changed Files + Stated Intent + Diff + File Contents; add **Project Notes** only when Step 2 surfaced structure facts (Step 4)
 - [ ] [agent-prompts.md](agent-prompts.md) read (Step 3)
 - [ ] Launch plan ready: all 8 analysis `Task` calls will go in one assistant message (Step 5)
 - [ ] Each of the 8 analysis `Task` prompts starts with **Shared: Restrictions** from [agent-prompts.md](agent-prompts.md)
+
+## Before launching the integration subagent
+
+Confirm all three before the integration `Task` call (Step 8):
+
+- [ ] **Stated Intent** text matches Step 4 (same across rounds)
+- [ ] **Change Scope** assembled — review-wide Changed Files + full unified diff (Step 7)
+- [ ] Integration `prompt` includes **Shared: Restrictions**, **Shared: Final Report Format**, Agent 9 section, **Stated Intent**, **Change Scope**, and concatenated specialist outputs
 
 ## Usage
 
@@ -67,7 +75,7 @@ Confirm all four before the eight parallel analysis `Task` calls (Step 7 integra
    <full content of each file in this round, labeled by path>
    ```
 
-   Keep each round's Code Context under ~50 000 characters; the same block is duplicated into 8 prompts, so split at ~35–40k when close to the limit. **Multi-round:** list only this round's files under Changed Files; repeat Steps 4–6 per round, then run Step 7 once on concatenated specialist outputs from all rounds ([reference.md](reference.md) **Context budget and rounds**). Grouping, merging, and per-round rules: same section.
+   Keep each round's Code Context under ~50 000 characters; the same block is duplicated into 8 prompts, so split at ~35–40k when close to the limit. **Multi-round:** list only this round's files under Changed Files; repeat Steps 4–6 per round, then run Steps 7–8 once using concatenated specialist outputs from all rounds ([reference.md](reference.md) **Context budget and rounds**). Grouping, merging, and per-round rules: same section.
 
 5. **Launch the 8 analysis subagents in parallel** — issue 8 `Task` calls in one assistant message so they run concurrently:
 
@@ -79,7 +87,11 @@ Confirm all four before the eight parallel analysis `Task` calls (Step 7 integra
 
 6. **Collect results** — wait for all 8 to return. When a subagent times out or returns empty or unusable output, tell the user and retry that one subagent once with the same prompt; do not retry a second time, and do not retry a subagent that returned a usable report. Then proceed with the available outputs and instruct the integration subagent to record the gap.
 
-7. **Launch the integration subagent** — issue a single `Task` call:
+7. **Assemble integration inputs** — once per review (not per round), before the integration `Task`:
+   - **Stated Intent** — same text used in Step 4 (identical across rounds).
+   - **Change Scope** — block with headings **## Change Scope**, **## Changed Files** (every scoped file with `hunks:<N>, +<A>/-<D>`), and **## Diff** (concatenate all `diff --git` blocks from every round; omit file contents). Required for Agent 9 intent alignment per [agent-prompts.md](agent-prompts.md) **Integration agent (9)**.
+
+8. **Launch the integration subagent** — issue a single `Task` call:
 
    | Parameter | Value |
    |-----------|-------|
@@ -87,7 +99,7 @@ Confirm all four before the eight parallel analysis `Task` calls (Step 7 integra
    | `description` | `"Integrate review findings"` |
    | `prompt` | **Shared: Restrictions** + **Shared: Final Report Format** + the Agent 9 section from [agent-prompts.md](agent-prompts.md) + the same **Stated Intent** block as Step 4 + **Change Scope** (review-wide Changed Files + full unified diff) + all available specialist outputs |
 
-8. **Present the final review** — show the integration subagent's report, then offer to drill down into any area.
+9. **Present the final review** — show the integration subagent's report, then offer to drill down into any area.
 
 ## Agent roster
 
