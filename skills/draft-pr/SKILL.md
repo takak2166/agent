@@ -30,8 +30,8 @@ Use when the user asks to create a draft PR, open a draft pull request, or invok
 1. `gh pr list --head "$(git branch --show-current)" --json number,url,isDraft` → `[]`
 2. `gh repo view --json visibility` → not `PUBLIC`; read `.github/PULL_REQUEST_TEMPLATE` (before any push)
 3. `git push -u origin $(git branch --show-current)`
-4. Ticket `TAK-123`; Write tool creates `/tmp/feature-TAK-123-add-widget.md` from the template sections; Reference links the Linear issue URL inferred from repo context
-5. `gh pr create --draft --title "Add widget (TAK-123)" --body-file /tmp/feature-TAK-123-add-widget.md --reviewer @copilot` → report PR URL
+4. Template has **Review Deadline** → run Step 6 anchor `date` and holiday `curl`, compute next business day at anchor hour with **`HH:00`** (JST); ticket `TAK-123`; Write tool creates `/tmp/feature-TAK-123-add-widget.md` (Reference + Review Deadline filled)
+5. `gh pr create --draft --title "Add widget (TAK-123)" --body-file /tmp/feature-TAK-123-add-widget.md --reviewer @copilot` → report PR URL and Review Deadline value (note if holiday fetch failed)
 
 **User:** same repo, PR `#7` already open for current branch.
 
@@ -68,7 +68,7 @@ Mark each item before Step 7:
    - Example: branch `feature/TAK-123-some-description` → issue key `TAK-123`
    - No ticket ID found: write `- Ticket: [TODO: fill in ticket ID and URL]` in Reference, and drop the `(<ticket-key>)` part of the title
    - **Public repos:** skip this step for PR text — do not copy ticket IDs from the branch into the title or body
-6. Compose the PR body with the Write tool (not shell) at `/tmp/<branch-slug>.md` following the template structure, where `<branch-slug>` is the current branch name with `/` replaced by `-` (for example, branch `feature/TAK-123-fix` → `/tmp/feature-TAK-123-fix.md`):
+6. When the template includes **Review Deadline** (`Review Deadline` or `レビュー期限`), run the anchor `date` and holiday `curl` from the bullet below **before** writing the body file. Compose the PR body with the Write tool (not shell) at `/tmp/<branch-slug>.md` following the template structure, where `<branch-slug>` is the current branch name with `/` replaced by `-` (for example, branch `feature/TAK-123-fix` → `/tmp/feature-TAK-123-fix.md`):
    - Keep the template's headings and checklist items; fill each section with a concise one-line summary and replace HTML comments and empty checklist items with content or `N/A`; when the changes are unknown (see Notes), write the Test plan item as `- [ ] N/A (to be filled in)` rather than inventing checks
    - **Non-public repos only:** write every spot the user must fill in as visible text such as `[TODO: fill in ticket URL]`, never as an HTML comment
    - **Reference — public repo:** omit any ticket / tracking bullet (no issue keys, no Linear / Notion / Scrapbox URLs). If the template expects a ticket line, use `- Ticket: N/A` with no link and no ID. For **ADR**, include `- ADR: <url>` only when `-adr` was passed **and** the URL is not Linear, Notion, or Scrapbox; otherwise `- ADR: None`
@@ -79,11 +79,11 @@ Mark each item before Step 7:
      - If the ticket system cannot be determined, write `- Ticket: <ticket-id> [TODO: fill in URL]` and do not invent a workspace
      - Format **Reference** as bullets: ticket line as `- Ticket: [<ticket-id>](<url>)` when the URL is known; ADR line as `- ADR: <url>` when `-adr` was passed, otherwise `- ADR: None`
    - **Review Deadline — only when the template has a heading matching `Review Deadline` or `レビュー期限` (case-insensitive):** fill it instead of `N/A` using the **anchor time** sampled in Step 6 (immediately before computing the deadline — not `gh pr create`’s `createdAt`):
-     - **Anchor time (run first):** `TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M %a'`
-     - **Deadline rule:** from the **calendar day after** the anchor date (JST), advance one day at a time until the first **business day**; write that date at the anchor’s `HH:MM`. A business day is neither Saturday, Sunday, nor a Japanese public holiday.
+     - **Anchor time (run immediately before computing the deadline, still in Step 6):** `TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M %a'`
+     - **Deadline rule:** from the **calendar day after** the anchor date (JST), advance one day at a time until the first **business day**; write that date at **`HH:00`** (JST), where `HH` is the anchor’s hour — minutes are always `:00` (ignore anchor minutes). A business day is neither Saturday, Sunday, nor a Japanese public holiday.
      - **Japanese holidays:** `curl -fsS --connect-timeout 5 --max-time 10 https://holidays-jp.github.io/api/v1/date.json` — keys are `YYYY-MM-DD`. Treat a candidate day as a holiday when its date is a key. **Fetch failed** when `curl` exits non-zero **or** the response body is not a JSON object parseable as a map of `YYYY-MM-DD` keys (e.g. HTML from a proxy). On failure, treat holidays as unknown: skip weekends only and report that holidays were not checked.
-     - **Format:** follow the template's example (e.g. `(例) 2024年12月10日 17:00` → `2026年10月13日 14:53`); with no example, `YYYY-MM-DD HH:MM (JST)`
-     - **Example:** anchor Fri 2026-10-09 14:53 → candidates from Sat 2026-10-10; Sat/Sun skipped, Mon 2026-10-12 is スポーツの日 → `2026年10月13日 14:53`
+     - **Format:** follow the template's example (e.g. `(例) 2024年12月10日 17:00` → `2026年10月13日 14:00`); with no example, `YYYY-MM-DD HH:00 (JST)`
+     - **Example:** anchor Fri 2026-10-09 14:53 → deadline clock **14:00** (not 14:53); candidates from Sat 2026-10-10; Sat/Sun skipped, Mon 2026-10-12 is スポーツの日 → `2026年10月13日 14:00`
    - Leave other optional sections (e.g., Debug List, screenshots) with placeholder text or "N/A" for the user to fill in later
 7. Create the draft PR and request a Copilot code review using:
    ```bash
