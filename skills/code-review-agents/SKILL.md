@@ -55,7 +55,7 @@ Confirm all four before the eight parallel analysis `Task` calls (Step 7 integra
    <changed files, one line of summary each>
 
    ## Stated Intent
-   <PR title and body; linked issue title/body when available — see reference.md **Stated intent**. For non-PR targets, use the branch-only fallback text from that section.>
+   <PR title and body; linked issue title/body when available — see reference.md **Stated intent**. For non-PR targets, use the non-PR fallback text from **Branch or working-tree targets** in that section.>
 
    ## Project Notes
    <optional — omit this heading entirely when Step 2 found nothing: structure facts that change how findings should be read, e.g. "no test directory exists">
