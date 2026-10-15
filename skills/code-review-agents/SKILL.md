@@ -85,7 +85,7 @@ Confirm all four before the eight parallel analysis `Task` calls (Step 7 integra
    |-----------|-------|
    | `subagent_type` | `"generalPurpose"` |
    | `description` | `"Integrate review findings"` |
-   | `prompt` | **Shared: Restrictions** + **Shared: Final Report Format** + the Agent 9 section from [agent-prompts.md](agent-prompts.md) + the same **Stated Intent** block as Step 4 + all available specialist outputs |
+   | `prompt` | **Shared: Restrictions** + **Shared: Final Report Format** + the Agent 9 section from [agent-prompts.md](agent-prompts.md) + the same **Stated Intent** block as Step 4 + **Change Scope** (review-wide Changed Files + full unified diff) + all available specialist outputs |
 
 8. **Present the final review** — show the integration subagent's report, then offer to drill down into any area.
 

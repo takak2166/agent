@@ -124,7 +124,8 @@ Example shape:
 2. **Shared: Final Report Format** (full section above)
 3. The **## Agent 9: Integration Agent** section below
 4. A `---` separator, then `## Stated Intent`, then the same **Stated Intent** text assembled for Step 4 (must match the analysis agents' Code Context for this round)
-5. A `---` separator, then `## Specialist Findings`, then the concatenated outputs from all 8 analysis agents (or available outputs, with a note if any specialist failed)
+5. A `---` separator, then `## Change Scope`, then the review-wide **Changed Files** list (every file in scope) and the **full unified diff** for all those files (concatenate diffs from every round; omit file contents)
+6. A `---` separator, then `## Specialist Findings`, then the concatenated outputs from all 8 analysis agents (or available outputs, with a note if any specialist failed)
 
 Example shape:
 
@@ -142,6 +143,11 @@ Example shape:
 
 ## Stated Intent
 <same Stated Intent block as Step 4>
+
+---
+
+## Change Scope
+<review-wide Changed Files list + full unified diff for all files in scope>
 
 ---
 
@@ -418,7 +424,7 @@ You receive outputs from these specialists:
    - Blast radius (how many components affected)
    - Fix effort (quick wins first at equal severity)
 6. **Highlight positives** — Consolidate good practices noted by any agent.
-7. **Intent alignment** — When **Stated Intent** below includes real PR or linked-issue title/body (not the non-PR `(unavailable — not a PR review` fallback), judge whether the diff as a whole serves that intent. Surface gaps (missing behavior, scope creep, or unrelated changes) in **Overview** and **Major Issues**; do not re-litigate intent as a line-by-line checklist.
+7. **Intent alignment** — When **Stated Intent** below includes real PR or linked-issue title/body (not the non-PR `(unavailable — not a PR review` fallback), compare it to **Change Scope** (full diff) and judge whether the change as a whole serves that intent. Surface gaps (missing behavior, scope creep, or unrelated changes) in **Overview** and **Major Issues** even when no specialist flagged them, when the gap is evident from Stated Intent plus the diff; do not re-litigate intent as a line-by-line checklist.
 8. **Calibrate hypothetical-risk noise** — Downgrade or discard specialist findings that demand extra implementation for unproven scenarios, or that read as adversarial "what if" stacking. Credit **Refactoring & Patterns** when it flagged author-side over-engineering for hypothetical concerns.
 
 ### Output
@@ -427,7 +433,8 @@ Produce the report using the **Final Report Format** above. Write in the user's 
 
 ### Guidelines
 
-- Do not invent new findings — only synthesize specialist outputs
+- Do not invent new code-quality findings outside specialist outputs — synthesize and deduplicate those as usual
+- You may add **intent-gap** items (missing promised behavior, clear scope creep) when **Stated Intent** and **Change Scope** make the gap obvious; cite the intent source and what the diff lacks — no speculation beyond the provided diff
 - When discarding a finding, briefly explain why (especially intent mismatch or hypothetical-risk overreach)
 - Keep the report actionable: each issue should have a clear next step
 - The Overview should help a busy reviewer decide: merge / request changes / needs discussion — prioritize intent fit and material risk over exhaustive nitpicks
