@@ -18,6 +18,7 @@ A skill to reply to review comments on a specified PR with resolution results, a
 2. **Do not post any reply without user confirmation** (Step 10) — present drafts first. **Exception:** when continuing from `check-pr-comment` in the same session, **review-bot** top-level comments (Copilot, CodeRabbit, `*[bot]`, etc.; see that skill’s **Review bots — reply without confirmation**) may be posted without per-reply confirmation; human threads still require confirmation.
 3. **Do not modify code** — this skill only drafts and posts replies.
 4. **Never fake a commit hash** — use **addressed** template only when the specific suggestion is implemented; if hash unknown, treat as not addressed and ask the user.
+   - 返信にコミット SHA を書く前に、`git cat-file -t <sha>` が `commit` を返すことと、`git show <sha>` の差分に対象の行（コメントの `path` と行）が入っていることを確かめる。どちらかが合わなければ、その SHA は書かない。正しいコミットを `git log` で探し直し、見つからなければ未対応として扱いユーザーに聞く。
 5. **Resolution paragraph has no emoji**; **Acknowledgment** may use emoji (addressed replies only).
 6. Use only commands listed under **Restrictions** (`jq` only for `gh api` JSON bodies or parsing).
 
@@ -132,6 +133,7 @@ This skill assumes that the **current checkout branch** is the **head branch of 
    - Use the base branch identified in step 4
    - For each comment's `path`, check whether the relevant file was modified
 9. For each actionable comment, generate a reply message per **Reply types and templates** (above)
+   - 下書きに SHA を入れたら、Non-negotiables 4 の確認（`git cat-file -t <sha>` と `git show <sha>`）を済ませてから表に出す。
 10. Present all generated replies to the user in a table format:
 
    ```
@@ -167,7 +169,7 @@ This skill assumes that the **current checkout branch** is the **head branch of 
 12. Report a summary of posted replies (count, any failures)
 
 ## Restrictions
-- Do not execute any commands other than `gh repo view`, `gh pr view`, `gh api`, `git branch --show-current`, `git log`, and `git diff`
+- Do not execute any commands other than `gh repo view`, `gh pr view`, `gh api`, `git branch --show-current`, `git log`, `git diff`, `git cat-file -t`, and `git show`
   - Exception: `jq` is allowed only for building/slicing JSON bodies for `gh api` (e.g. `jq -n ...`) or summarizing `gh api` output for readability. Do not use it to filter out comments at the API level.
 - Do not post any reply without user confirmation, except review-bot threads per `check-pr-comment` **Review bots — reply without confirmation** when triage ran in the same session
 - Do not modify any code — this skill only posts replies
