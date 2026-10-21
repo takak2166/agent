@@ -18,7 +18,7 @@ A skill to reply to review comments on a specified PR with resolution results, a
 2. **Do not post any reply without user confirmation** (Step 10) — present drafts first. **Exception:** when continuing from `check-pr-comment` in the same session, **review-bot** top-level comments (Copilot, CodeRabbit, `*[bot]`, etc.; see that skill’s **Review bots — reply without confirmation**) may be posted without per-reply confirmation; human threads still require confirmation.
 3. **Do not modify code** — this skill only drafts and posts replies.
 4. **Never fake a commit hash** — use **addressed** template only when the specific suggestion is implemented; if hash unknown, treat as not addressed and ask the user.
-   - 返信にコミット SHA を書く前に、`git cat-file -t <sha>` が `commit` を返すことと、`git show <sha>` の差分に対象の行（コメントの `path` と行）が入っていることを確かめる。どちらかが合わなければ、その SHA は書かない。正しいコミットを `git log` で探し直し、見つからなければ未対応として扱いユーザーに聞く。
+   - 返信に **7-char commit short hash** を書く前に、次をすべて満たすこと。(1) `git cat-file -t <sha>` が `commit` を返す。(2) Step 4 の `baseRefName` を使い、`git log --oneline [base_branch]..HEAD` のいずれかの行に `<sha>`（短縮形が一意に一致する場合は短縮形可）が含まれる。(3) `git show <sha>` の差分から、そのコメントの**具体的な指摘**が実装されていると判断できる。コメントの `path` / `line` / `position` は調査の起点に留める — API の行番号と hunk 行の完全一致は要求しない。別ファイル・共有ヘルパーへの修正や、修正による行ずれは許容する。いずれかが合わない、または (3) が不明なら hash は書かず未対応としてユーザーに聞く。正しい commit hash を同じ `git log --oneline [base_branch]..HEAD` で探し直してもよい。
 5. **Resolution paragraph has no emoji**; **Acknowledgment** may use emoji (addressed replies only).
 6. Use only commands listed under **Restrictions** (`jq` only for `gh api` JSON bodies or parsing).
 
@@ -133,7 +133,7 @@ This skill assumes that the **current checkout branch** is the **head branch of 
    - Use the base branch identified in step 4
    - For each comment's `path`, check whether the relevant file was modified
 9. For each actionable comment, generate a reply message per **Reply types and templates** (above)
-   - 下書きに SHA を入れたら、Non-negotiables 4 の確認（`git cat-file -t <sha>` と `git show <sha>`）を済ませてから表に出す。
+   - 下書きに commit hash を入れる場合は、Non-negotiables 4 の確認（`git cat-file -t`、PR レンジの `git log [base_branch]..HEAD`、`git show` で指摘内容の実装）を済ませてから表に出す。
 10. Present all generated replies to the user in a table format:
 
    ```
