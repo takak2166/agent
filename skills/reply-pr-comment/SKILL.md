@@ -18,7 +18,7 @@ A skill to reply to review comments on a specified PR with resolution results, a
 2. **Do not post any reply without user confirmation** (Step 10) — present drafts first. **Exception:** when continuing from `check-pr-comment` in the same session, **review-bot** top-level comments (Copilot, CodeRabbit, `*[bot]`, etc.; see that skill’s **Review bots — reply without confirmation**) may be posted without per-reply confirmation; human threads still require confirmation.
 3. **Do not modify code** — this skill only drafts and posts replies.
 4. **Never fake a commit hash** — use **addressed** template only when the specific suggestion is implemented; if hash unknown, treat as not addressed and ask the user.
-   - 返信に **7-char commit short hash** を書く前に、次をすべて満たすこと。(1) `git cat-file -t <sha>` が `commit` を返す。(2) Step 4 の `baseRefName` を使い、`git log --oneline [base_branch]..HEAD` のいずれかの行に `<sha>`（短縮形が一意に一致する場合は短縮形可）が含まれる。(3) `git show <sha>` の差分から、そのコメントの**具体的な指摘**が実装されていると判断できる。コメントの `path` / `line` / `position` は調査の起点に留める — API の行番号と hunk 行の完全一致は要求しない。別ファイル・共有ヘルパーへの修正や、修正による行ずれは許容する。いずれかが合わない、または (3) が不明なら hash は書かず未対応としてユーザーに聞く。正しい commit hash を同じ `git log --oneline [base_branch]..HEAD` で探し直してもよい。
+   - Before putting a **7-char commit short hash** in a reply, satisfy all of the following: (1) `git cat-file -t <sha>` returns `commit`. (2) Using `baseRefName` from Step 4, `<sha>` appears on a line of `git log --oneline [base_branch]..HEAD` (a unique short prefix is acceptable when unambiguous). (3) From the `git show <sha>` diff, you can judge that the comment's **specific suggestion** was implemented. Treat the comment's `path`, `line`, and `position` only as a starting point for the investigation — do not require an exact match between API line numbers and diff hunk lines; fixes in another file, shared helpers, or line drift from edits are acceptable. If any check fails or (3) is unclear, omit the commit hash, treat the point as not addressed, and ask the user. You may search again for the correct commit hash in the same `git log --oneline [base_branch]..HEAD` output.
 5. **Resolution paragraph has no emoji**; **Acknowledgment** may use emoji (addressed replies only).
 6. Use only commands listed under **Restrictions** (`jq` only for `gh api` JSON bodies or parsing).
 
@@ -133,7 +133,7 @@ This skill assumes that the **current checkout branch** is the **head branch of 
    - Use the base branch identified in step 4
    - For each comment's `path`, check whether the relevant file was modified
 9. For each actionable comment, generate a reply message per **Reply types and templates** (above)
-   - 下書きに commit hash を入れる場合は、Non-negotiables 4 の確認（`git cat-file -t`、PR レンジの `git log [base_branch]..HEAD`、`git show` で指摘内容の実装）を済ませてから表に出す。
+   - If a draft will include a commit hash, complete the Non-negotiables 4 checks (`git cat-file -t`, `git log --oneline [base_branch]..HEAD` for the PR range, and `git show` to confirm the specific suggestion was implemented) before showing it in the table.
 10. Present all generated replies to the user in a table format:
 
    ```
