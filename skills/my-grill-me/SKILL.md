@@ -41,6 +41,8 @@ Classify each frontier item **before** adding it to a question-tool payload. Sto
 | **Empirical** | Running, measuring, or a throwaway sketch could settle it (behavior, timing, layout, output, perf, whether two approaches actually differ) | Do **not** ask as if the user knows. Do **not** prototype or implement during this skill. **Park** it: what to observe later, and which later decision it unlocks. |
 | **Preference** | No experiment can settle it (taste, priority, risk appetite, who it is for, what "done" means, which users to serve) | Ask via the question tool. |
 
+A look-up result about changing state (PR, CI, routine, issue) goes stale: re-read it right before the question that depends on it, and drop the question if it is already settled.
+
 When class is unclear: try a cheap look-up first. If it is still unsettleable without a product call, class **preference**. Do not default to asking.
 
 Running **existing** code, tests, or traces to learn the current system is look-up. Building a **new** sketch to decide a fork is empirical — park it.
