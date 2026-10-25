@@ -41,7 +41,7 @@ Classify each frontier item **before** adding it to a question-tool payload. Sto
 | **Empirical** | Running, measuring, or a throwaway sketch could settle it (behavior, timing, layout, output, perf, whether two approaches actually differ) | Do **not** ask as if the user knows. Do **not** prototype or implement during this skill. **Park** it: what to observe later, and which later decision it unlocks. |
 | **Preference** | No experiment can settle it (taste, priority, risk appetite, who it is for, what "done" means, which users to serve) | Ask via the question tool. |
 
-A look-up result about changing state (PR, CI, routine, issue) goes stale: re-read it right before the question that depends on it, and drop the question if it is already settled.
+A look-up of external state that can change during the interview (PR status, CI runs, issue state, scheduled jobs) goes stale: re-read it right before the preference question that depends on it. If the fresh read makes that decision moot (for example the PR is already merged), record the dropped question and the settling state under **Looked-up facts** this round (Expected output item 2) and omit the question; if only a premise changed (for example CI passed but the release call is still open), rebuild the question and options from the fresh read instead of dropping it. This check updates the question payload only; it is not a mid-round recompute of the design tree (Restrictions).
 
 When class is unclear: try a cheap look-up first. If it is still unsettleable without a product call, class **preference**. Do not default to asking.
 
