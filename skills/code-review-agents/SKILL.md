@@ -1,12 +1,12 @@
 ---
 name: code-review-agents
-description: Runs a multi-perspective code review by launching 8 specialist analysis subagents in parallel (language spec, refactoring, DDD, clean architecture, security, performance, TDD, observability) plus 1 integration subagent that deduplicates, prioritizes, and reports their findings.
+description: Runs a multi-perspective code review via 3 sequential consolidated analysis passes (security/performance/observability; architecture/DDD/refactoring; language/TDD) plus 1 integration subagent that deduplicates, prioritizes, and reports their findings.
 disable-model-invocation: true
 ---
 
 # Code Review Agents
 
-Orchestrate 8 specialist analysis subagents (parallel), then 1 integration subagent (sequential). Produce review text only.
+Orchestrate **3 consolidated analysis passes** (sequential — one `Task` at a time), then 1 integration subagent. Produce review text only.
 
 ## Restrictions
 
@@ -19,14 +19,14 @@ These bullets govern the orchestrator (you):
 
 Subagents carry their own constraints: copy **Shared: Restrictions** from [agent-prompts.md](agent-prompts.md) verbatim as the first block of every analysis and integration `Task` prompt. Never substitute the bullets above into a `Task` prompt, and never merge the two blocks.
 
-## Before launching analysis subagents
+## Before launching analysis passes
 
-Confirm all four before the eight parallel analysis `Task` calls (Step 8 integration uses the same **Shared: Restrictions** rule separately):
+Confirm all four before the first analysis `Task` (Step 5; Step 8 integration uses the same **Shared: Restrictions** rule separately):
 
 - [ ] Code Context block for the current round is complete — Changed Files + Stated Intent + Diff + File Contents; add **Project Notes** only when Step 2 surfaced structure facts (Step 4)
 - [ ] [agent-prompts.md](agent-prompts.md) read (Step 3)
-- [ ] Launch plan ready: all 8 analysis `Task` calls will go in one assistant message (Step 5)
-- [ ] Each of the 8 analysis `Task` prompts starts with **Shared: Restrictions** from [agent-prompts.md](agent-prompts.md)
+- [ ] Launch plan ready: three analysis `Task` calls in order (Pass 1 → Pass 2 → Pass 3), each after the prior returns
+- [ ] Each analysis `Task` prompt starts with **Shared: Restrictions** from [agent-prompts.md](agent-prompts.md) and includes every agent section listed for that pass in **Consolidated passes**
 
 ## Before launching the integration subagent
 
@@ -75,17 +75,22 @@ Confirm all three before the integration `Task` call (Step 8):
    <full content of each file in this round, labeled by path>
    ```
 
-   Keep each round's Code Context under ~50 000 characters; the same block is duplicated into 8 prompts, so split at ~35–40k when close to the limit. **Multi-round:** list only this round's files under Changed Files; repeat Steps 4–6 per round, then run Steps 7–8 once using concatenated specialist outputs from all rounds ([reference.md](reference.md) **Context budget and rounds**). Grouping, merging, and per-round rules: same section.
+   Keep each round's Code Context under ~50 000 characters; the same block is duplicated into 3 pass prompts, so split at ~35–40k when close to the limit. **Multi-round:** list only this round's files under Changed Files; repeat Steps 4–6 per round, then run Steps 7–8 once using concatenated pass outputs from all rounds ([reference.md](reference.md) **Context budget and rounds**). Grouping, merging, and per-round rules: same section.
 
-5. **Launch the 8 analysis subagents in parallel** — issue 8 `Task` calls in one assistant message so they run concurrently:
+5. **Launch the 3 consolidated analysis passes sequentially** — issue one `Task` at a time; start the next pass only after the previous returns:
+
+   | Pass | `description` | Agent sections from [agent-prompts.md](agent-prompts.md) (in order) |
+   |------|---------------|---------------------------------------------------------------------|
+   | 1 | `"Review pass: Sec/Perf/Obs"` | Agent 5 (Security), Agent 6 (Performance), Agent 8 (Observability) |
+   | 2 | `"Review pass: Arch/DDD/Refactor"` | Agent 3 (DDD), Agent 4 (Clean Architecture), Agent 2 (Refactoring & Patterns) |
+   | 3 | `"Review pass: Lang/TDD"` | Agent 1 (Language Spec), Agent 7 (TDD) |
 
    | Parameter | Value |
    |-----------|-------|
    | `subagent_type` | `"generalPurpose"` |
-   | `description` | Short label, e.g. `"Review: Security"` |
-   | `prompt` | **Shared: Restrictions** + **Shared: Finding Format** + the agent's section from [agent-prompts.md](agent-prompts.md) + the Code Context block (see **How to construct prompts** there) |
+   | `prompt` | **Shared: Restrictions** + **Shared: Finding Format** + the pass's agent sections (concatenated) + the Code Context block (see **How to construct prompts** there) |
 
-6. **Collect results** — wait for all 8 to return. When a subagent times out or returns empty or unusable output, tell the user and retry that one subagent once with the same prompt; do not retry a second time, and do not retry a subagent that returned a usable report. Then proceed with the available outputs and instruct the integration subagent to record the gap.
+6. **Collect results** — after each pass, retain its report labeled by pass name. When a pass times out or returns empty or unusable output, tell the user and retry **that pass** once with the same prompt; do not retry a second time, and do not retry a pass that returned a usable report. Then proceed with the available outputs and instruct the integration subagent to record any missing pass.
 
 7. **Assemble integration inputs** — once per review (not per round), before the integration `Task`:
    - **Stated Intent** — same text used in Step 4 (identical across rounds).
@@ -97,11 +102,21 @@ Confirm all three before the integration `Task` call (Step 8):
    |-----------|-------|
    | `subagent_type` | `"generalPurpose"` |
    | `description` | `"Integrate review findings"` |
-   | `prompt` | **Shared: Restrictions** + **Shared: Final Report Format** + the Agent 9 section from [agent-prompts.md](agent-prompts.md) + the same **Stated Intent** block as Step 4 + **Change Scope** (review-wide Changed Files + full unified diff) + all available specialist outputs |
+   | `prompt` | **Shared: Restrictions** + **Shared: Final Report Format** + the Agent 9 section from [agent-prompts.md](agent-prompts.md) + the same **Stated Intent** block as Step 4 + **Change Scope** (review-wide Changed Files + full unified diff) + all available pass outputs (Pass 1–3) |
 
 9. **Present the final review** — show the integration subagent's report, then offer to drill down into any area.
 
-## Agent roster
+## Consolidated passes
+
+Each pass is one `Task` that applies multiple specialist lenses (sections in [agent-prompts.md](agent-prompts.md)):
+
+| Pass | Perspectives covered |
+|------|----------------------|
+| 1 | Security, Performance, Observability |
+| 2 | DDD, Clean Architecture, Refactoring & Patterns |
+| 3 | Language Spec, TDD |
+
+## Agent roster (prompt source)
 
 | # | Agent | Focus area |
 |---|-------|------------|

@@ -16,8 +16,8 @@ Store manifests as `/tmp/code-review-agents/eval-data/pr-{owner}-{repo}-{n}.json
 
 | Design | Dispatch pattern |
 |--------|------------------|
-| **A (current)** | 8 specialist analysis subagents in parallel + 1 integration subagent ([SKILL.md](../SKILL.md)) |
-| **B (consolidated)** | 3 sequential generalist passes (security/performance/observability; architecture/DDD/refactoring; language/TDD) + 1 integration subagent — same shared Code Context, perspectives drawn from [agent-prompts.md](../agent-prompts.md) |
+| **A (legacy)** | 8 specialist analysis subagents in parallel + 1 integration subagent |
+| **B (shipped)** | 3 sequential consolidated passes + 1 integration subagent — same shared Code Context, perspectives drawn from [agent-prompts.md](../agent-prompts.md) ([SKILL.md](../SKILL.md)) |
 
 Run each PR **twice** per design (`run1`, `run2`) with the **same Task model** recorded in `BENCHMARKS.md`. **Pass** = recall ≥ 60% and precision ≥ 50% for that PR-run. Record **flipped PRs** when pass/fail changes between runs or after skill edits.
 
