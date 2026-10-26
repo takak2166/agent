@@ -17,7 +17,8 @@ Orchestrate **audit-skill → empirical-prompt-tuning → skill-optimizer** on o
 3. **Scope edits** to the target skill directory only—the same restriction as audit-skill.
 4. **Do not** create git commits unless the user explicitly asks.
 5. **Task tool required** for Phase 2 and Phase 3 subagent dispatch. If unavailable, stop after Phase 1 and report `empirical/optimizer evaluation skipped: dispatch unavailable`. Outer convergence is unreachable; verification audit is N/A.
-6. **Record every round** in `/tmp/{skill-name}/HARDENING.md` (create on Round 1). `{skill-name}` is always the **target skill's** frontmatter `name`—never this loop skill's name. Append Phase 2 detail to `/tmp/{skill-name}/BENCHMARKS.md` per empirical-prompt-tuning; append Phase 3 optimizer benchmark matrices to the same file under `## Optimizer benchmark — Round N` headings.
+6. **Record every round** in `/tmp/{skill-name}/HARDENING.md` (create on Round 1). `{skill-name}` is always the **target skill's** frontmatter `name`—never this loop skill's name. Append Phase 2 detail to `/tmp/{skill-name}/BENCHMARKS.md` per empirical-prompt-tuning; append Phase 3 optimizer benchmark matrices to the same file under `## Optimizer benchmark — Round N` headings. Append **flipped-scenario** readouts there too (see **Must-not-break scenarios**).
+7. **No real external writes** during evals (no production Slack, GitHub posts, Linear, live memory APIs). Use dummy tool results; logs stay under `/tmp/{skill-name}/` only.
 
 ## Usage
 
@@ -123,6 +124,20 @@ Use the directory you actually read for that phase (prefer absolute paths for `$
 
 Phase 1–3 child skills are declared as transitive APM dependencies in [`apm.yml`](apm.yml). Installing `takak2166/agent/skills/skill-hardening-loop` resolves them automatically; verify with `apm deps tree`.
 
+## Must-not-break scenarios
+
+Applies to the **target** skill being hardened (not this loop skill).
+
+1. **Extract rules** — From the target, list every must-not-break rule: bullets under **Non-negotiables** and **Restrictions**, explicit prohibitions, and required gates that must hold on every invocation.
+2. **One scenario per rule** — Give each listed rule its own scenario. Do **not** bundle multiple must-not-break rules into one combined scenario.
+3. **Run count**
+   - **Must-not-break rule scenarios:** **n = 2** independent runs in Phase 2 (fresh subagent per run). In Phase 3, **n = 2** runs per matrix cell for each must-not-break scenario (with-skill and without-skill cells each run twice). Record `run1` and `run2` pass/fail separately.
+   - **Other scenarios** (core capability, omission-prone footer/checklist, noisy-context retrieval): keep Phase 2 run-count guidance below (default **n = 1** unless you deliberately raise n to read a trend).
+4. **Flipped scenarios** — Compare pass/fail across runs. Append a `## Flipped scenarios — Round N` block to `/tmp/{skill-name}/BENCHMARKS.md` listing:
+   - Scenarios or matrix cells whose pass/fail **changed before-edit vs after-edit** (Phase 2 iteration or Phase 3 optimizer re-run)
+   - For each must-not-break rule scenario, any **run1 vs run2** disagreement in the same round
+5. **Final report** — Include `### Flipped scenarios` with counts and scenario ids (not averages alone). Template: [reference.md](reference.md).
+
 ## Round workflow
 
 Copy this checklist each round and mark progress in the round log:
@@ -150,13 +165,15 @@ Skip entirely if Task tool is unavailable (see **Non-negotiables**).
 
 1. Read empirical-prompt-tuning `SKILL.md` in full. Append **Phase start log** (`Child skill resolved: empirical-prompt-tuning → …`) to **`/tmp/{skill-name}/HARDENING.md`** where `{skill-name}` is the **hardened target's** frontmatter `name`—not the child skill's name.
 2. Run **Iteration 0** (description/body consistency) on the target. For **manual-invoke targets**, reconcile only **factual** WHAT/body gaps—do not add discovery WHEN or trigger phrases to `description`. If Phase 1 already fixed factual WHAT/body gaps, Iteration 0 is a confirmation pass only—do not re-edit unless Phase 1 skipped the fix.
-3. Run the full empirical loop (baseline → dispatch subagents → two-sided evaluation → apply diff → re-evaluate) until **empirical convergence**. Before the first dispatch, apply **eval-meta sanitization** (step 4).
+3. Build the **scenario plan** (see **Must-not-break scenarios**) before the first dispatch.
+4. Run the full empirical loop (baseline → dispatch subagents → two-sided evaluation → apply diff → re-evaluate) until **empirical convergence**. Before the first dispatch, apply **eval-meta sanitization** (step 5).
    - **3** consecutive iterations with **zero new unclear points** for orchestrator/meta skills (including this skill); **2** for ordinary targets
    - Accuracy improvement ≤ +3 points vs previous iteration
    - Step count within ±10%, duration within ±15% of previous — **these two bands only mean something at ≥2 runs per scenario.** At n=1 a single extra file read moves step count past ±10%, so the band measures run-to-run noise rather than the target. With one run per scenario, **record both numbers but do not gate convergence on them**; converge on the unclear-point and accuracy criteria instead, and write `step/duration: n=1, recorded not gating` in the iteration block. Raise n only for scenarios whose trend you actually intend to read—paying for extra runs everywhere is rarely worth it.
    - Hold-out scenario: if accuracy drops ≥15 points from recent average, add edge scenarios and continue (do not declare converged)
-4. **Eval-meta sanitization (Phase 2 and Phase 3).** Names and prompts the executor sees must look like an organic user task. Do not put eval-meta labels in candidate-visible directories, files, or prompts: `eval`, `judge`, `experiment`, `rubric`, `score`, `compare`, `benchmark`, `candidate`, `arena`. `test` is forbidden as a meta label (`test-run`, `eval-test`) but allowed when it is the project's real test path the organic task would use. Do not tell a cell that other cells or models exist. Details in [reference.md](reference.md) **Chain-following and eval-meta sanitization**.
-5. **Chain-following (second channel — does not replace self-report).** Keep empirical self-report for unclear points and discretionary fill-ins. Score **whether the executor followed the target skill** from the cell transcript, not from the executor's claims. Full rules: [reference.md](reference.md) **Chain-following and eval-meta sanitization**.
+   - Must-not-break rule scenarios always use **n = 2** (see **Must-not-break scenarios**); do not treat them as optional n=1 cells.
+5. **Eval-meta sanitization (Phase 2 and Phase 3).** Names and prompts the executor sees must look like an organic user task. Do not put eval-meta labels in candidate-visible directories, files, or prompts: `eval`, `judge`, `experiment`, `rubric`, `score`, `compare`, `benchmark`, `candidate`, `arena`. `test` is forbidden as a meta label (`test-run`, `eval-test`) but allowed when it is the project's real test path the organic task would use. Do not tell a cell that other cells or models exist. Details in [reference.md](reference.md) **Chain-following and eval-meta sanitization**.
+6. **Chain-following (second channel — does not replace self-report).** Keep empirical self-report for unclear points and discretionary fill-ins. Score **whether the executor followed the target skill** from the cell transcript, not from the executor's claims. Full rules: [reference.md](reference.md) **Chain-following and eval-meta sanitization**.
    - Use only the active workspace's `agent-transcripts/` path named in the system prompt. Do **not** glob `~/.cursor/projects/*/`.
    - Prefer the subagent transcript for that Task cell (nested `.../subagents/*.jsonl` or the path returned with the Task). Match it by the cell's opening user prompt.
    - With-skill cell: did it actually `Read` the target `SKILL.md`? Record `chain_follow: observed | claimed-only | unknown`.
@@ -164,8 +181,8 @@ Skip entirely if Task tool is unavailable (see **Non-negotiables**).
    - `unknown` (no transcript): record it; do not infer either way.
    - Do **not** gate empirical inner-loop convergence on `chain_follow` alone. Use it to discount false "I followed the skill" reports when applying diffs.
    - After scoring, read each executor's returned body end to end. If it disagrees with the self-report or the requirements checklist, log the disagreement and do not paper over it in the iteration average.
-6. Append iteration summaries to `/tmp/{skill-name}/BENCHMARKS.md` (include `chain_follow` per cell).
-7. Record:
+7. Append iteration summaries and **Flipped scenarios** (when any flip occurred) to `/tmp/{skill-name}/BENCHMARKS.md` (include `chain_follow` per cell).
+8. Record:
    - `empirical_edits`: yes / no
    - Iteration count
    - Final accuracy / success per scenario (table from empirical presentation format)
@@ -190,8 +207,9 @@ Skip entirely if Task tool is unavailable (same as Phase 2).
    - [ ] Phase 2 *scenario settings* reused from `BENCHMARKS.md` when present; missing benchmark-loop scenarios added
    - [ ] At least 2 distinct Task models when supported (log `multi-model: partial` if only one)
    - [ ] Target `name` checked against installed skills; if it collides, the without-cell prompt names that skill and forbids loading it
-   - [ ] Each scenario × model: two **fresh** subagents (with-skill gets target `SKILL.md`; without-skill gets brief only)
-   - [ ] After cells return, score against rubric only; record matrix under `## Optimizer benchmark — Round N` in `BENCHMARKS.md`
+   - [ ] Must-not-break rule scenarios from the plan included; **n = 2** runs per matrix cell for those scenarios
+   - [ ] Each scenario × model: two **fresh** subagents per run (with-skill gets target `SKILL.md`; without-skill gets brief only)
+   - [ ] After cells return, score against rubric only; record matrix and **Flipped scenarios** under `BENCHMARKS.md` (`## Optimizer benchmark — Round N`)
 
    - **Scenarios:** Reuse Phase 2 *scenario settings* from `BENCHMARKS.md` when present; add any missing **benchmark-loop** required scenarios (core capability, omission-prone footer/checklist, noisy-context retrieval). Do **not** paste Phase 2 requirements checklists into executor prompts as-is—Phase 2 lists are with-skill achievement items and leak answers into without-skill cells.
    - **Models:** Use **distinct models available via Task in this environment**—no fixed slug list (panels differ by host). Dispatch at least **2** when supported; if only one is available, run the full with/without matrix on that model and log `multi-model: partial (single model)`. Record chosen slugs in the round log and `BENCHMARKS.md`.
@@ -211,7 +229,7 @@ Skip entirely if Task tool is unavailable (same as Phase 2).
    - **Parent read-through:** After the matrix scores, read each cell's returned body end to end. If the parent's reading disagrees with the rubric %, log the disagreement (ambiguous rubric or biased self-summary) and exclude that cell from the mean rather than averaging it away.
    - **Readout:** Use benchmark-loop table format; flag universal failures (0% with skill) and regressions (negative delta) per `regression-triage.md`.
 4. **Salience edits:** If the matrix shows universal failures or regressions, apply **minimum salience edits**. For **manual-invoke targets**, limit to in-body execution clarity (front-loaded checklists, integrated examples, must/omit wording)—**not** discovery triggers (`## Triggers`, `description` WHEN expansion, trigger-phrase lists). For other targets, activation-design patterns (including triggers) apply when the matrix shows activation gaps. One theme per optimizer iteration within this phase.
-5. **Re-run evals:** After edits, re-dispatch subagents on **affected scenario × model cells** (at minimum: any cell with regression or universal failure; ideally the full matrix if edits were global). Compare deltas to the pre-edit run.
+5. **Re-run evals:** After edits, re-dispatch subagents on **affected scenario × model cells** (at minimum: any cell with regression or universal failure; ideally the full matrix if edits were global). Compare deltas to the pre-edit run; update **Flipped scenarios** for any pass/fail change.
 6. **Release gates:** Check required pass conditions in `release-gates.md` against the **latest** benchmark matrix (date, matrix, deltas recorded in `BENCHMARKS.md`). Do not ship-blocking issues silently.
 7. **Inner stop (this phase):** Stop Phase 3 when release gates pass with no new salience edits needed, or after **one** edit → re-run cycle this round (outer round may continue if `optimizer_edits: yes`).
 8. Append the benchmark matrix and interpretation to `/tmp/{skill-name}/BENCHMARKS.md` under `## Optimizer benchmark — Round N`.
@@ -266,6 +284,9 @@ Use this structure:
 ### Round summary
 | Round | Audit edits | Empirical edits | Optimizer edits | Notes |
 |-------|-------------|-----------------|-----------------|-------|
+
+### Flipped scenarios
+(per round: rule-scenario run1/run2 disagreements; before-edit vs after-edit cell changes — from `BENCHMARKS.md`)
 
 ### Verification audit
 (Include only when Status is **Converged**. Report Critical/Major status: "clean — no Critical/Major remain" or list issues found. Omit for Max rounds reached / Partial statuses.)

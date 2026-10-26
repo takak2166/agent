@@ -94,6 +94,22 @@ Round 1:
 
 No `## Round 2` heading is created — the verification audit is the last block under `## Round 1`.
 
+## BENCHMARKS.md — flipped scenarios template
+
+Append after each Phase 2 iteration or Phase 3 matrix when pass/fail can change:
+
+```markdown
+## Flipped scenarios — Round {N}
+
+| Scenario / cell | Change | Notes |
+|-----------------|--------|-------|
+| rule: no-external-writes / with-skill / run1→run2 | pass→fail | … |
+| optimizer: noisy-context / without / model-A | fail→pass (pre-edit→post-edit) | … |
+
+**Rule-scenario run disagreement (n=2):** {count}  
+**Before-edit vs after-edit flips:** {count}
+```
+
 ## Worked example (condensed)
 
 **Target:** `skills/example-skill` (hypothetical auto-discovered target without `disable-model-invocation: true`)
