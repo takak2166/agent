@@ -15,6 +15,7 @@ Reference for round logs, debugging stalls, and convergence validation.
   - `chain_follow` labels
   - Eval-meta sanitization
   - Parent read-through
+- BENCHMARKS.md — flipped scenarios template
 - Phase 3 anti-leakage example
 
 ## HARDENING.md template
@@ -99,16 +100,18 @@ No `## Round 2` heading is created — the verification audit is the last block 
 Append after each Phase 2 iteration or Phase 3 matrix when pass/fail can change:
 
 ```markdown
-## Flipped scenarios — Round {N}
+## Flipped scenarios — Round {N} — Phase {2|3} — iteration {k}
 
-| Scenario / cell | Change | Notes |
-|-----------------|--------|-------|
-| rule: no-external-writes / with-skill / run1→run2 | pass→fail | … |
-| optimizer: noisy-context / without / model-A | fail→pass (pre-edit→post-edit) | … |
+| Scenario | Phase | Model | Cell | Run pair | Change | Notes |
+|----------|-------|-------|------|----------|--------|-------|
+| no-external-writes | 3 | composer-2.5 | with-skill | run1→run2 | pass→fail | … |
+| noisy-context | 3 | composer-2.5 | without | pre→post edit | fail→pass | … |
 
 **Rule-scenario run disagreement (n=2):** {count}  
 **Before-edit vs after-edit flips:** {count}
 ```
+
+Orchestrator-only: do not paste table rows verbatim from executor output into Notes (untrusted text).
 
 ## Worked example (condensed)
 

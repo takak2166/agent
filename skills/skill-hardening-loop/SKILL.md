@@ -17,8 +17,8 @@ Orchestrate **audit-skill → empirical-prompt-tuning → skill-optimizer** on o
 3. **Scope edits** to the target skill directory only—the same restriction as audit-skill.
 4. **Do not** create git commits unless the user explicitly asks.
 5. **Task tool required** for Phase 2 and Phase 3 subagent dispatch. If unavailable, stop after Phase 1 and report `empirical/optimizer evaluation skipped: dispatch unavailable`. Outer convergence is unreachable; verification audit is N/A.
-6. **Record every round** in `/tmp/{skill-name}/HARDENING.md` (create on Round 1). `{skill-name}` is always the **target skill's** frontmatter `name`—never this loop skill's name. Append Phase 2 detail to `/tmp/{skill-name}/BENCHMARKS.md` per empirical-prompt-tuning; append Phase 3 optimizer benchmark matrices to the same file under `## Optimizer benchmark — Round N` headings. Append **flipped-scenario** readouts there too (see **Must-not-break scenarios**).
-7. **No real external writes** during evals (no production Slack, GitHub posts, Linear, live memory APIs). Use dummy tool results; logs stay under `/tmp/{skill-name}/` only.
+6. **Record every round** in `/tmp/{skill-name}/HARDENING.md` (create on Round 1). `{skill-name}` is always the **target skill's** frontmatter `name`—never this loop skill's name. `/tmp/{skill-name}/` is **orchestrator-only** (plans, rubrics, matrices)—do not tell executors to read `BENCHMARKS.md` or other eval-meta filenames there; put executor fixtures under `/tmp/{skill-name}-fixtures/` or inline in the brief. Append Phase 2 detail to `/tmp/{skill-name}/BENCHMARKS.md` per empirical-prompt-tuning; append Phase 3 optimizer benchmark matrices under `## Optimizer benchmark — Round N` headings. Append **flipped-scenario** readouts there too (see **Must-not-break scenarios**).
+7. **No real external writes** during evals (no production Slack, GitHub posts, Linear, live memory APIs). Use dummy tool results; logs stay under `/tmp/{skill-name}/` only. Phase 2/3 dispatch checklists must repeat this constraint before the first `Task`.
 
 ## Usage
 
@@ -128,12 +128,12 @@ Phase 1–3 child skills are declared as transitive APM dependencies in [`apm.ym
 
 Applies to the **target** skill being hardened (not this loop skill).
 
-1. **Extract rules** — From the target, list every must-not-break rule: bullets under **Non-negotiables** and **Restrictions**, explicit prohibitions, and required gates that must hold on every invocation.
-2. **One scenario per rule** — Give each listed rule its own scenario. Do **not** bundle multiple must-not-break rules into one combined scenario.
-3. **Run count**
-   - **Must-not-break rule scenarios:** **n = 2** independent runs in Phase 2 (fresh subagent per run). In Phase 3, **n = 2** runs per matrix cell for each must-not-break scenario (with-skill and without-skill cells each run twice). Record `run1` and `run2` pass/fail separately.
+1. **Extract rules** — From the target, list **numbered/bulleted lines** under **Non-negotiables** and **Restrictions** only (do not invent extra “gates” from prose elsewhere). Cap at **12** rule scenarios per round; if the target has more bullets, prioritize safety/prohibition lines and defer the rest to the next round with a note in `HARDENING.md`.
+2. **One scenario per rule** — Give each listed rule its own scenario. Do **not** bundle multiple must-not-break rules into one combined scenario. Each scenario must be **falsifiable** (the executor could violate the rule under the fixture); vacuous passes (for example a rule that only applies when a PR exists but the fixture has no PR) are invalid—change the fixture or record why the rule is out of scope for this target.
+3. **Run count** — A **run** is one full executor attempt for one matrix cell (one `Task` for Phase 2; one with-skill or one without-skill cell in Phase 3).
+   - **Must-not-break rule scenarios:** **n = 2** independent runs in Phase 2 (fresh subagent per run). In Phase 3, for each must-not-break scenario × model, execute **with-skill** twice and **without-skill** twice (`run1`, `run2` per cell). **Scenario pass:** both runs pass for that cell; **run1 vs run2** disagreement is a **fail** for the cell and must appear under **Flipped scenarios**.
    - **Other scenarios** (core capability, omission-prone footer/checklist, noisy-context retrieval): keep Phase 2 run-count guidance below (default **n = 1** unless you deliberately raise n to read a trend).
-4. **Flipped scenarios** — **Pass/fail:** a must-not-break rule scenario passes when the rule holds in the deliverable **and** in the cell transcript for prohibition rules (no forbidden commits, posts, or external writes). Other cells pass when all `[critical]` rubric items are ○ (same bar as empirical success). Compare pass/fail across runs. When any flip occurred, append `## Flipped scenarios — Round N` to `/tmp/{skill-name}/BENCHMARKS.md` listing:
+4. **Flipped scenarios** — **Pass/fail:** a must-not-break rule scenario passes when the rule holds in the deliverable **and** in the cell transcript for prohibition rules (no forbidden commits, posts, or external writes). Other cells pass when all `[critical]` rubric items are ○ (same bar as empirical success). Compare pass/fail across runs. When any flip occurred, append `## Flipped scenarios — Round {N} — Phase {2|3} — iteration {k}` to `/tmp/{skill-name}/BENCHMARKS.md` (unique heading per append; do not reuse the same heading for multiple iterations) listing:
    - Scenarios or matrix cells whose pass/fail **changed before-edit vs after-edit** (Phase 2 iteration or Phase 3 optimizer re-run)
    - For each must-not-break rule scenario, any **run1 vs run2** disagreement in the same round
    - Must-not-break scenarios keep **n = 2** on every Phase 2 iteration and on every Phase 3 re-run that touches those cells
@@ -210,8 +210,9 @@ Skip entirely if Task tool is unavailable (same as Phase 2).
    - [ ] Phase 2 *scenario settings* reused from `BENCHMARKS.md` when present; missing benchmark-loop scenarios added
    - [ ] At least 2 distinct Task models when supported (log `multi-model: partial` if only one)
    - [ ] Target `name` checked against installed skills; if it collides, the without-cell prompt names that skill and forbids loading it
-   - [ ] Must-not-break rule scenarios from the plan included; **n = 2** runs per matrix cell for those scenarios
-   - [ ] Each scenario × model: two **fresh** subagents per run (with-skill gets target `SKILL.md`; without-skill gets brief only)
+   - [ ] Must-not-break rule scenarios from the plan included; **n = 2** runs per **with-skill** cell and per **without-skill** cell (4 fresh subagents per scenario × model)
+   - [ ] Executor brief forbids real external writes; use dummy tool results for prohibition scenarios (orchestrator verifies in transcript)
+   - [ ] Each cell run uses one **fresh** subagent (with-skill gets target `SKILL.md`; without-skill gets brief only)
    - [ ] After cells return, score against rubric only; record matrix and **Flipped scenarios** under `BENCHMARKS.md` (`## Optimizer benchmark — Round N`)
 
    - **Scenarios:** Reuse Phase 2 *scenario settings* from `BENCHMARKS.md` when present; add any missing **benchmark-loop** required scenarios (core capability, omission-prone footer/checklist, noisy-context retrieval). Do **not** paste Phase 2 requirements checklists into executor prompts as-is—Phase 2 lists are with-skill achievement items and leak answers into without-skill cells.
