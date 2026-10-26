@@ -5,6 +5,7 @@ Read this file when Step 1 of [SKILL.md](SKILL.md) hits an edge case, or when St
 - [Target resolution](#target-resolution)
 - [Stated intent](#stated-intent)
 - [Context budget and rounds](#context-budget-and-rounds)
+- [eval-comparison.md](eval-comparison.md) — offline PR review design comparison (read-only GitHub, `/tmp` logs)
 
 ## Target resolution
 

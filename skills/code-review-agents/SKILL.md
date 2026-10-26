@@ -127,6 +127,7 @@ Confirm all three before the integration `Task` call (Step 8):
 
 ## Notes
 
+- **Offline design eval:** Maintainer comparison of multi-agent vs consolidated review lives in [reference/eval-comparison.md](reference/eval-comparison.md). GitHub remains read-only; artifacts under `/tmp/code-review-agents/` only.
 - **Output language**: match the user's preference (default: 日本語).
 - **Codebase exploration**: analysis subagents may `Read` / `Grep` surrounding code for context beyond the diff.
 - **Model choice**: omit the `model` parameter so subagents inherit the parent model; if choosing a faster model instead, use `model: "composer-2.5-fast"` on all `Task` calls consistently.
