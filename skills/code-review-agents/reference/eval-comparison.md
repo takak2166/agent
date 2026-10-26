@@ -6,8 +6,8 @@ GitHub is **read-only** for this eval. Never post reviews or comments. Raw artif
 
 Build ~10 merged PRs from `takak2166/*` repos. For each PR:
 
-1. `gh pr diff` and changed files (read-only).
-2. Ground truth = review thread comments (human + bot) that recommend a **fix** (map dismiss-only threads separately).
+1. Check out the PR head commit (`gh pr view --json headRefOid`) before `Read`/`Grep` file contents; use `gh pr diff` for the unified diff (read-only).
+2. Ground truth = top-level review comments (`gh api …/pulls/{n}/comments`) that recommend a **fix**; exclude threads the author dismissed without a code change.
 3. Normalize each ground-truth item to a short finding key (file + topic).
 
 Store manifests as `/tmp/code-review-agents/eval-data/pr-{owner}-{repo}-{n}.json`.
@@ -19,7 +19,7 @@ Store manifests as `/tmp/code-review-agents/eval-data/pr-{owner}-{repo}-{n}.json
 | **A (current)** | 8 specialist analysis subagents in parallel + 1 integration subagent ([SKILL.md](../SKILL.md)) |
 | **B (consolidated)** | 3 sequential generalist passes (security/performance/observability; architecture/DDD/refactoring; language/TDD) + 1 integration subagent — same shared Code Context, perspectives drawn from [agent-prompts.md](../agent-prompts.md) |
 
-Run each PR **twice** per design (`run1`, `run2`). Record **flipped PRs** when pass/fail or above-threshold recall changes between runs or after skill edits.
+Run each PR **twice** per design (`run1`, `run2`) with the **same Task model** recorded in `BENCHMARKS.md`. **Pass** = recall ≥ 60% and precision ≥ 50% for that PR-run. Record **flipped PRs** when pass/fail changes between runs or after skill edits.
 
 ## Scoring
 
