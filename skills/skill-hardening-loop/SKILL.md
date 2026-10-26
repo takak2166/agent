@@ -133,9 +133,10 @@ Applies to the **target** skill being hardened (not this loop skill).
 3. **Run count**
    - **Must-not-break rule scenarios:** **n = 2** independent runs in Phase 2 (fresh subagent per run). In Phase 3, **n = 2** runs per matrix cell for each must-not-break scenario (with-skill and without-skill cells each run twice). Record `run1` and `run2` pass/fail separately.
    - **Other scenarios** (core capability, omission-prone footer/checklist, noisy-context retrieval): keep Phase 2 run-count guidance below (default **n = 1** unless you deliberately raise n to read a trend).
-4. **Flipped scenarios** — Compare pass/fail across runs. Append a `## Flipped scenarios — Round N` block to `/tmp/{skill-name}/BENCHMARKS.md` listing:
+4. **Flipped scenarios** — **Pass/fail:** a must-not-break rule scenario passes when the rule holds in the deliverable; other cells pass when all `[critical]` rubric items are ○ (same bar as empirical success). Compare pass/fail across runs. When any flip occurred, append `## Flipped scenarios — Round N` to `/tmp/{skill-name}/BENCHMARKS.md` listing:
    - Scenarios or matrix cells whose pass/fail **changed before-edit vs after-edit** (Phase 2 iteration or Phase 3 optimizer re-run)
    - For each must-not-break rule scenario, any **run1 vs run2** disagreement in the same round
+   - Must-not-break scenarios keep **n = 2** on every Phase 2 iteration and on every Phase 3 re-run that touches those cells
 5. **Final report** — Include `### Flipped scenarios` with counts and scenario ids (not averages alone). Template: [reference.md](reference.md).
 
 ## Round workflow
@@ -165,7 +166,7 @@ Skip entirely if Task tool is unavailable (see **Non-negotiables**).
 
 1. Read empirical-prompt-tuning `SKILL.md` in full. Append **Phase start log** (`Child skill resolved: empirical-prompt-tuning → …`) to **`/tmp/{skill-name}/HARDENING.md`** where `{skill-name}` is the **hardened target's** frontmatter `name`—not the child skill's name.
 2. Run **Iteration 0** (description/body consistency) on the target. For **manual-invoke targets**, reconcile only **factual** WHAT/body gaps—do not add discovery WHEN or trigger phrases to `description`. If Phase 1 already fixed factual WHAT/body gaps, Iteration 0 is a confirmation pass only—do not re-edit unless Phase 1 skipped the fix.
-3. Build the **scenario plan** (see **Must-not-break scenarios**) before the first dispatch.
+3. Build the **scenario plan** (see **Must-not-break scenarios**) before the first dispatch. Write the rule→scenario mapping to `/tmp/{skill-name}/BENCHMARKS.md` under `## Must-not-break scenario plan — Round N` (note when zero rules were found).
 4. Run the full empirical loop (baseline → dispatch subagents → two-sided evaluation → apply diff → re-evaluate) until **empirical convergence**. Before the first dispatch, apply **eval-meta sanitization** (step 5).
    - **3** consecutive iterations with **zero new unclear points** for orchestrator/meta skills (including this skill); **2** for ordinary targets
    - Accuracy improvement ≤ +3 points vs previous iteration
