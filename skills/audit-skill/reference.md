@@ -69,6 +69,7 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 - Grep the files under review for all-caps `MUST`, `NEVER`, `ALWAYS`, `CRITICAL`, and `IMPORTANT`. **Minor** when the caps are emphasis and the sentence already states the action. Do not flag lowercase prohibitions, a caps token that is the only statement of a safety prohibition, these tokens inside fenced examples, or a line that only names this search pattern
 - The skill does not mix too many unrelated objectives
 - User-specified verbatim wording in the target is preserved, not paraphrased or expanded, unless a defect requires changing it
+- **Obsolete model-compensation instructions:** Prose added for older models that is redundant on current hosts (re-stating what the environment already enforces, repeating the same constraint in multiple places, step-by-step micromanagement that no longer changes decisions). **Major** — auto-remove when clearly obsolete. **Minor** — **Suggested fix:** only when ambiguous. **Never** remove safety rules, prohibitions, or verbatim user wording. List **each removal** as its own item under **## Changes Applied** (one **Fix applied:** per removed passage).
 
 ### 4. Output and examples
 
