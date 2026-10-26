@@ -133,11 +133,13 @@ Applies to the **target** skill being hardened (not this loop skill).
 3. **Run count**
    - **Must-not-break rule scenarios:** **n = 2** independent runs in Phase 2 (fresh subagent per run). In Phase 3, **n = 2** runs per matrix cell for each must-not-break scenario (with-skill and without-skill cells each run twice). Record `run1` and `run2` pass/fail separately.
    - **Other scenarios** (core capability, omission-prone footer/checklist, noisy-context retrieval): keep Phase 2 run-count guidance below (default **n = 1** unless you deliberately raise n to read a trend).
-4. **Flipped scenarios** — **Pass/fail:** a must-not-break rule scenario passes when the rule holds in the deliverable; other cells pass when all `[critical]` rubric items are ○ (same bar as empirical success). Compare pass/fail across runs. When any flip occurred, append `## Flipped scenarios — Round N` to `/tmp/{skill-name}/BENCHMARKS.md` listing:
+4. **Flipped scenarios** — **Pass/fail:** a must-not-break rule scenario passes when the rule holds in the deliverable **and** in the cell transcript for prohibition rules (no forbidden commits, posts, or external writes). Other cells pass when all `[critical]` rubric items are ○ (same bar as empirical success). Compare pass/fail across runs. When any flip occurred, append `## Flipped scenarios — Round N` to `/tmp/{skill-name}/BENCHMARKS.md` listing:
    - Scenarios or matrix cells whose pass/fail **changed before-edit vs after-edit** (Phase 2 iteration or Phase 3 optimizer re-run)
    - For each must-not-break rule scenario, any **run1 vs run2** disagreement in the same round
    - Must-not-break scenarios keep **n = 2** on every Phase 2 iteration and on every Phase 3 re-run that touches those cells
 5. **Final report** — Include `### Flipped scenarios` with counts and scenario ids (not averages alone). Template: [reference.md](reference.md).
+6. **Convergence gate** — If any must-not-break rule scenario fails in the final Phase 2 iteration or final Phase 3 matrix for that round, the round is **not converged** until the target is fixed or the scenario/rubric is corrected. Do not emit Status **Converged** while a rule scenario is still failing with zero edits.
+7. **Prohibition scoring** — For must-not-break rules that forbid side effects, score from transcript and tool use, not deliverable prose alone.
 
 ## Round workflow
 
