@@ -136,7 +136,7 @@ Requirements here win over [`reference.md`](reference.md) if anything conflicts.
 
 - **Section order:** **## Changes Applied** → **## Findings** → **## Strengths** (mandatory on the full-output path).
 - **Templates and examples:** Use [`reference.md`](reference.md) for copy-paste Markdown templates, empty-section wording, multi-item separators, and worked examples—**read it before writing the reply**.
-- **## Changes Applied:** Critical/Major items you fixed. Subsections `### Critical` / `### Major` only when non-empty. If none fixed: **No Critical or Major issues; no edits made.** If audit-only with unresolved Critical/Major: **No edits made.** (one line). Each item: **Affected section:**, **Problem:**, **Why it matters:**, **Fix applied:** (name file + brief change).
+- **## Changes Applied:** Critical/Major items you fixed. Subsections `### Critical` / `### Major` only when non-empty. If none fixed: **No Critical or Major issues; no edits made.** If audit-only with unresolved Critical/Major: **No edits made.** (one line). Each item: **Affected section:**, **Problem:**, **Why it matters:**, **Fix applied:** (name file + brief change). Each obsolete-instruction removal is its own item (do not batch multiple removals into one bullet).
 - **## Findings:** Minor suggestions and Critical/Major items not auto-fixed. Each item: **Affected section:**, **Problem:**, **Why it matters:**, **Suggested fix:**. If none: **No Minor findings.**
 - **Uncertainty:** Insufficient evidence → do not auto-fix; report under **## Findings** with **cannot determine** / **cannot judge** wording.
 - **Separators:** Between items in the same subsection, use **`Finding 2`**, **`Finding 3`**, … or `---`—do not mix both styles.
