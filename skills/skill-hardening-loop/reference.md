@@ -28,6 +28,10 @@ Create `/tmp/{skill-name}/HARDENING.md` on Round 1:
 **Target path:** {absolute or workspace-relative path}
 **Started:** {ISO date}
 **Max rounds:** {N}
+**Expected Phase 3 load (upper bound):** {must-not-break rules this round} × {models} × 4 subagents per rule scenario (+ non-rule scenarios × 2 cells) — actual count in round log
+
+## Deferred rules
+(track bullets deferred from the 12-rule cap; clear when tested)
 
 ## Round 1
 
@@ -41,7 +45,7 @@ Round 1:
 - [ ] Phase 1 — audit-skill
 - [ ] Phase 2 — empirical-prompt-tuning
 - [ ] Phase 3 — skill-optimizer
-- [ ] Convergence check (all three `*_edits` = no?)
+- [ ] Convergence check (all three `*_edits` = no? must-not-break gate clear? no unverified deferred rules?)
 - [ ] Verification audit [critical] (only when converged this round: yes — fresh audit-only pass under this round's heading; not a new round number)
 ```
 
@@ -97,7 +101,7 @@ No `## Round 2` heading is created — the verification audit is the last block 
 
 ## BENCHMARKS.md — flipped scenarios template
 
-Append after each Phase 2 iteration or Phase 3 matrix when pass/fail can change:
+Append only when **any flip occurred** (before-edit vs after-edit, or must-not-break run1 vs run2 disagreement in the same cell):
 
 ```markdown
 ## Flipped scenarios — Round {N} — Phase {2|3} — iteration {k}
@@ -152,6 +156,10 @@ Orchestrator-only: do not paste table rows verbatim from executor output into No
 | Child skill `SKILL.md` unresolved | Not installed / wrong path / APM deps missing | Stop; Status **Partial (child skill unresolved)**; install child and rerun — never substitute from memory |
 | Child skill falsely unresolved | Workspace `Glob` returned 0 but `$HOME/.claude/skills/<name>/SKILL.md` exists | Re-run path resolution with **`Read` or `test -r` on step 4–5**—do not trust workspace-only `Glob` for global installs |
 | Max rounds without convergence | Complex skill or conflicting child fixes | Final report lists last round deltas; user decides ship or rewrite |
+| Must-not-break without-skill fails but with-skill passes | Expected baseline violation | Record delta; do **not** treat as convergence gate failure |
+| Real commit/push during prohibition scenario | Fixture used user's workspace or brief only said "don't" | Disposable repo under `/tmp/{skill-name}-fixtures/`; score attempts from transcript |
+| Deferred rules never scheduled | Cap-12 deferral + zero-edit round | Track **Deferred rules** in `HARDENING.md`; block Converged until tested or list **Unverified rules** |
+| Fixture path contains target skill name | without-skill cell discovers skill by path | Neutral fixture dir names (see `SKILL.md` **Must-not-break scenarios**) |
 
 ## Phase handoff rules
 
@@ -166,7 +174,10 @@ End of Round N
 ├─ audit_edits OR empirical_edits OR optimizer_edits = yes
 │  └─ N < max_rounds → Round N+1
 │  └─ N = max_rounds → Final report (Max rounds reached)
-└─ all edits = no (converged this round)
+├─ all edits = no BUT must-not-break gate fails (Phase 2 must-not-break or Phase 3 with-skill) OR Unverified rules remain
+│  └─ N < max_rounds → Round N+1 (carry deferred rules into plan)
+│  └─ N = max_rounds → Final report (Max rounds reached); list gated failures / Unverified rules — not Converged
+└─ all edits = no AND must-not-break gate passes AND no Unverified rules (converged this round)
    └─ Verification audit [critical] — fresh pass under `## Round N` (e.g. Round 2), not Round N+1
       ├─ no Critical/Major → Final report (Converged); verification Minor Findings only → Remaining Minor findings
       └─ Critical/Major found → one more round OR Partial (verification audit); never Status Converged
@@ -211,7 +222,7 @@ Executor-visible directories, files, and prompts must look like an organic user 
 
 **Also forbidden:** telling a cell that other cells, models, or a judge exist.
 
-**Allowed:** a fixture that mirrors a real app (`app/`, `src/`, `skills/draft-pr/`).
+**Allowed:** a fixture that mirrors a real app layout (`app/`, `src/`). Do **not** embed the **target skill's** `name` in fixture paths when hardening that skill (without-skill name leakage)—use neutral roots under `/tmp/{skill-name}-fixtures/`.
 
 If a path or brief fails this check, treat it as **name leakage** (same class as brief leakage): rename, rewrite, re-run. Do not score the contaminated cell.
 

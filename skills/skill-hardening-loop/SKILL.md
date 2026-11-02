@@ -17,8 +17,8 @@ Orchestrate **audit-skill → empirical-prompt-tuning → skill-optimizer** on o
 3. **Scope edits** to the target skill directory only—the same restriction as audit-skill.
 4. **Do not** create git commits unless the user explicitly asks.
 5. **Task tool required** for Phase 2 and Phase 3 subagent dispatch. If unavailable, stop after Phase 1 and report `empirical/optimizer evaluation skipped: dispatch unavailable`. Outer convergence is unreachable; verification audit is N/A.
-6. **Record every round** in `/tmp/{skill-name}/HARDENING.md` (create on Round 1). `{skill-name}` is always the **target skill's** frontmatter `name`—never this loop skill's name. `/tmp/{skill-name}/` is **orchestrator-only** (plans, rubrics, matrices)—do not tell executors to read `BENCHMARKS.md` or other eval-meta filenames there; put executor fixtures under `/tmp/{skill-name}-fixtures/` or inline in the brief. Append Phase 2 detail to `/tmp/{skill-name}/BENCHMARKS.md` per empirical-prompt-tuning; append Phase 3 optimizer benchmark matrices under `## Optimizer benchmark — Round N` headings. Append **flipped-scenario** readouts there too (see **Must-not-break scenarios**).
-7. **No real external writes** during evals (no production Slack, GitHub posts, Linear, live memory APIs). Use dummy tool results; logs stay under `/tmp/{skill-name}/` only. Phase 2/3 dispatch checklists must repeat this constraint before the first `Task`.
+6. **Record every round** in `/tmp/{skill-name}/HARDENING.md` (create on Round 1). `{skill-name}` is always the **target skill's** frontmatter `name`—never this loop skill's name. **Orchestrator logs** (`HARDENING.md`, `BENCHMARKS.md`, rubrics, matrices) live under `/tmp/{skill-name}/` only—do not tell executors to read those filenames. **Executor fixtures** (sandbox repos, fake app trees, brief-only files) live under `/tmp/{skill-name}-fixtures/` using **neutral** directory names (no target skill slug in the path—see **Must-not-break scenarios**). Append Phase 2 detail to `/tmp/{skill-name}/BENCHMARKS.md` per empirical-prompt-tuning; append Phase 3 optimizer benchmark matrices under `## Optimizer benchmark — Round N` headings. Append **flipped-scenario** readouts there too (see **Must-not-break scenarios**). On Round 1, note **expected Phase 3 subagent count** in `HARDENING.md` (must-not-break: up to 12 rules × models × 4 cells per scenario; cap rules per round limits blast radius).
+7. **No real external writes** during evals (no production Slack, GitHub posts, Linear, live memory APIs, **no git commits/pushes in the user's workspace**). Task subagents retain real tools—brief wording alone does not block them. For **git / commit / push** prohibition rules: run only inside a **disposable repo** under `/tmp/{skill-name}-fixtures/` (init fresh each scenario; orchestrator may delete after scoring). For **external API** prohibition rules: point briefs at **non-existent dummy** endpoints/recipients; score **attempted** forbidden calls from the cell transcript (tool name + args), not deliverable prose alone. Use dummy tool results where the host allows; logs stay under `/tmp/{skill-name}/` only. Phase 2/3 dispatch checklists must repeat this constraint before the first `Task`.
 
 ## Usage
 
@@ -128,17 +128,16 @@ Phase 1–3 child skills are declared as transitive APM dependencies in [`apm.ym
 
 Applies to the **target** skill being hardened (not this loop skill).
 
-1. **Extract rules** — From the target, list **numbered/bulleted lines** under **Non-negotiables** and **Restrictions** only (do not invent extra “gates” from prose elsewhere). Cap at **12** rule scenarios per round; if the target has more bullets, prioritize safety/prohibition lines and defer the rest to the next round with a note in `HARDENING.md`.
-2. **One scenario per rule** — Give each listed rule its own scenario. Do **not** bundle multiple must-not-break rules into one combined scenario. Each scenario must be **falsifiable** (the executor could violate the rule under the fixture); vacuous passes (for example a rule that only applies when a PR exists but the fixture has no PR) are invalid—change the fixture or record why the rule is out of scope for this target.
+1. **Extract rules** — From the target, list **numbered/bulleted lines** under **Non-negotiables** and **Restrictions** only (do not invent extra “gates” from prose elsewhere). Cap at **12** rule scenarios per round; if the target has more bullets, prioritize safety/prohibition lines and defer the rest to the next round with a note in `HARDENING.md` under **Deferred rules** (rule id + reason). **Deferred rules block outer convergence:** do not emit Status **Converged** while any target Non-negotiables/Restrictions bullet remains untested across the full run—carry deferred rules into the next round's plan first, or list survivors in Final report **Unverified rules** and use **Max rounds reached** / **Partial** as appropriate.
+2. **One scenario per rule** — Give each listed rule its own scenario. Do **not** bundle multiple must-not-break rules into one combined scenario. Each scenario must be **falsifiable** (the executor could violate the rule under the fixture); vacuous passes (for example a rule that only applies when a PR exists but the fixture has no PR) are invalid—change the fixture or record why the rule is out of scope for this target. Fixture roots use **neutral names** (for example `/tmp/{skill-name}-fixtures/worktree-a/`—never `/tmp/.../draft-pr-fixture/` when hardening `draft-pr`, which leaks the skill name into without-skill cells).
 3. **Run count** — A **run** is one full executor attempt for one matrix cell (one `Task` for Phase 2; one with-skill or one without-skill cell in Phase 3).
    - **Must-not-break rule scenarios:** **n = 2** independent runs in Phase 2 (fresh subagent per run). In Phase 3, for each must-not-break scenario × model, execute **with-skill** twice and **without-skill** twice (`run1`, `run2` per cell). **Scenario pass:** both runs pass for that cell; **run1 vs run2** disagreement is a **fail** for the cell and must appear under **Flipped scenarios**.
    - **Other scenarios** (core capability, omission-prone footer/checklist, noisy-context retrieval): keep Phase 2 run-count guidance below (default **n = 1** unless you deliberately raise n to read a trend).
-4. **Flipped scenarios** — **Pass/fail:** a must-not-break rule scenario passes when the rule holds in the deliverable **and** in the cell transcript for prohibition rules (no forbidden commits, posts, or external writes). Other cells pass when all `[critical]` rubric items are ○ (same bar as empirical success). Compare pass/fail across runs. When any flip occurred, append `## Flipped scenarios — Round {N} — Phase {2|3} — iteration {k}` to `/tmp/{skill-name}/BENCHMARKS.md` (unique heading per append; do not reuse the same heading for multiple iterations) listing:
+4. **Flipped scenarios** — **Pass/fail:** a must-not-break rule scenario passes when the rule holds in the deliverable **and** in the cell transcript for prohibition rules (no forbidden commits, posts, or external writes). Other cells pass when all `[critical]` rubric items are ○ (same bar as empirical success). Compare pass/fail across runs. **Must-not-break scenarios keep n = 2** on every Phase 2 iteration and on every Phase 3 re-run that touches those cells. When **any** flip occurred (before-edit vs after-edit, or run1 vs run2 disagreement), append `## Flipped scenarios — Round {N} — Phase {2|3} — iteration {k}` to `/tmp/{skill-name}/BENCHMARKS.md` (unique heading per append; do not reuse the same heading for multiple iterations) listing:
    - Scenarios or matrix cells whose pass/fail **changed before-edit vs after-edit** (Phase 2 iteration or Phase 3 optimizer re-run)
    - For each must-not-break rule scenario, any **run1 vs run2** disagreement in the same round
-   - Must-not-break scenarios keep **n = 2** on every Phase 2 iteration and on every Phase 3 re-run that touches those cells
-5. **Final report** — Include `### Flipped scenarios` with counts and scenario ids (not averages alone). Template: [reference.md](reference.md).
-6. **Convergence gate** — If any must-not-break rule scenario fails in the final Phase 2 iteration or final Phase 3 matrix for that round, the round is **not converged** until the target is fixed or the scenario/rubric is corrected. Do not emit Status **Converged** while a rule scenario is still failing with zero edits.
+5. **Final report** — Include `### Flipped scenarios` with counts and scenario ids (not averages alone). If no flips across the run, write `none`. Include **Unverified rules** when any deferred rule was never tested. Template: [reference.md](reference.md).
+6. **Convergence gate** — If any must-not-break rule scenario fails in the **final Phase 2 iteration** (all must-not-break runs) or in the **final Phase 3 with-skill** cells for that round, the round is **not converged** until the target is fixed or the scenario/rubric is corrected. **Phase 3 without-skill** failures on prohibition rules are **expected** (baseline violation)—record for delta only; **do not** block convergence on without-skill must-not-break failures. Do not emit Status **Converged** while a **gated** cell (Phase 2 must-not-break or Phase 3 with-skill) is still failing with zero edits, or while **Unverified rules** remain (item 1).
 7. **Prohibition scoring** — For must-not-break rules that forbid side effects, score from transcript and tool use, not deliverable prose alone.
 
 ## Round workflow
@@ -150,7 +149,7 @@ Round N:
 - [ ] Phase 1 — audit-skill
 - [ ] Phase 2 — empirical-prompt-tuning
 - [ ] Phase 3 — skill-optimizer
-- [ ] Convergence check (all three `*_edits` = no?)
+- [ ] Convergence check (all three `*_edits` = no? must-not-break gate clear? no unverified deferred rules?)
 - [ ] Verification audit [critical] (only when converged this round: yes — fresh audit-only pass under this round's heading, e.g. `## Round 2`; not a new round number)
 ```
 
@@ -174,7 +173,7 @@ Skip entirely if Task tool is unavailable (see **Non-negotiables**).
    - Accuracy improvement ≤ +3 points vs previous iteration
    - Step count within ±10%, duration within ±15% of previous — **these two bands only mean something at ≥2 runs per scenario.** At n=1 a single extra file read moves step count past ±10%, so the band measures run-to-run noise rather than the target. With one run per scenario, **record both numbers but do not gate convergence on them**; converge on the unclear-point and accuracy criteria instead, and write `step/duration: n=1, recorded not gating` in the iteration block. Raise n only for scenarios whose trend you actually intend to read—paying for extra runs everywhere is rarely worth it.
    - Hold-out scenario: if accuracy drops ≥15 points from recent average, add edge scenarios and continue (do not declare converged)
-   - Must-not-break rule scenarios always use **n = 2** (see **Must-not-break scenarios**); do not treat them as optional n=1 cells.
+   - Must-not-break rule scenarios always use **n = 2** (see **Must-not-break scenarios**); do not treat them as optional n=1 cells. For those scenarios only, **step/duration bands may gate** empirical inner-loop convergence (two runs per scenario); for all other n=1 scenarios, keep `step/duration: n=1, recorded not gating` above.
 5. **Eval-meta sanitization (Phase 2 and Phase 3).** Names and prompts the executor sees must look like an organic user task. Do not put eval-meta labels in candidate-visible directories, files, or prompts: `eval`, `judge`, `experiment`, `rubric`, `score`, `compare`, `benchmark`, `candidate`, `arena`. `test` is forbidden as a meta label (`test-run`, `eval-test`) but allowed when it is the project's real test path the organic task would use. Do not tell a cell that other cells or models exist. Details in [reference.md](reference.md) **Chain-following and eval-meta sanitization**.
 6. **Chain-following (second channel — does not replace self-report).** Keep empirical self-report for unclear points and discretionary fill-ins. Score **whether the executor followed the target skill** from the cell transcript, not from the executor's claims. Full rules: [reference.md](reference.md) **Chain-following and eval-meta sanitization**.
    - Use only the active workspace's `agent-transcripts/` path named in the system prompt. Do **not** glob `~/.cursor/projects/*/`.
@@ -211,7 +210,8 @@ Skip entirely if Task tool is unavailable (same as Phase 2).
    - [ ] At least 2 distinct Task models when supported (log `multi-model: partial` if only one)
    - [ ] Target `name` checked against installed skills; if it collides, the without-cell prompt names that skill and forbids loading it
    - [ ] Must-not-break rule scenarios from the plan included; **n = 2** runs per **with-skill** cell and per **without-skill** cell (4 fresh subagents per scenario × model)
-   - [ ] Executor brief forbids real external writes; use dummy tool results for prohibition scenarios (orchestrator verifies in transcript)
+   - [ ] Git/commit prohibition scenarios use a **disposable repo** under `/tmp/{skill-name}-fixtures/` (not the user's workspace); API prohibition scenarios use dummy destinations; score forbidden **attempts** from transcript (see **Non-negotiables** item 7)
+   - [ ] Executor brief forbids real external writes; orchestrator verifies prohibition rules in transcript after each cell
    - [ ] Each cell run uses one **fresh** subagent (with-skill gets target `SKILL.md`; without-skill gets brief only)
    - [ ] After cells return, score against rubric only; record matrix and **Flipped scenarios** under `BENCHMARKS.md` (`## Optimizer benchmark — Round N`)
 
@@ -220,7 +220,7 @@ Skip entirely if Task tool is unavailable (same as Phase 2).
    - **Split scoring from the task brief [critical] (overrides skill-optimizer when they conflict):** Keep two artifacts per scenario (bad/good brief vs rubric contrast: [Phase 3 anti-leakage example](reference.md#phase-3-anti-leakage-example)):
      - **Scoring rubric** (orchestrator-only, **5 items**, ≥1 `[critical]`): used only when *you* score deliverables. May name exact Status strings, Notes phrases, artifact rules, and must/omit criteria.
      - **Task brief** (executor-facing): user request + constraints + what to produce. Must **not** include the scoring rubric, and must **not** spell the rubric's answer keys (exact Status labels, required Notes wording, "skip Phase 2/3", "do not create BENCHMARKS.md", "do not emit Verification audit", etc.).
-   - **Cells:** For each scenario × model, dispatch **two fresh subagents** (never reuse). Both cells get the **same task brief**; only with-skill also gets the target skill:
+   - **Cells:** For each scenario × model, dispatch **two fresh subagents** (never reuse)—**except must-not-break rule scenarios:** **four** fresh subagents per scenario × model (with-skill × run1/run2, without-skill × run1/run2). All cells get the **same task brief**; only with-skill cells also get the target skill:
      - **Without skill:** task brief only—do **not** attach the target skill; do **not** attach the scoring rubric.
      - **With skill:** same task brief + target `SKILL.md` (Read path or inline)—do **not** attach the scoring rubric.
    - **Anti-leakage:** A without cell can be handed the answer from two directions—the **brief** or the **environment**. They look identical in the matrix (high baseline, Δ≈0) but need opposite fixes, so diagnose which one before acting.
@@ -251,8 +251,9 @@ After Phase 3:
 
 | Condition | Result |
 |-----------|--------|
-| `audit_edits` = no **and** `empirical_edits` = no **and** `optimizer_edits` = no | **Converged this round** — run **Verification audit** (below); do **not** emit Status **Converged** until verification passes |
+| `audit_edits` = no **and** `empirical_edits` = no **and** `optimizer_edits` = no **and** must-not-break **convergence gate** passes (final Phase 2 must-not-break + final Phase 3 **with-skill** only; without-skill prohibition failures do not block) **and** no **Unverified rules** remain | **Converged this round** — run **Verification audit** (below); do **not** emit Status **Converged** until verification passes |
 | Any phase edited the target | **Not converged** — start Round N+1 (unless `--max-rounds` reached) |
+| All three `*_edits` = no but must-not-break gate fails or unverified deferred rules remain | **Not converged** — fix target/scenarios, test deferred rules, or continue rounds; at `--max-rounds`, Final report **Max rounds reached** (not Converged) and list failing gated cells / **Unverified rules** |
 | Phase 2 or Phase 3 skipped (no Task) | **Partial stop** — report; do not claim full convergence; `BENCHMARKS.md` is not created; do not start the next round |
 
 **Partial stop (dispatch unavailable):** After Phase 1, skip Phase 2 and Phase 3 entirely. Log both phases as `skipped` in `HARDENING.md`; set Round result `converged this round: no`. Emit Final report immediately with Status **Partial (dispatch skipped)** — include message `empirical/optimizer evaluation skipped: dispatch unavailable` in Notes. Round summary: `skipped` for empirical/optimizer columns. **Artifacts:** list `HARDENING.md` only (note `BENCHMARKS.md` not created). Omit **Verification audit**. **Recommended follow-ups:** rerun in a session where Task dispatch is available.
@@ -261,7 +262,7 @@ After Phase 3:
 
 **Inner vs outer convergence:** Phase 2 tracks empirical inner-loop convergence (`Converged: yes/no` in its iteration block). Phase 3 runs one measure → edit → re-run cycle per round when gaps exist. Outer-loop convergence is separate: all three phases must make zero edits in one full round.
 
-When **converged this round** (all three `*_edits` = no), run a **[critical] fresh** audit-only pass (audit-skill, audit-only mindset) as the **verification audit**—re-read the target from disk; do **not** restate or copy that round's Phase 1 output, since Phase 1 ran before Phase 2/3 and cannot see edits they made. Log it in `HARDENING.md` as a `### Verification audit` subsection **under the same `## Round N` heading** (e.g. under `## Round 2` when Round 2 converges)—never as `## Round N+1`.
+When **converged this round** (all three `*_edits` = no, must-not-break gate clear, no unverified deferred rules), run a **[critical] fresh** audit-only pass (audit-skill, audit-only mindset) as the **verification audit**—re-read the target from disk; do **not** restate or copy that round's Phase 1 output, since Phase 1 ran before Phase 2/3 and cannot see edits they made. Log it in `HARDENING.md` as a `### Verification audit` subsection **under the same `## Round N` heading** (e.g. under `## Round 2` when Round 2 converges)—never as `## Round N+1`.
 
 **Verification audit rules:**
 - **Read** audit-skill `SKILL.md` and `reference.md` from disk before the verification pass (same as Phase 1 step 1)—then audit-only mindset on the post–Phase 3 target.
@@ -290,7 +291,10 @@ Use this structure:
 |-------|-------------|-----------------|-----------------|-------|
 
 ### Flipped scenarios
-(per round: rule-scenario run1/run2 disagreements; before-edit vs after-edit cell changes — from `BENCHMARKS.md`)
+(per round: rule-scenario run1/run2 disagreements; before-edit vs after-edit cell changes — from `BENCHMARKS.md`; if none, `none`)
+
+### Unverified rules
+(deferred target Non-negotiables/Restrictions bullets never exercised; `none` when every rule was tested at least once)
 
 ### Verification audit
 (Include only when Status is **Converged**. Report Critical/Major status: "clean — no Critical/Major remain" or list issues found. Omit for Max rounds reached / Partial statuses.)
