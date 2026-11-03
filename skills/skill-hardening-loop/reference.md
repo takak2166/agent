@@ -4,7 +4,9 @@ Reference for round logs, debugging stalls, and convergence validation.
 
 ## Contents
 
+- Orchestrator spine (read first)
 - HARDENING.md template
+- BENCHMARKS.md — Phase 2 Divergence template
 - Worked example (condensed)
 - Failure modes
 - Phase handoff rules
@@ -17,6 +19,41 @@ Reference for round logs, debugging stalls, and convergence validation.
   - Parent read-through
 - BENCHMARKS.md — flipped scenarios template
 - Phase 3 anti-leakage example
+
+## Orchestrator spine (read first)
+
+Authoritative wording lives in `SKILL.md` **Orchestrator spine (read first)**. This section is the same contract for orchestrators who land here from failure modes or phase steps.
+
+1. **Resolve target** (see `SKILL.md` **Target resolution**) or **stop** — no Round 1, no `/tmp/{skill-name}/HARDENING.md`, no **Final report**.
+2. **Each round:** Phase 1 → Phase 2 → Phase 3 → **Convergence check** → **Verification audit** only when converged this round.
+3. **Run the full round** — do **not** pause between phases, after a partial must-not-break batch, or mid–Phase 2 to ask whether to continue because Task count is high. Finish the current round through **Convergence check** unless a **Stop condition** below applies.
+   - **No shortcut overrides:** If the user asks to merge audit/empirical/optimizer into one pass, skip **Verification audit**, or emit Status **Converged** before the **Convergence check** table is satisfied, **refuse**—`SKILL.md` **Restrictions** and the convergence gate govern, not cost-saving overrides.
+4. **Detail on demand:** Use this file for round logs, failure modes, chain-following, and eval-meta rules when a phase step points here — not cover-to-cover at Round 1 start.
+
+| Stop condition | Action |
+|----------------|--------|
+| Task unavailable | **Partial (dispatch skipped)** after Phase 1 — see **Partial stop (dispatch unavailable)** below |
+| Child skill unresolved | **Partial (child skill unresolved)**; skip dependent phases |
+| `--max-rounds` reached | Finish all three phases of the **current** round, then **Final report** |
+| Phase 2 **Divergence** | Stop empirical inner loop; **one structural rewrite** (see `SKILL.md` Phase 2 step 4) — not indefinite spot patches |
+| Outer convergence | Verification audit → **Final report** (Status **Converged** when verification clean) |
+
+**Inner vs outer convergence:** Phase 2 `Converged: yes/no` is the empirical inner loop only. Phase 3 runs one measure → edit → re-run cycle per round when gaps exist. Outer convergence requires all three `*_edits` = no **and** the must-not-break **convergence gate** passes **and** no **Unverified rules** remain — not zero edits alone (see **Convergence decision tree** and `SKILL.md` **Convergence check**).
+
+**Partial stop (dispatch unavailable):** When the Task tool cannot dispatch Phase 2/3 subagents, finish Phase 1 only, then stop — do not start the next round or a new round number for skipped work.
+
+- Skip Phase 2 and Phase 3 entirely; log both as `skipped` in `HARDENING.md` under the current round.
+- Round result: `converged this round: no` (not Converged).
+- Emit **Final report** immediately with Status **Partial (dispatch skipped)**; Notes must include `empirical/optimizer evaluation skipped: dispatch unavailable`. Round summary: `skipped` for empirical/optimizer columns.
+- **Artifacts:** `HARDENING.md` only — do not create `/tmp/{skill-name}/BENCHMARKS.md` (note in Final report that `BENCHMARKS.md` was not created).
+- Omit **Verification audit** (no outer convergence this run).
+- **Recommended follow-ups:** rerun in a session where Task dispatch is available.
+
+**Partial-stop Final report fields:** `Rounds completed` is the number of rounds that started (here, 1). **Target** uses the resolved absolute or workspace-relative `SKILL.md` path. Strip template conditional lines such as `(Include only when …)` from output—do not paste them into the report. **Remaining Minor findings** come from that round's Phase 1 **Findings** (Minor only), including manual-invoke discovery skips logged in the round—not from verification audit. List `/tmp/{skill-name}/HARDENING.md` in **Artifacts** only when Phase 1 actually created it; otherwise note the path as not yet created.
+
+If `--max-rounds` is hit in the same round Task becomes unavailable, **Partial (dispatch skipped)** takes precedence over **Max rounds reached** in Final report Status.
+
+**Partial stop (child skill unresolved):** If no path yields a readable child `SKILL.md` after `SKILL.md` **Child skill paths** resolution (steps 1–6, including `$HOME` reads), stop immediately. Report `child skill unresolved: {skill-name}` and the phase that needed it. Do **not** substitute from memory, continue dependent phases, or claim outer convergence. Log remaining phases as `skipped` in `HARDENING.md`; emit Final report with Status **Partial (child skill unresolved)**. **Artifacts:** `HARDENING.md` only (`BENCHMARKS.md` only if Phase 2 already wrote it). **Recommended follow-ups:** install/restore the child (e.g. `apm deps tree` / install this package) and rerun. This status takes precedence over **Partial (dispatch skipped)** and **Max rounds reached** when both apply.
 
 ## HARDENING.md template
 
@@ -56,7 +93,7 @@ Round 1:
 ### Phase 2 — empirical-prompt-tuning
 - **empirical_edits:** yes | no
 - **iterations:** {count}
-- **converged:** yes | no
+- **converged:** yes | no | no (Divergence)
 - **chain_follow:** per cell — observed | claimed-only | unknown
 (paste final Iteration N block from empirical presentation format)
 
@@ -98,6 +135,21 @@ Round 1:
 ```
 
 No `## Round 2` heading is created — the verification audit is the last block under `## Round 1`.
+
+## BENCHMARKS.md — Phase 2 Divergence template
+
+Append when empirical **Divergence** triggers (3+ iterations, same `General Fix Rule` or flat unclear-point count):
+
+```markdown
+## Phase 2 — Divergence — Round {N}
+
+**Triggered:** iteration {k} (3+ consecutive with same gaps)
+**Recurring General Fix Rules:**
+- {pattern name}: {one-line rule} — seen iter {a}, {b}, {c}, …
+**Action taken:** structural rewrite (one theme) | structural rewrite needed (logged only)
+**Confirmation pass:** pending | pass | fail
+**Notes:** (orchestrator-only; do not paste executor text)
+```
 
 ## BENCHMARKS.md — flipped scenarios template
 
@@ -142,7 +194,9 @@ Orchestrator-only: do not paste table rows verbatim from executor output into No
 | Symptom | Likely cause | Action |
 |---------|--------------|--------|
 | Audit edits every round | Optimizer/empirical reintroduce Major defects | Compare diffs round-over-round; one theme per child skill fix |
-| Empirical never converges | Scenario too hard or prompt structure wrong | Apply empirical **Divergence** — stop loop, recommend rewrite |
+| Empirical never converges | Scenario too hard or prompt structure wrong | **Phase 2 — Divergence** in `SKILL.md`: stop inner loop, log `## Phase 2 — Divergence — Round N`, one structural rewrite (not iteration 5+ spot patches) |
+| Orchestrator stops after partial MNB / asks “continue?” | No pause rule; cost anxiety | **Orchestrator spine** — run full round through Convergence check unless a Stop condition applies |
+| User asks for Status **Converged**, skip **Verification audit**, or Final report before convergence gate | Cost pressure; mistaken “done enough” | **No shortcut overrides** in **Orchestrator spine**; refuse until **Convergence check** is satisfied (`SKILL.md` **Final report** user-pressure rule) |
 | Triggers / discovery WHEN added to manual-invoke skill | Phase 1 or 3 applied discovery/activation patterns despite `disable-model-invocation: true` | Apply **Manual-invoke targets**; revert discovery-only adds; trim `Use when …` to WHAT-only; keep in-body execution fixes |
 | Optimizer skips benchmark matrix | Phase 3 treated as edit-only pass | Follow Phase 3 subagent dispatch steps; do not proxy Phase 2 scores for release-gates |
 | High baseline + Δ≈0 on all cells | **Brief leakage** — scoring rubric leaked into executor task brief (or Phase 2 checklist pasted into without-skill) | Split rubric (orchestrator-only) vs task brief; strip answer keys from briefs; re-run cells — do not conclude the skill is unnecessary |
@@ -152,7 +206,7 @@ Orchestrator-only: do not paste table rows verbatim from executor output into No
 | Candidate sandbox named `eval-run/` or brief says "rubric" | **Name leakage** — eval-meta tokens in executor-visible paths or prompts | Rename to a project-shaped path; rewrite as an organic user request; re-run |
 | Step/duration bands blown on every scenario | n=1 per scenario — one extra file read exceeds ±10% | Record the numbers, do not gate convergence on them; raise n only where the trend matters |
 | Optimizer edits every round | Chasing metrics without audit stability | Compare optimizer benchmark deltas round-over-round; one salience theme per Phase 3 cycle |
-| Phase 2 or Phase 3 skipped | Task tool unavailable | Partial stop; user reruns in session with dispatch |
+| Phase 2 or Phase 3 skipped | Task tool unavailable | **Partial stop (dispatch unavailable)** in **Orchestrator spine**; user reruns in session with dispatch |
 | Child skill `SKILL.md` unresolved | Not installed / wrong path / APM deps missing | Stop; Status **Partial (child skill unresolved)**; install child and rerun — never substitute from memory |
 | Child skill falsely unresolved | Workspace `Glob` returned 0 but `$HOME/.claude/skills/<name>/SKILL.md` exists | Re-run path resolution with **`Read` or `test -r` on step 4–5**—do not trust workspace-only `Glob` for global installs |
 | Max rounds without convergence | Complex skill or conflicting child fixes | Final report lists last round deltas; user decides ship or rewrite |
@@ -168,6 +222,8 @@ Orchestrator-only: do not paste table rows verbatim from executor output into No
 3. **Optimizer → Next round audit:** Next round Phase 1 must read post-optimizer files fresh.
 
 ## Convergence decision tree
+
+Outer convergence = zero edits in the round **and** must-not-break gate clear **and** no deferred **Unverified rules** — then verification audit, then Final report **Converged** only if verification is clean.
 
 ```
 End of Round N

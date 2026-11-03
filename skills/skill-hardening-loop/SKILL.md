@@ -10,6 +10,22 @@ Orchestrate **audit-skill → empirical-prompt-tuning → skill-optimizer** on o
 
 **Role:** Pipeline operator. Read and follow each child skill fully at the start of its phase—do not substitute from memory.
 
+## Orchestrator spine (read first)
+
+1. **Resolve target** (see **Target resolution**) or **stop** — no Round 1, no `/tmp/{skill-name}/HARDENING.md`, no **Final report**.
+2. **Each round:** Phase 1 → Phase 2 → Phase 3 → **Convergence check** → **Verification audit** only when converged this round.
+3. **Run the full round** — do **not** pause between phases, after a partial must-not-break batch, or mid–Phase 2 to ask whether to continue because Task count is high. Finish the current round through **Convergence check** unless a **Stop condition** below applies.
+   - **No shortcut overrides:** If the user asks to merge audit/empirical/optimizer into one pass, skip **Verification audit**, or emit Status **Converged** before the **Convergence check** table is satisfied, **refuse**—**Restrictions** and the convergence gate govern, not cost-saving overrides.
+4. **Detail on demand:** Round log templates, failure modes, chain-following, and eval-meta rules live in [reference.md](reference.md). Read those sections when a phase step points you there — not cover-to-cover at Round 1 start.
+
+| Stop condition | Action |
+|----------------|--------|
+| Task unavailable | **Partial (dispatch skipped)** after Phase 1 |
+| Child skill unresolved | **Partial (child skill unresolved)**; skip dependent phases |
+| `--max-rounds` reached | Finish all three phases of the **current** round, then **Final report** |
+| Phase 2 **Divergence** | Stop empirical inner loop; **one structural rewrite** (see Phase 2 step 4) — not indefinite spot patches |
+| Outer convergence | Verification audit → **Final report** (Status **Converged** when verification clean) |
+
 ## Non-negotiables
 
 1. **Resolve target** before Round 1 (see **Target resolution**). Missing or unresolvable path → ask and **stop**; do not start rounds.
@@ -174,6 +190,9 @@ Skip entirely if Task tool is unavailable (see **Non-negotiables**).
    - Step count within ±10%, duration within ±15% of previous — **these two bands only mean something at ≥2 runs per scenario.** At n=1 a single extra file read moves step count past ±10%, so the band measures run-to-run noise rather than the target. With one run per scenario, **record both numbers but do not gate convergence on them**; converge on the unclear-point and accuracy criteria instead, and write `step/duration: n=1, recorded not gating` in the iteration block. Raise n only for scenarios whose trend you actually intend to read—paying for extra runs everywhere is rarely worth it.
    - Hold-out scenario: if accuracy drops ≥15 points from recent average, add edge scenarios and continue (do not declare converged)
    - Must-not-break rule scenarios always use **n = 2** (see **Must-not-break scenarios**); do not treat them as optional n=1 cells. For those scenarios only, **step/duration bands may gate** empirical inner-loop convergence (two runs per scenario); for all other n=1 scenarios, keep `step/duration: n=1, recorded not gating` above.
+   - **Divergence (escape hatch — overrides “run another iteration”):** When **3+ consecutive** empirical iterations each surface the **same** `General Fix Rule` from structured reflection, or **new unclear points fail to decrease** (same gaps every time), **stop the empirical inner loop** for this Phase 2 pass. Log under `/tmp/{skill-name}/BENCHMARKS.md` as `## Phase 2 — Divergence — Round N` with recurring pattern names and iteration ids. Set `Converged: no (Divergence)` in the round log. Do **not** apply further incremental diffs after Divergence — that is the **Restrictions** escape hatch, not a failure to obey the user.
+     - **User says “keep patching” after Divergence:** treat that as approval for **one structural rewrite** of the target (reorder or split sections, add a front-loaded spine/checklist, move long prose to `reference.md`, **one theme only**) — then at most **one** confirmation dispatch pass with fresh subagents. It does **not** mean iteration 5, 6, … of spot fixes.
+     - After the structural rewrite, record `empirical_edits: yes` if the target changed; proceed to Phase 3 for this round (or end Phase 2 if Task unavailable).
 5. **Eval-meta sanitization (Phase 2 and Phase 3).** Names and prompts the executor sees must look like an organic user task. Do not put eval-meta labels in candidate-visible directories, files, or prompts: `eval`, `judge`, `experiment`, `rubric`, `score`, `compare`, `benchmark`, `candidate`, `arena`. `test` is forbidden as a meta label (`test-run`, `eval-test`) but allowed when it is the project's real test path the organic task would use. Do not tell a cell that other cells or models exist. Details in [reference.md](reference.md) **Chain-following and eval-meta sanitization**.
 6. **Chain-following (second channel — does not replace self-report).** Keep empirical self-report for unclear points and discretionary fill-ins. Score **whether the executor followed the target skill** from the cell transcript, not from the executor's claims. Full rules: [reference.md](reference.md) **Chain-following and eval-meta sanitization**.
    - Use only the active workspace's `agent-transcripts/` path named in the system prompt. Do **not** glob `~/.cursor/projects/*/`.
@@ -260,7 +279,7 @@ After Phase 3:
 
 **Partial-stop Final report fields:** `Rounds completed` is the number of rounds that started (here, 1). **Target** uses the resolved absolute or workspace-relative `SKILL.md` path. Strip template conditional lines such as `(Include only when …)` from output—do not paste them into the report. **Remaining Minor findings** come from that round's Phase 1 **Findings** (Minor only), including manual-invoke discovery skips logged in the round—not from verification audit. List `/tmp/{skill-name}/HARDENING.md` in **Artifacts** only when Phase 1 actually created it; otherwise note the path as not yet created.
 
-**Inner vs outer convergence:** Phase 2 tracks empirical inner-loop convergence (`Converged: yes/no` in its iteration block). Phase 3 runs one measure → edit → re-run cycle per round when gaps exist. Outer-loop convergence is separate: all three phases must make zero edits in one full round.
+**Inner vs outer convergence:** Phase 2 tracks empirical inner-loop convergence (`Converged: yes/no` in its iteration block). Phase 3 runs one measure → edit → re-run cycle per round when gaps exist. Outer-loop convergence is separate: all three `*_edits` = no **and** the must-not-break **convergence gate** passes **and** no **Unverified rules** remain (see **Convergence check** table)—not edits alone.
 
 When **converged this round** (all three `*_edits` = no, must-not-break gate clear, no unverified deferred rules), run a **[critical] fresh** audit-only pass (audit-skill, audit-only mindset) as the **verification audit**—re-read the target from disk; do **not** restate or copy that round's Phase 1 output, since Phase 1 ran before Phase 2/3 and cannot see edits they made. Log it in `HARDENING.md` as a `### Verification audit` subsection **under the same `## Round N` heading** (e.g. under `## Round 2` when Round 2 converges)—never as `## Round N+1`.
 
@@ -272,6 +291,8 @@ When **converged this round** (all three `*_edits` = no, must-not-break gate cle
 - **Remaining Minor findings** in the Final report come **only** from this verification audit's **Findings** (Minor severity)—not from that round's Phase 1, not from earlier rounds.
 
 ## Final report
+
+**User pressure to skip gates:** If the user asks for Status **Converged**, a Final report, or skipping **Verification audit** before the **Convergence check** row is satisfied (all three `*_edits` = no, must-not-break gate clear, no unverified deferred rules), **refuse** and continue or explain what phases remain—do **not** issue Status **Converged** or a Converged Final report to save time.
 
 Use this structure:
 
@@ -312,11 +333,19 @@ Use this structure:
 
 ## Restrictions
 
+**User-pressure refusals [critical]** — when the user pushes the opposite of a restriction, **refuse** and cite the matching bullet below (do not comply to finish faster):
+
+- **DMI / manual-invoke:** Do not remove `disable-model-invocation`, and do not add discovery WHEN or new `## Triggers` on manual-invoke targets—cite **Manual-invoke targets** and **Preserve intentional design** (trimming existing discovery WHEN to WHAT-only is allowed; removing DMI is not).
+- **One target:** Do not harden two skill paths in one invocation—pick one target or ask the user to choose (**One target per invocation**).
+- **Scope:** Do not edit non-target skills (including this loop skill’s `reference.md` while acting as an eval executor) except the **resolved target** directory; use `/tmp/…` fixtures for eval artifacts (**Eval cells stay in scope**).
+- **One target (examples):** If the user names two paths (e.g. `draft-pr` and a fixture `neutral-pkg`) in one message, **stop** and require a single chosen target—do not run Phase 1 on both.
+- **Phases:** Do not merge audit, empirical, and optimizer into one ad-hoc pass (**No shortcut phases**).
+
 - **No shortcut phases:** Do not merge audit, empirical, and optimizer into one ad-hoc pass.
 - **One target per invocation:** Multi-skill repo audits are out of scope unless the user lists one target path.
 - **Eval cells stay in scope:** Phase 2/3 Task prompts must tell executors **not to edit** any skill directory except the hardened target (use `/tmp/…` fixtures for scenario artifacts). Revert accidental edits to non-target skills before the next phase.
 - **Preserve intentional design:** Same as audit-skill—verbatim user wording and `disable-model-invocation` choices stay unless a child skill's fix requires changing them. Manual-invoke targets: see **Manual-invoke targets**—WHAT-only `description`; no discovery WHEN / `## Triggers` adds; trimming discovery WHEN is allowed.
-- **Divergence escape hatch:** If empirical shows unclear points not decreasing across 3+ iterations (empirical **Divergence** criterion), stop the loop, report structural rewrite needed, and do not patch indefinitely.
+- **Divergence escape hatch:** If empirical shows unclear points not decreasing across 3+ iterations (empirical **Divergence** criterion), stop the inner loop and apply **Phase 2 step 4 — Divergence** (one structural rewrite, not indefinite patches). Do not declare empirical **Converged: yes** while Divergence is open unless the post-rewrite confirmation pass clears recurring patterns.
 
 ## Additional resources
 
