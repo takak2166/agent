@@ -4,7 +4,7 @@ GitHub is **read-only** for this eval. Never post reviews or comments. Raw artif
 
 ## Ground-truth set
 
-Build ~10 merged PRs from `takak2166/*` repos. For each PR:
+Build **10** merged PRs from `takak2166/*` repos. For each PR:
 
 1. Resolve the PR head commit SHA with `gh pr view <n> --json headRefOid -q .headRefOid`, then check it out read-only for file reads:
    - `git fetch origin <headRefOid>`
@@ -15,7 +15,7 @@ Build ~10 merged PRs from `takak2166/*` repos. For each PR:
    - `gh api -X GET /repos/{owner}/{repo}/pulls/{n}/comments --paginate` (REST review comments), **and**
    - GraphQL `reviewThreads` when a Files-tab thread has no REST row (paginate until `hasNextPage` is false).
    Exclude threads the author dismissed without a code change and pure praise/LGTM.
-3. Normalize each ground-truth item to a **finding key**: `{path}::{topic}` where `topic` is a short stable label for the underlying defect (same file + same root cause = one key). Before scoring agent output, map each reported finding to the same key shape by comparing path + root cause against the GT list for that PR; record the chosen `topic` labels in the PR manifest (`gt_keys` and any agent-side keys used for matching).
+3. Normalize each ground-truth item to a **finding key**: `{path}::{topic}` where `topic` is a short stable label for the underlying defect (same file + same root cause = one key). Record GT keys in the PR manifest; apply the same key rules to agent findings per **Scoring** (Topic normalization).
 
 Store manifests as `/tmp/code-review-agents/eval-data/{owner}-{repo}-{n}.json` with `gt_fix_count` and normalized keys.
 
@@ -54,9 +54,9 @@ Do **not** use “task count × nominal wall time” as a substitute for measure
 
 ## Winner rule
 
-1. **Completion gate:** If fewer than **40/40** verified cells completed, do **not** apply steps 2–5. Report `completed_count` and per-cell metrics only; **abort the winner decision** (same rule as [Recording](#recording) and [Execution status](#execution-status)).
-2. Compare **mean recall** and **mean precision** across all **40/40** completed PR-runs for each design.
-3. If **both** gaps are ≤ **10 percentage points**, pick the design with **lower measured** wall time and token cost. When tokens are `unavailable`, use wall time only (step 3 already covers that tie case).
+1. **Completion gate:** If fewer than **40/40** verified cells completed, do **not** apply steps 2–6. Report `completed_count` and per-cell metrics only; **abort the winner decision** (same rule as [Recording](#recording) and [Execution status](#execution-status)).
+2. Compare **mean recall** and **mean precision** across all completed PR-runs for each design (20 cells per design when the matrix is 10 PRs × 2 runs).
+3. If **both** gaps are ≤ **10 percentage points**, pick the design with **lower measured** cost: prefer lower total token cost when both designs have token totals; when tokens are `unavailable` for either design, use mean wall time only; when both metrics are available, break ties on lower mean wall time.
 4. If recall gap **>** 10 points, pick higher mean recall.
 5. If recall gap ≤ 10 but precision gap **>** 10 points, pick higher mean precision.
 6. If still tied within measurement noise, rerun flipped PRs once; if still tied, keep **Design A** (current shipped shape).
