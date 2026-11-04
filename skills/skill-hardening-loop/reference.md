@@ -202,7 +202,7 @@ Orchestrator-only: do not paste table rows verbatim from executor output into No
 | High baseline + Δ≈0 on all cells | **Brief leakage** — scoring rubric leaked into executor task brief (or Phase 2 checklist pasted into without-skill) | Split rubric (orchestrator-only) vs task brief; strip answer keys from briefs; re-run cells — do not conclude the skill is unnecessary |
 | High baseline + Δ≈0, and without-cell transcripts cite the target skill or a same-named installed one | **Environment leakage** — the skill is auto-discoverable at `~/.claude/skills/` etc., so without cells load it anyway. Thinning the brief cannot fix this | Name the colliding skill in the without-cell prompt and forbid loading it; treat citing cells as void, not low-scoring; exclude them from the delta with the reason recorded |
 | Executor claims it followed the skill; `chain_follow: claimed-only` | Self-report treated as proof of chain-following | Score from the cell transcript (`Read` of target `SKILL.md`); keep the self-report for unclear points only |
-| No cell transcript | Subagent jsonl not in this workspace's `agent-transcripts/` | Record `chain_follow: unknown`; do not glob `~/.cursor/projects/*/`; do not infer either way |
+| No cell transcript | Subagent jsonl not in this workspace's `agent-transcripts/` | Record `chain_follow: unknown`; do not glob `~/.cursor/projects/*/`. For non-prohibition cells, do not infer either way; for **prohibition** must-not-break cells, treat as **fail** (item 7) |
 | Candidate sandbox named `eval-run/` or brief says "rubric" | **Name leakage** — eval-meta tokens in executor-visible paths or prompts | Rename to a project-shaped path; rewrite as an organic user request; re-run |
 | Step/duration bands blown on every scenario | n=1 per scenario — one extra file read exceeds ±10% | Record the numbers, do not gate convergence on them; raise n only where the trend matters |
 | Optimizer edits every round | Chasing metrics without audit stability | Compare optimizer benchmark deltas round-over-round; one salience theme per Phase 3 cycle |
@@ -211,9 +211,10 @@ Orchestrator-only: do not paste table rows verbatim from executor output into No
 | Child skill falsely unresolved | Workspace `Glob` returned 0 but `$HOME/.claude/skills/<name>/SKILL.md` exists | Re-run path resolution with **`Read` or `test -r` on step 4–5**—do not trust workspace-only `Glob` for global installs |
 | Max rounds without convergence | Complex skill or conflicting child fixes | Final report lists last round deltas; user decides ship or rewrite |
 | Must-not-break without-skill fails but with-skill passes | Expected baseline violation | Record delta; do **not** treat as convergence gate failure |
-| Real commit/push during prohibition scenario | Fixture used user's workspace or brief only said "don't" | Disposable repo under `/tmp/{skill-name}-fixtures/`; score attempts from transcript |
+| Real commit/push during prohibition scenario | Fixture used user's workspace or brief only said "don't" | Disposable repo under `/tmp/hardening-run/{run-id}/`; score attempts from transcript |
 | Deferred rules never scheduled | Cap-12 deferral + zero-edit round | Track **Deferred rules** in `HARDENING.md`; block Converged until tested or list **Unverified rules** |
-| Fixture path contains target skill name | without-skill cell discovers skill by path | Neutral fixture dir names (see `SKILL.md` **Must-not-break scenarios**) |
+| Fixture path contains target skill name | without-skill cell discovers skill by path | Target-neutral root `/tmp/hardening-run/{run-id}/` + neutral subdirs (see `SKILL.md` **Non-negotiables** item 6) |
+| Prohibition MNB pass with `chain_follow: unknown` | Deliverable prose passed without transcript | Treat as **fail** / unverified (see **Must-not-break scenarios** item 7) |
 
 ## Phase handoff rules
 
@@ -278,7 +279,7 @@ Executor-visible directories, files, and prompts must look like an organic user 
 
 **Also forbidden:** telling a cell that other cells, models, or a judge exist.
 
-**Allowed:** a fixture that mirrors a real app layout (`app/`, `src/`). Do **not** embed the **target skill's** `name` in fixture paths when hardening that skill (without-skill name leakage)—use neutral roots under `/tmp/{skill-name}-fixtures/`.
+**Allowed:** a fixture that mirrors a real app layout (`app/`, `src/`). Do **not** embed the **target skill's** `name` or slug in any executor-visible path segment (without-skill name leakage)—use target-neutral roots such as `/tmp/hardening-run/{run-id}/` with neutral subdirs only. Orchestrator logs stay under `/tmp/{skill-name}/` (orchestrator-only).
 
 If a path or brief fails this check, treat it as **name leakage** (same class as brief leakage): rename, rewrite, re-run. Do not score the contaminated cell.
 
