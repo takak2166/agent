@@ -21,7 +21,7 @@ Treat a bare integer as a PR number by default; treat anything else as a base br
 
 ### Missing base branch (base-branch argument)
 
-When the user passes a branch name and `git diff <branch>...HEAD` fails because `<branch>` does not exist locally (for example `fatal: ambiguous argument` or unknown ref), **stop before Step 2** and tell the user the base ref is missing. Ask them to fetch or create that branch, or to pass a PR number / different base. Do not launch subagents until a valid diff scope is available.
+When the user passes a branch name and `git diff <branch>...HEAD` **fails** (non-zero exit or `fatal:` on stderr — not an empty diff on stdout), **stop before Step 2**. Treat this as a command failure, not **Empty diff** below. The common case is a missing local `<branch>` (`fatal: ambiguous argument` or unknown ref); other failures include unrelated histories or an unborn HEAD. Tell the user the base scope could not be computed. Ask them to `git fetch` and retry, pass a remote-tracking ref (e.g. `origin/<branch>`), or choose a PR number / different base. Do not launch subagents until a valid diff scope is available.
 
 ### Unavailable `gh` (PR flow only)
 
