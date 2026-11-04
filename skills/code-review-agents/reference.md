@@ -19,6 +19,10 @@ Treat a bare integer as a PR number by default; treat anything else as a base br
 - Matching branch exists → ask the user: 「`<arg>` は PR 番号ですか？それともブランチ名ですか？」
 - No match → proceed as a PR number
 
+### Missing base branch (base-branch argument)
+
+When the user passes a branch name and `git diff <branch>...HEAD` fails because `<branch>` does not exist locally (for example `fatal: ambiguous argument` or unknown ref), **stop before Step 2** and tell the user the base ref is missing. Ask them to fetch or create that branch, or to pass a PR number / different base. Do not launch subagents until a valid diff scope is available.
+
 ### Unavailable `gh` (PR flow only)
 
 When `gh` is missing, unauthenticated, or cannot fetch the PR, stop and tell the user to install or authenticate `gh` and re-run.
