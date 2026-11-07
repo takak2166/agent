@@ -135,6 +135,7 @@ Requirements here win over [`reference.md`](reference.md) if anything conflicts.
 **Does not apply** on Missing path, not-a-skill, or unresolvable-target early exits (Steps §1–§3)—reply with a brief ask or report, then stop.
 
 - **Section order:** **## Changes Applied** → **## Findings** → **## Strengths** (mandatory on the full-output path).
+- **Auditor checklist (full-output path):** Paste the completed `Auditor checklist` block from **Steps** with every box marked `[x]` immediately above **## Changes Applied**—do not skip it on the final reply.
 - **Templates and examples:** Use [`reference.md`](reference.md) for copy-paste Markdown templates, empty-section wording, multi-item separators, and worked examples—**read it before writing the reply**.
 - **## Changes Applied:** Critical/Major items you fixed. Subsections `### Critical` / `### Major` only when non-empty. If none fixed: **No Critical or Major issues; no edits made.** If audit-only with unresolved Critical/Major: **No edits made.** (one line). Each item: **Affected section:**, **Problem:**, **Why it matters:**, **Fix applied:** (name file + brief change). Each **obsolete model-compensation** removal is its own item (do not batch multiple removals into one bullet); **Fix applied:** must quote or cite the removed passage (line range or short excerpt).
 - **## Findings:** Minor suggestions and Critical/Major items not auto-fixed. Each item: **Affected section:**, **Problem:**, **Why it matters:**, **Suggested fix:**. If none: **No Minor findings.**
