@@ -108,7 +108,7 @@ Cross-references **Steps §1–§3** mean the **first three items** in this list
    | 7 | Authoring anti-patterns | **Minor** only: dated deprecations missing, many equivalent tools with no default, duplicate examples |
    | 8 | Voice and mechanisms | Keep only prose that changes a decision; delegate sibling skills by path instead of restating them; prefer a lint, script, flag, or runtime check over more instruction text |
 
-   When a row is ambiguous, apply the expanded bullet list in [`reference.md`](reference.md) **Audit checklist (expanded)**. Always apply that expanded list for frontmatter reserved words and XML (row 1), reference depth and reference-file contents (row 2), cross-file contradictions, pressure signals, and omission-prone checklists (row 3), frontmatter discovery limits (row 6), and named path, script, MCP, or command checks (row 5).
+   When a row is ambiguous, apply the expanded bullet list in [`reference.md`](reference.md) **Audit checklist (expanded)**. Always apply that expanded list for frontmatter reserved words and XML (row 1), reference depth and reference-file contents (row 2), cross-file contradictions, pressure signals, omission-prone checklists (row 3), obsolete model-compensation instructions (row 3), frontmatter discovery limits (row 6), and named path, script, MCP, or command checks (row 5).
 
    **Severity definitions:**
    - `Critical`: likely wrong behavior, unsafe behavior, or failed execution
