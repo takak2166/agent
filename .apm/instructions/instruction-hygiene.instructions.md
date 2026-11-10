@@ -10,7 +10,7 @@ When writing or editing agent instructions:
 - Remove what a session can derive from the code: directory layout, dependency lists, standard install/test/lint commands, generic advice, and rules a linter already enforces.
 - Keep pitfalls, design rationale, conventions that differ from tool defaults, safety prohibitions, commands that cannot be inferred, and external references. If unsure, keep it.
 - Always-on instructions hold cross-cutting invariants only. Put workflows and long procedures in a skill. Keep "never do X" prohibitions always-on.
-- State each fact in one place. Skip history narrative, incident IDs, and pinned model names.
+- State each fact in one place. When guidance changes, revise the existing bullet or section in place; do not stack a parallel or near-duplicate rule beside the old wording. Skip history narrative, incident IDs, and pinned model names.
 - Do not turn one session's stumble into a permanent rule.
 - For skills and instructions, inline short templates or references used on every invocation into the main file rather than forcing extra file reads.
 
