@@ -136,9 +136,18 @@ User invokes `/audit-skill @skills/example-skill` (hypothetical target whose `de
    - **Minor (optional):** body uses second person while frontmatter should stay third person.
 4. Auto-fix Major: update target `description` with third-person WHAT + WHEN.
 5. Read this `reference.md` for output templates.
-6. Compose reply:
+6. Compose reply (checklist above **## Changes Applied** per `SKILL.md` **Audit Output**):
 
 ```markdown
+Audit pass:
+- [x] Target `SKILL.md` and every directly linked supporting file read
+- [x] This package's `reference.md` read for output templates (not the target's `reference.md` unless auditing this package)
+- [x] Checklist rows 1–8 applied; expanded bullets from reference for rows 1–3, 5–6
+- [x] Always-on rules checked when they can apply to the same action
+- [x] Critical/Major fixes applied in the target skill directory only; Minor reported only
+- [x] Final reply order: ## Changes Applied → ## Findings → ## Strengths
+- [x] Re-audit from supporting-files step when this pass fixed any Critical/Major (repeat-until-Minor mode only)
+
 ## Changes Applied
 
 ### Major
@@ -162,7 +171,7 @@ User invokes `/audit-skill @skills/example-skill` (hypothetical target whose `de
 
 # Audit output — templates and examples
 
-Use these when composing the final response for **audit-skill**.
+Use these when composing the final response for **audit-skill**. On the full-output path, paste the completed **Auditor checklist** from `SKILL.md` **## Auditor checklist** immediately above **## Changes Applied** (canonical shape: integrated workflow example). Few-shot blocks below elide the checklist for brevity unless the heading says **complete reply**.
 
 ## Full template (fixed + suggested)
 
@@ -170,7 +179,12 @@ Copy only the subsections you need. Do not paste empty `### Critical` / `### Maj
 
 In the actual response, **replace** every `…` placeholder with real text; do not output literal `…` as the item content.
 
+Paste the completed **Auditor checklist** from `SKILL.md` **## Auditor checklist** immediately above **## Changes Applied** (see **Audit Output**).
+
 ```markdown
+Audit pass:
+- [x] … (all boxes marked per the audit pass)
+
 ## Changes Applied
 
 ### Critical
@@ -284,9 +298,18 @@ Use **Fix applied:** to name what changed, not to restate the problem. For **obs
 
 <example type="Major" title="Major auto-fixed + Minor suggestion">
 
-Below is a **complete** sample from **## Changes Applied** through **## Strengths**.
+Below is a **complete reply** (checklist + three sections).
 
 ```markdown
+Audit pass:
+- [x] Target `SKILL.md` and every directly linked supporting file read
+- [x] This package's `reference.md` read for output templates
+- [x] Checklist rows 1–8 applied; expanded bullets from reference for rows 1–3, 5–6
+- [x] Always-on rules checked when they can apply to the same action
+- [x] Critical/Major fixes applied in the target skill directory only; Minor reported only
+- [x] Final reply order: ## Changes Applied → ## Findings → ## Strengths
+- [x] Re-audit from supporting-files step when this pass fixed any Critical/Major (repeat-until-Minor mode only)
+
 ## Changes Applied
 
 ### Major

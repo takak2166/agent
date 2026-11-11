@@ -135,7 +135,7 @@ Requirements here win over [`reference.md`](reference.md) if anything conflicts.
 **Does not apply** on Missing path, not-a-skill, or unresolvable-target early exits (Steps §1–§3)—reply with a brief ask or report, then stop.
 
 - **Section order:** **## Changes Applied** → **## Findings** → **## Strengths** (mandatory on the full-output path).
-- **Auditor checklist (full-output path):** Paste the completed `Auditor checklist` block from **Steps** with every box marked `[x]` immediately above **## Changes Applied**—do not skip it on the final reply.
+- **Auditor checklist (full-output path):** Paste the completed `Auditor checklist` block from **## Auditor checklist** (above) with every box marked `[x]` immediately above **## Changes Applied**—do not skip it on the final reply.
 - **Templates and examples:** Use [`reference.md`](reference.md) for copy-paste Markdown templates, empty-section wording, multi-item separators, and worked examples—**read it before writing the reply**.
 - **## Changes Applied:** Critical/Major items you fixed. Subsections `### Critical` / `### Major` only when non-empty. If none fixed: **No Critical or Major issues; no edits made.** If audit-only with unresolved Critical/Major: **No edits made.** (one line). Each item: **Affected section:**, **Problem:**, **Why it matters:**, **Fix applied:** (name file + brief change). Each **obsolete model-compensation** removal is its own item (do not batch multiple removals into one bullet); **Fix applied:** must quote or cite the removed passage (line range or short excerpt).
 - **## Findings:** Minor suggestions and Critical/Major items not auto-fixed. Each item: **Affected section:**, **Problem:**, **Why it matters:**, **Suggested fix:**. If none: **No Minor findings.**
@@ -143,7 +143,7 @@ Requirements here win over [`reference.md`](reference.md) if anything conflicts.
 - **Separators:** Between items in the same subsection, use **`Finding 2`**, **`Finding 3`**, … or `---`—do not mix both styles.
 - **## Strengths:** 2–5 bullets; quote short snippets when grounding claims.
 - **After the three sections:** Follow always-on consumer instructions that apply to the audit reply itself (for example confidence rating). Keep **## Changes Applied** → **## Findings** → **## Strengths** in that order; append anything else after **## Strengths**.
-- **Optional prefill:** If the client allows steering the first tokens, prefill with `## Changes Applied` only (no item content)—**full-output path only**; never on early exits (Steps §1–§3).
+- **Optional prefill:** If the client allows steering the first tokens, prefill the completed **Auditor checklist** block, then `## Changes Applied` with no item content yet—**full-output path only**; never on early exits (Steps §1–§3). When prefill is unavailable, paste the same two blocks manually in that order.
 
 ## Notes
 
