@@ -1,7 +1,6 @@
 ---
 name: my-grill-me
-description: Stress-tests a plan or decision through a classified design-tree interview (look up facts, park empirical forks, ask only preference questions). Use when the user runs `/my-grill-me`, attaches this skill, or a parent skill delegates by Read-and-follow (e.g. product-requirements). Does not implement until the user explicitly asks.
-disable-model-invocation: true
+description: Stress-tests a plan, design, or operational change through a classified design-tree interview. Use before deciding a new plan, design, or operational change, or when a parent skill delegates by instructing the agent to read and follow this skill (for example product-requirements). Do not use for small, clear tasks or routine fixes whose direction is already decided.
 ---
 
 # My Grill Me
@@ -17,6 +16,7 @@ Stress-test a plan, decision, or idea through structured questioning until **sha
 Run when any of these applies:
 
 - The user explicitly attaches this skill or invokes `/my-grill-me`.
+- The model auto-invoked this skill because the turn is about deciding a new **plan**, **design**, or **operational change** (frontmatter `description` WHEN).
 - A **parent skill** (for example **`product-requirements`**) explicitly delegates by instructing the agent to **Read** and follow this `SKILL.md` — treat that as invocation; do not wait for `/my-grill-me` or a separate attach.
 
 If the same turn also asks to implement something, grill first and do not implement.
@@ -63,7 +63,7 @@ Running **existing** code, tests, or traces to learn the current system is look-
 
 1. Short **settled decisions** list (bullets).
 2. **Looked-up facts** this round (one line each) and **parked empirical** items (what to observe later, what it unlocks). Omit a subsection when empty.
-3. One or more structured-question tool calls covering the **preference** frontier only (batched only when the tool caps questions per call).
+3. Deliver the **preference** frontier via structured-question tool calls when available, otherwise the markdown fallback in **Question delivery** (batched only when the tool caps questions per call).
 4. No implementation, edits, prototypes, or other action on the interview subject.
 
 **Session end (preference frontier empty):**
@@ -98,4 +98,4 @@ When the preference frontier is empty, follow **Expected output** → **Session 
 - Do not ask the user for look-up-able facts or empirical / observable forks.
 - Do not recompute the design tree mid-round.
 - Do not add a duplicate Other option.
-- Do not start this workflow from ambient chat unless the skill was explicitly attached, `/my-grill-me` was used, or a parent skill delegated by **Read**-and-follow as in **Usage**.
+- Do not use for small, clear tasks or routine fixes whose direction is already decided.

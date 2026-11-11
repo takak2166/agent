@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Product requirements
 
-Produce a **requirements document** at the **storage destination** (not in the git repo). Run the requirements interview using the **`my-grill-me`** workflow (read that skill’s installed `SKILL.md` — it is not auto-invoked); do not implement the product in this skill.
+Produce a **requirements document** at the **storage destination** (not in the git repo). Run the requirements interview using the **`my-grill-me`** workflow (read that skill’s installed `SKILL.md` and follow it — parent Read-and-follow delegation); do not implement the product in this skill.
 
 ## Standalone invocation
 
@@ -38,7 +38,7 @@ After the grill, the saved document must include these sections (see template). 
 
 ## Prerequisites
 
-- **`my-grill-me`** — read the installed `SKILL.md` and follow its interview workflow (`disable-model-invocation: true`; the user may attach `/my-grill-me` explicitly). Subject = this product’s requirements.
+- **`my-grill-me`** — read the installed `SKILL.md` and follow its interview workflow (parent Read-and-follow; `/my-grill-me` also valid). Subject = this product’s requirements.
 - **Storage** — read installed **`product-storage`** references: [`../product-storage/reference/storage-destination.md`](../product-storage/reference/storage-destination.md) and default Cosense provider [`../product-storage/reference/storage-cosense.md`](../product-storage/reference/storage-cosense.md) (**`@helpfeel/cosense-cli`** requires **Node.js >= 24**).
 - **Template** — [`reference/requirements-template.md`](reference/requirements-template.md).
 
