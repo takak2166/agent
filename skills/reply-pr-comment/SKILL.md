@@ -4,7 +4,7 @@ description: Drafts and posts GitHub pull request review comment replies after t
 ---
 
 # Reply PR Comment
-A skill to reply to review comments on a specified PR with resolution results, assuming `check-pr-comment` has already been used to triage the comments in the same conversation.
+A skill to reply to review comments on a specified PR with resolution results. Assumes `check-pr-comment` ran in the same conversation when triage context is needed; otherwise fetch all comments yourself (see Step 6).
 
 ## Usage
 ```

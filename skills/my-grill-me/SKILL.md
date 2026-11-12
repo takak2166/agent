@@ -19,7 +19,11 @@ Run when any of these applies:
 - The model auto-invoked this skill because the turn is about deciding a new **plan**, **design**, or **operational change** (frontmatter `description` WHEN).
 - A **parent skill** (for example **`product-requirements`**) explicitly delegates by instructing the agent to **Read** and follow this `SKILL.md` — treat that as invocation; do not wait for `/my-grill-me` or a separate attach.
 
-If the same turn also asks to implement something, grill first and do not implement.
+When this skill is auto-invoked, state in one sentence why it applied (the turn is about deciding a new plan, design, or operational change). If the user declines the grill, exit this skill without interviewing.
+
+If this skill is loaded (including auto-invoke) and the request is a small, clear task or routine fix whose direction is already decided (frontmatter WHEN-NOT), state why this skill does not apply and exit without interviewing. If the same turn also asked to implement, proceed with that implementation after exiting.
+
+If the same turn also asks to implement something, and the request is not excluded by WHEN-NOT, grill first and do not implement.
 
 The interview **subject** is the plan, decision, or idea in the user's message. If none is given, ask once via the question tool what to stress-test, then begin the design tree.
 
@@ -98,4 +102,4 @@ When the preference frontier is empty, follow **Expected output** → **Session 
 - Do not ask the user for look-up-able facts or empirical / observable forks.
 - Do not recompute the design tree mid-round.
 - Do not add a duplicate Other option.
-- Do not use for small, clear tasks or routine fixes whose direction is already decided.
+- Do not use for small, clear tasks or routine fixes whose direction is already decided. If this skill is already loaded (including auto-invoke) and you judge the subject is that kind of request, state why and exit without starting or continuing the interview.

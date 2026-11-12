@@ -76,7 +76,7 @@ Confirm **product name**, **one-line goal**, and **storage page title** (or acce
 
 ### 2. Requirements interview
 
-- Read the installed **`my-grill-me`** `SKILL.md` and follow its workflow (subject: requirements for `<product name>`). Do not assume nested skill auto-invocation.
+- Read the installed **`my-grill-me`** `SKILL.md` and follow its workflow (subject: requirements for `<product name>`). Even if `my-grill-me` is auto-invoked, delegation remains Read-and-follow; do not restart an in-progress interview.
 - Cover at least: users, core workflows, non-goals, acceptance definition, constraints, open empirical items (parked per grill rules).
 - Stop when the grill session completes with user confirmation of shared understanding (per **`my-grill-me`**).
 
