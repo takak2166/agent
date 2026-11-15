@@ -45,7 +45,7 @@ After the grill, the saved document must include these sections (see template). 
 ## Non-negotiables
 
 1. **Grill before write** — complete the **`my-grill-me`** workflow until shared understanding is confirmed (per that skill’s session end). Do not draft the final doc during the grill.
-2. **No implementation** — no product code, infra, or Linear Issue create in this skill.
+2. **No implementation** — no product code, infra, or tracker ticket create in this skill (including Linear Issues and GitHub Issues such as `gh issue create`). Issue decomposition belongs to **`product-kickoff`** downstream (Step 6 Handoff), not this skill.
 3. **No overwrite** — follow storage rules: existence check before create; never silently replace an existing page.
 4. **Secrets** — never print `COSENSE_PAT` or other credentials.
 
