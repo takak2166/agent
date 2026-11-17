@@ -1,7 +1,6 @@
 ---
 name: draft-pr
-description: Create a draft pull request for the current branch with a structured PR body.
-disable-model-invocation: true
+description: Creates a draft pull request for the current branch with a structured PR body from the repository template. Use whenever creating a pull request, including when the user invokes /draft-pr.
 ---
 
 # Draft PR

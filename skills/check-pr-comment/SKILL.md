@@ -1,7 +1,6 @@
 ---
 name: check-pr-comment
-description: Reviews and triages GitHub pull request inline review comments via gh. Fetches all comments, groups by file and thread, verifies each claim against code and human PR replies, classifies fix/dismiss/ask, coverage-checks ids, and scores importance/difficulty.
-disable-model-invocation: true
+description: Reviews and triages GitHub pull request inline review comments via gh. Use whenever checking pull request review comments. The procedure is always the full triage (fetch all comments, coverage-check every id, verify each claim, classify fix/dismiss/ask); there is no lightweight path.
 ---
 
 # Check PR Comment
