@@ -65,7 +65,7 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 - **Critical** when both sides would apply to the same action and the agent cannot follow both. Cite the skill location and the rule location
 - Do not flag a difference the narrower file explains as an override, or a path-scoped rule whose glob cannot match the skill's work
 - Auto-fix only inside the target skill directory, and only when the always-on text is the invariant the skill must follow. If you cannot tell which side wins, report **cannot determine** under **## Findings** and do not edit. Do not edit rule files outside the target skill
-- **Auditing vs executing:** When the target package is under **audit**, the auditor's session may use Read/Glob/shell per client defaults. Do **not** weaken the target's **Restrictions** merely because the audit session uses tools the target would forbid **when that target skill later governs the turn**. Cross-file **Critical** applies when the target text governs the same action as the always-on rule in that same mode (for example the target is the active workflow, not a passive document being reviewed)
+- **Auditing vs executing:** When the target package is under **audit**, the auditor's session may use Read/Glob/shell per client defaults. Do **not** weaken the target's **Restrictions** merely because the audit session uses tools the target would forbid **when that target skill later governs the turn**. Cross-file **Critical** applies when the target text governs the same action as the always-on rule in that same mode (for example the target is the active workflow, not a passive document being reviewed). The same lines may also qualify for a **Minor** host-dependent obsolete-compensation finding—file both when each criterion matches; do not treat Critical as a substitute for reporting host-only compensation under row 3
 - Grep the files under review for all-caps `MUST`, `NEVER`, `ALWAYS`, `CRITICAL`, and `IMPORTANT`. **Minor** when the caps are emphasis and the sentence already states the action. Do not flag lowercase prohibitions, a caps token that is the only statement of a safety prohibition, these tokens inside fenced examples, or a line that only names this search pattern
 - The skill does not mix too many unrelated objectives
 - User-specified verbatim wording in the target is preserved, not paraphrased or expanded, unless a defect requires changing it
@@ -145,7 +145,7 @@ Audit pass:
 - [x] Checklist rows 1–8 applied; expanded bullets from reference for rows 1–3, 5–6
 - [x] Always-on rules checked when they can apply to the same action
 - [x] Critical/Major fixes applied in the target skill directory only; Minor reported only
-- [x] Final reply order: ## Changes Applied → ## Findings → ## Strengths
+- [x] Completed **Auditor checklist** pasted immediately above **## Changes Applied**, then **## Changes Applied** → **## Findings** → **## Strengths**
 - [x] Re-audit from supporting-files step when this pass fixed any Critical/Major (repeat-until-Minor mode only)
 
 ## Changes Applied
@@ -171,7 +171,7 @@ Audit pass:
 
 # Audit output — templates and examples
 
-Use these when composing the final response for **audit-skill**. On the full-output path, paste the completed **Auditor checklist** from `SKILL.md` **## Auditor checklist** immediately above **## Changes Applied** (canonical shape: integrated workflow example). Few-shot blocks below elide the checklist for brevity unless the heading says **complete reply**.
+Use these when composing the final response for **audit-skill**. On the full-output path, paste the completed **Auditor checklist** from `SKILL.md` **## Auditor checklist** immediately above **## Changes Applied** (canonical shape: integrated workflow example). Few-shot blocks below elide the checklist for brevity **only when labeled body-only**; headings that say **complete reply** must include the checklist—real audit replies never skip it per `SKILL.md` **Audit Output**.
 
 ## Full template (fixed + suggested)
 
@@ -212,6 +212,8 @@ Audit pass:
 ```
 
 ## Empty sections
+
+On the full-output path, paste the completed **Auditor checklist** from `SKILL.md` immediately above **## Changes Applied** before using any block below (see integrated workflow example for the canonical full-reply shape).
 
 When nothing was fixed at Critical or Major severity:
 
@@ -307,7 +309,7 @@ Audit pass:
 - [x] Checklist rows 1–8 applied; expanded bullets from reference for rows 1–3, 5–6
 - [x] Always-on rules checked when they can apply to the same action
 - [x] Critical/Major fixes applied in the target skill directory only; Minor reported only
-- [x] Final reply order: ## Changes Applied → ## Findings → ## Strengths
+- [x] Completed **Auditor checklist** pasted immediately above **## Changes Applied**, then **## Changes Applied** → **## Findings** → **## Strengths**
 - [x] Re-audit from supporting-files step when this pass fixed any Critical/Major (repeat-until-Minor mode only)
 
 ## Changes Applied

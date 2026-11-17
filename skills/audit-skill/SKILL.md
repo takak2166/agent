@@ -30,13 +30,13 @@ Confirm all of the following before composing the final reply:
 1. **Read** the target `SKILL.md` and every linked supporting file (`reference.md`, `examples.md`, `scripts/*`) the main skill references.
 2. **Read** [`reference.md`](reference.md) in **this audit-skill directory** (output templates, separators, worked examples—not the target skill's `reference.md`, unless auditing this package).
 3. **Fix** Critical and Major issues in the target skill directory only; report Minor as suggestions—**do not edit for Minor**.
-4. **Output** sections in this order: **## Changes Applied** → **## Findings** → **## Strengths**.
+4. **Output** the completed **Auditor checklist** block (every box `[x]`) immediately above **## Changes Applied**, then **## Changes Applied** → **## Findings** → **## Strengths** (see **Audit Output**).
 5. **Ground** every finding and edit in text you actually read; do not infer undocumented behavior.
 6. **Do not** create git commits unless the user explicitly asks.
 
 ## Success criteria
 
-When the full Audit Output applies, the reply includes **## Changes Applied**, **## Findings**, and **## Strengths** with field labels from **Audit Output**; severities match **Steps**. Default to one audit pass; re-audit only when the user asks to repeat until only Minor findings remain. For targets with `disable-model-invocation: true`, evaluate `description` for factual WHAT accuracy only—do not Major-fix absent discovery WHEN.
+When the full Audit Output applies, the reply includes the completed **Auditor checklist** above **## Changes Applied**, then **## Changes Applied**, **## Findings**, and **## Strengths** with field labels from **Audit Output**; severities match **Steps**. Default to one audit pass; re-audit only when the user asks to repeat until only Minor findings remain. For targets with `disable-model-invocation: true`, evaluate `description` for factual WHAT accuracy only—do not Major-fix absent discovery WHEN.
 
 ## Restrictions
 
@@ -73,7 +73,7 @@ Audit pass:
 - [ ] Checklist rows 1–8 applied; expanded bullets from reference for rows 1–3, 5–6
 - [ ] Always-on rules checked when they can apply to the same action
 - [ ] Critical/Major fixes applied in the target skill directory only; Minor reported only
-- [ ] Final reply order: ## Changes Applied → ## Findings → ## Strengths
+- [ ] Completed **Auditor checklist** pasted immediately above **## Changes Applied**, then **## Changes Applied** → **## Findings** → **## Strengths**
 - [ ] Re-audit from supporting-files step when this pass fixed any Critical/Major (repeat-until-Minor mode only)
 ```
 
@@ -134,7 +134,7 @@ Requirements here win over [`reference.md`](reference.md) if anything conflicts.
 
 **Does not apply** on Missing path, not-a-skill, or unresolvable-target early exits (Steps §1–§3)—reply with a brief ask or report, then stop.
 
-- **Section order:** **## Changes Applied** → **## Findings** → **## Strengths** (mandatory on the full-output path).
+- **Section order:** Completed **Auditor checklist** immediately above **## Changes Applied**, then **## Changes Applied** → **## Findings** → **## Strengths** (mandatory on the full-output path).
 - **Auditor checklist (full-output path):** Paste the completed `Auditor checklist` block from **## Auditor checklist** (above) with every box marked `[x]` immediately above **## Changes Applied**—do not skip it on the final reply.
 - **Templates and examples:** Use [`reference.md`](reference.md) for copy-paste Markdown templates, empty-section wording, multi-item separators, and worked examples—**read it before writing the reply**.
 - **## Changes Applied:** Critical/Major items you fixed. Subsections `### Critical` / `### Major` only when non-empty. If none fixed: **No Critical or Major issues; no edits made.** If audit-only with unresolved Critical/Major: **No edits made.** (one line). Each item: **Affected section:**, **Problem:**, **Why it matters:**, **Fix applied:** (name file + brief change). Each **obsolete model-compensation** removal is its own item (do not batch multiple removals into one bullet); **Fix applied:** must quote or cite the removed passage (line range or short excerpt).
@@ -142,7 +142,7 @@ Requirements here win over [`reference.md`](reference.md) if anything conflicts.
 - **Uncertainty:** Insufficient evidence → do not auto-fix; report under **## Findings** with **cannot determine** / **cannot judge** wording.
 - **Separators:** Between items in the same subsection, use **`Finding 2`**, **`Finding 3`**, … or `---`—do not mix both styles.
 - **## Strengths:** 2–5 bullets; quote short snippets when grounding claims.
-- **After the three sections:** Follow always-on consumer instructions that apply to the audit reply itself (for example confidence rating). Keep **## Changes Applied** → **## Findings** → **## Strengths** in that order; append anything else after **## Strengths**.
+- **After output sections:** Follow always-on consumer instructions that apply to the audit reply itself (for example confidence rating). On the full-output path keep completed **Auditor checklist** → **## Changes Applied** → **## Findings** → **## Strengths**; append anything else after **## Strengths**.
 - **Optional prefill:** If the client allows steering the first tokens, prefill the completed **Auditor checklist** block, then `## Changes Applied` with no item content yet—**full-output path only**; never on early exits (Steps §1–§3). When prefill is unavailable, paste the same two blocks manually in that order.
 
 ## Notes
