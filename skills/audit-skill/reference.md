@@ -65,10 +65,11 @@ Apply in priority order. For supporting files without YAML frontmatter, skip **D
 - **Critical** when both sides would apply to the same action and the agent cannot follow both. Cite the skill location and the rule location
 - Do not flag a difference the narrower file explains as an override, or a path-scoped rule whose glob cannot match the skill's work
 - Auto-fix only inside the target skill directory, and only when the always-on text is the invariant the skill must follow. If you cannot tell which side wins, report **cannot determine** under **## Findings** and do not edit. Do not edit rule files outside the target skill
-- **Auditing vs executing:** When the target package is under **audit**, the auditor's session may use Read/Glob/shell per client defaults. Do **not** weaken the target's **Restrictions** merely because the audit session uses tools the target would forbid **when that target skill later governs the turn**. Cross-file **Critical** applies when the target text governs the same action as the always-on rule in that same mode (for example the target is the active workflow, not a passive document being reviewed)
+- **Auditing vs executing:** When the target package is under **audit**, the auditor's session may use Read/Glob/shell per client defaults. Do **not** weaken the target's **Restrictions** merely because the audit session uses tools the target would forbid **when that target skill later governs the turn**. Cross-file **Critical** applies when the target text governs the same action as the always-on rule in that same mode (for example the target is the active workflow, not a passive document being reviewed). The same lines may also qualify for a **Minor** host-dependent obsolete-compensation finding—file both when each criterion matches; do not treat Critical as a substitute for reporting host-only compensation under row 3
 - Grep the files under review for all-caps `MUST`, `NEVER`, `ALWAYS`, `CRITICAL`, and `IMPORTANT`. **Minor** when the caps are emphasis and the sentence already states the action. Do not flag lowercase prohibitions, a caps token that is the only statement of a safety prohibition, these tokens inside fenced examples, or a line that only names this search pattern
 - The skill does not mix too many unrelated objectives
 - User-specified verbatim wording in the target is preserved, not paraphrased or expanded, unless a defect requires changing it
+- **Obsolete model-compensation instructions:** Prose added for older models whose obsolescence is verifiable from the target skill files alone (repeating the same constraint in multiple places within the target files, step-by-step micromanagement that duplicates a checklist already in the same skill). **Precedence:** evaluate passages here first; do not re-flag the same passage under row 6 or row 8 unless a different defect applies. **Major** — auto-remove only when obsolescence is verifiable from the target skill files alone (for example duplicate constraint stated twice, or a step that only repeats a Non-negotiable already above). When auto-removing such a duplicate, keep the instance in the higher-authority section (for example **Non-negotiables** or **Restrictions** before **Steps**) or the more specific wording; remove only the weaker echo. If you cannot identify a safe keeper, downgrade to **Minor** with **Suggested fix:**—do not auto-remove. **Minor** — **Suggested fix:** when the claim depends on host-specific behavior you cannot verify from the target files (for example “the environment already enforces X” without naming a checkable artifact in the skill). **Never** remove safety rules, prohibitions, or verbatim user wording—even when duplicated elsewhere in the target files; treat duplicate safety/prohibition/verbatim text as **Minor** with **Suggested fix:** to consolidate manually if needed. Per-item **## Changes Applied** reporting and **Fix applied:** quote/cite requirements: follow `SKILL.md` **Audit Output** (canonical—do not restate here).
 
 ### 4. Output and examples
 
@@ -135,9 +136,18 @@ User invokes `/audit-skill @skills/example-skill` (hypothetical target whose `de
    - **Minor (optional):** body uses second person while frontmatter should stay third person.
 4. Auto-fix Major: update target `description` with third-person WHAT + WHEN.
 5. Read this `reference.md` for output templates.
-6. Compose reply:
+6. Compose reply (checklist above **## Changes Applied** per `SKILL.md` **Audit Output**):
 
 ```markdown
+Audit pass:
+- [x] Target `SKILL.md` and every directly linked supporting file read
+- [x] This package's `reference.md` read for output templates (not the target's `reference.md` unless auditing this package)
+- [x] Checklist rows 1–8 applied; expanded bullets from reference for rows 1–3, 5–6
+- [x] Always-on rules checked when they can apply to the same action
+- [x] Critical/Major fixes applied in the target skill directory only; Minor reported only
+- [x] Completed **Auditor checklist** pasted immediately above **## Changes Applied**, then **## Changes Applied** → **## Findings** → **## Strengths**
+- [x] Re-audit from supporting-files step when this pass fixed any Critical/Major (repeat-until-Minor mode only)
+
 ## Changes Applied
 
 ### Major
@@ -161,7 +171,7 @@ User invokes `/audit-skill @skills/example-skill` (hypothetical target whose `de
 
 # Audit output — templates and examples
 
-Use these when composing the final response for **audit-skill**.
+Use these when composing the final response for **audit-skill**. On the full-output path, paste the completed **Auditor checklist** from `SKILL.md` **## Auditor checklist** immediately above **## Changes Applied** (canonical shape: integrated workflow example). Few-shot blocks below elide the checklist for brevity **only when labeled body-only**; headings that say **complete reply** must include the checklist—real audit replies never skip it per `SKILL.md` **Audit Output**.
 
 ## Full template (fixed + suggested)
 
@@ -169,7 +179,12 @@ Copy only the subsections you need. Do not paste empty `### Critical` / `### Maj
 
 In the actual response, **replace** every `…` placeholder with real text; do not output literal `…` as the item content.
 
+Paste the completed **Auditor checklist** from `SKILL.md` **## Auditor checklist** immediately above **## Changes Applied** (see **Audit Output**).
+
 ```markdown
+Audit pass:
+- [x] … (all boxes marked per the audit pass)
+
 ## Changes Applied
 
 ### Critical
@@ -197,6 +212,8 @@ In the actual response, **replace** every `…` placeholder with real text; do n
 ```
 
 ## Empty sections
+
+On the full-output path, paste the completed **Auditor checklist** from `SKILL.md` immediately above **## Changes Applied** before using any block below (see integrated workflow example for the canonical full-reply shape).
 
 When nothing was fixed at Critical or Major severity:
 
@@ -265,7 +282,7 @@ Use **Suggested fix:** to give an actionable, specific change. Avoid vague advic
 
 ## Fix applied — weak vs strong (Critical/Major auto-fix)
 
-Use **Fix applied:** to name what changed, not to restate the problem.
+Use **Fix applied:** to name what changed, not to restate the problem. For **obsolete model-compensation** removals, quote/cite and per-item **## Changes Applied** rules live in `SKILL.md` **Audit Output** only—read that section before composing removals; do not duplicate those requirements in this file.
 
 <example type="contrast" title="Weak vs strong Fix applied">
 
@@ -283,9 +300,18 @@ Use **Fix applied:** to name what changed, not to restate the problem.
 
 <example type="Major" title="Major auto-fixed + Minor suggestion">
 
-Below is a **complete** sample from **## Changes Applied** through **## Strengths**.
+Below is a **complete reply** (checklist + three sections).
 
 ```markdown
+Audit pass:
+- [x] Target `SKILL.md` and every directly linked supporting file read
+- [x] This package's `reference.md` read for output templates
+- [x] Checklist rows 1–8 applied; expanded bullets from reference for rows 1–3, 5–6
+- [x] Always-on rules checked when they can apply to the same action
+- [x] Critical/Major fixes applied in the target skill directory only; Minor reported only
+- [x] Completed **Auditor checklist** pasted immediately above **## Changes Applied**, then **## Changes Applied** → **## Findings** → **## Strengths**
+- [x] Re-audit from supporting-files step when this pass fixed any Critical/Major (repeat-until-Minor mode only)
+
 ## Changes Applied
 
 ### Major
