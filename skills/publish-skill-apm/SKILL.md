@@ -1,12 +1,12 @@
 ---
 name: publish-skill-apm
-description: Publishes an APM skill dependency to dotfiles apm.yml, then commit, push main, chezmoi update, and apm install -g in one fail-fast pipeline.
+description: Publishes an APM skill dependency to dotfiles apm.yml, then commit, push main, chezmoi update, apm install -g, and apm compile -g in one fail-fast pipeline.
 disable-model-invocation: true
 ---
 
 # Publish Skill via APM
 
-Register a new APM skill dependency in chezmoi-managed dotfiles, commit, push to **main**, apply with chezmoi, and materialize globally with APM.
+Register a new APM skill dependency in chezmoi-managed dotfiles, commit, push to **main**, apply with chezmoi, materialize globally with APM, and regenerate user-scope root context files.
 
 ## Usage
 
@@ -61,6 +61,7 @@ All git commands run with working directory `~/.local/share/chezmoi`.
 - [ ] 7. Push to main
 - [ ] 8. chezmoi update
 - [ ] 9. apm install -g
+- [ ] 10. apm compile -g
 ```
 
 ### 0. Validate input
@@ -136,26 +137,37 @@ apm install -g
 
 - `apm install` has no `--yes` flag; run as shown. If a future APM version adds a non-interactive flag for install, prefer it.
 
+### 10. Regenerate user-scope root context
+
+```bash
+apm compile -g
+```
+
+- `apm install -g` and `apm update -g` only print a hint; they do not regenerate user-scope root files such as `~/.codex/AGENTS.md`. Run this step after every global install or update, including manual `apm update -g` runs outside this pipeline.
+- Output files follow the `targets:` list in `dot_apm/apm.yml`. Instructions without `applyTo` are written to root files; Claude is skipped when `~/.claude/rules/` already holds the same rules.
+- A `skipped (hand-authored)` line or a `retained … (edited or unverifiable generated file)` warning means APM did not write that file. Treat it as a failure and report it.
+- **First switch only:** a hand-written `~/.codex/AGENTS.md` (no APM marker) blocks generation and shows as `skipped (hand-authored)`. Stop and report it. The one-time fix runs outside this pipeline with the owner's approval: copy the file to a dated backup (for example `~/.codex/AGENTS.md.bak-YYYYMMDD`), move it out of the way, then rerun `apm compile -g`. Do not edit the generated file by hand afterwards; edits make APM skip it.
+
 ## Integrated example
 
 **Input:** `/publish-skill-apm takak2166/agent/skills/new-skill`
 
 **Duplicate (step 2):** `dot_apm/apm.yml` already contains `- takak2166/agent/skills/new-skill` → report **already registered — no changes made** and exit. No git commit, push, chezmoi, or apm.
 
-**Full run (path not present):** append line in agent skill block → `git add dot_apm/apm.yml` → commit (`chore: Add new-skill to apm dependencies`) → warn if other dirty files → `git push origin main` → `chezmoi update` → `apm install -g` → success report with commit hash.
+**Full run (path not present):** append line in agent skill block → `git add dot_apm/apm.yml` → commit (`chore: Add new-skill to apm dependencies`) → warn if other dirty files → `git push origin main` → `chezmoi update` → `apm install -g` → `apm compile -g` → success report with commit hash.
 
 ## Success report
 
-After step 9, report:
+After step 10, report:
 
 - Added dependency path
 - Commit hash (from step 5)
 - Push target (`origin/main`)
-- `chezmoi update` and `apm install -g` completed
+- `chezmoi update`, `apm install -g`, and `apm compile -g` completed (list the files compile wrote)
 
 ## Restrictions
 
-- Allowed commands: file read/edit for `dot_apm/apm.yml`; `git -C ~/.local/share/chezmoi rev-parse`; `git diff --staged`, `git add dot_apm/apm.yml`, `git commit -m`, `git status --porcelain`, `git branch --show-current`, `git push origin main`; `chezmoi update`; `apm install -g`.
+- Allowed commands: file read/edit for `dot_apm/apm.yml`; `git -C ~/.local/share/chezmoi rev-parse`; `git diff --staged`, `git add dot_apm/apm.yml`, `git commit -m`, `git status --porcelain`, `git branch --show-current`, `git push origin main`; `chezmoi update`; `apm install -g`; `apm compile -g`.
 - Do not push branches other than **main**.
-- Do not run `apm update`, `apm compile`, or modify files outside the pipeline scope.
+- Do not run `apm update`, project-scope `apm compile` (without `-g`), or modify files outside the pipeline scope.
 - Do not create git commits in repos other than the chezmoi source.
