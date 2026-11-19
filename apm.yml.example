@@ -10,6 +10,8 @@ dependencies:
   apm:
     # Rules / always-on instructions (entire package primitive)
     - takak2166/agent
+    # Cursor only: sessionStart hook that injects the always-on rules (needs the claude target too)
+    - takak2166/agent/packages/cursor-always-on-rules
 
     # Skills (one path per skill)
     - takak2166/agent/skills/check-pr-comment

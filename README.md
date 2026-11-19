@@ -12,6 +12,7 @@ Personal repository for agent-oriented configuration.
 apm.yml
 .apm/instructions/*.instructions.md
 skills/<skill-name>/SKILL.md
+packages/cursor-always-on-rules/   # Cursor-only sessionStart hook package
 ```
 
 ## Install skills (APM)
@@ -55,3 +56,27 @@ dependencies:
 ```
 
 Ensure the runtimes you use exist (e.g. `mkdir -p .claude .cursor`) or use `apm install --target claude` / `target:` in `apm.yml` so APM creates them—same behavior as other APM packages. See [`apm.yml.example`](./apm.yml.example) (includes `takak2166/agent` alongside skills).
+
+### How always-on rules reach each harness
+
+| Harness | Mechanism |
+|---------|-----------|
+| Claude Code | `~/.claude/rules/*.md` without `paths:` load at launch (instructions without `applyTo`). |
+| Cursor (IDE / CLI) | APM turns instructions without `applyTo` into description-only `.mdc` rules, so they are not guaranteed in context. The **`packages/cursor-always-on-rules`** package adds a `sessionStart` hook that reads the always-on rules from `~/.claude/rules/*.md` (files without `paths:`) and returns them as `additional_context`. |
+| Codex | `apm compile -g` writes the instructions without `applyTo` into `~/.codex/AGENTS.md`. |
+
+Install the hook package next to the root package (user scope, with `claude` and `cursor` among the targets):
+
+```yaml
+dependencies:
+  apm:
+    - takak2166/agent
+    - takak2166/agent/packages/cursor-always-on-rules
+```
+
+Notes:
+
+- The hook package declares `target: cursor`. APM refuses to install one package's hooks to both Claude and Cursor (Cursor can import Claude hooks, so they could run twice), which is why the hook is not in the root package.
+- The hook reads `~/.claude/rules/`, so the `claude` target must also be installed. It answers only Cursor input (`cursor_version`), once per `session_id`, and prints nothing otherwise.
+- JSON is built with `jq`, or `python3` if `jq` is missing; with neither, the hook does nothing.
+- Cursor runs `sessionStart` only for a new chat. A resumed chat (`--resume`) keeps the context from its first start, but does not pick up rule changes made since.
