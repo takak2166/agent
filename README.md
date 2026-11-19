@@ -4,6 +4,7 @@ Personal repository for agent-oriented configuration.
 
 - **`skills/`** — [Agent Skills](https://agentskills.io) (`skills/<name>/SKILL.md`).
 - **Rules** — APM [instruction primitives](https://microsoft.github.io/apm/introduction/anatomy-of-an-apm-package/) under **`.apm/instructions/`**. On `apm install takak2166/agent`, they deploy to **`.claude/rules/`**, **`.cursor/rules/`**, etc. (with `.claude/` / `.cursor/` present or an explicit `target`). See [IDE & Tool Integration](https://microsoft.github.io/apm/integrations/ide-tool-integration/).
+  - Omit `applyTo` for rules that must be in context from session start: Claude Code loads `.claude/rules/*.md` without `paths:` at launch, while any `applyTo` (even `**/*`) becomes `paths:` and loads only after Claude reads a matching file. In Cursor, an instruction without `applyTo` becomes a description-only rule (the agent decides when to apply it). Keep `applyTo` only for rules scoped to specific files.
 
 ## Repository layout
 

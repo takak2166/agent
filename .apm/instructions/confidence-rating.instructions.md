@@ -1,6 +1,5 @@
 ---
 description: End responses with confidence level
-applyTo: "**/*"
 ---
 
 # Confidence Rating Rule

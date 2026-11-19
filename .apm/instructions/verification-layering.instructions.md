@@ -1,6 +1,5 @@
 ---
 description: Layer formal, empirical, and structural verification; humans own spec correctness
-applyTo: "**/*"
 ---
 
 # Verification: Layering and Intent

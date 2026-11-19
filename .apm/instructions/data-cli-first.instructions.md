@@ -1,6 +1,5 @@
 ---
 description: Prefer CLI tools for structured data parsing and transformation
-applyTo: "**/*"
 ---
 
 # Data handling: CLI-first (format-aware tools)
