@@ -1,6 +1,5 @@
 ---
 description: Prefer documented repo rules; use existing code patterns as reference, not automatic adoption
-applyTo: "**/*"
 ---
 
 # Code Pattern Analysis

@@ -1,6 +1,5 @@
 ---
 description: Keep Linear URLs and issue IDs out of code comments
-applyTo: "**/*"
 ---
 
 # Code Comments
