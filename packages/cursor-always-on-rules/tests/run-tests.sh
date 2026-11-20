@@ -92,6 +92,24 @@ json_bad='{"cursor_version":"1","session_id":"../evil"}'
 out5=$(run_hook "APM_ALWAYS_ON_RULES_DIR=${RULES_ALWAYS} XDG_RUNTIME_DIR=${STAMP_BASE}/e" "$json_bad" 2>/dev/null || true)
 assert_empty "unsafe session_id" "$out5"
 
+# 8) CLAUDE_CONFIG_DIR/rules (config dir is ~/.claude equivalent, not parent of .claude)
+CFG="${TMP_BASE}/claude-config"
+mkdir -p "${CFG}/rules"
+cp "${RULES_ALWAYS}/always-one.md" "${CFG}/rules/"
+json_cfg='{"cursor_version":"1","session_id":"sess-cfg","workspace_roots":[]}'
+EMPTY_HOME_CFG="${TMP_BASE}/home-no-claude"
+mkdir -p "$EMPTY_HOME_CFG"
+out_cfg=$(run_hook "CLAUDE_CONFIG_DIR=${CFG} HOME=${EMPTY_HOME_CFG} XDG_RUNTIME_DIR=${STAMP_BASE}/f" "$json_cfg" 2>/dev/null || true)
+assert_json_context "CLAUDE_CONFIG_DIR rules" "$out_cfg" "RULE_BODY_ALWAYS"
+
+# 9) Default HOME/.claude/rules when no workspace and no CLAUDE_CONFIG_DIR override
+HOME_DEFAULT="${TMP_BASE}/home-default"
+mkdir -p "${HOME_DEFAULT}/.claude/rules"
+cp "${RULES_ALWAYS}/always-one.md" "${HOME_DEFAULT}/.claude/rules/"
+json_home='{"cursor_version":"1","session_id":"sess-home","workspace_roots":[]}'
+out_home=$(run_hook "HOME=${HOME_DEFAULT} XDG_RUNTIME_DIR=${STAMP_BASE}/g" "$json_home" 2>/dev/null || true)
+assert_json_context "HOME .claude/rules default" "$out_home" "RULE_BODY_ALWAYS"
+
 if [ "$FAIL" -ne 0 ]; then
   exit 1
 fi

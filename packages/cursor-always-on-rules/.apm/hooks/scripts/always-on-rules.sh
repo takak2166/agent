@@ -83,7 +83,7 @@ _resolve_rules_dir() {
     printf '%s' "${workspace_root}/.claude/rules"
     return 0
   fi
-  local home_rules="${CLAUDE_CONFIG_DIR:-$HOME}/.claude/rules"
+  local home_rules="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}/rules"
   if [ -d "$home_rules" ]; then
     printf '%s' "$home_rules"
     return 0
