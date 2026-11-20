@@ -1,4 +1,6 @@
-# Example consumer apm.yml. Copy to apm.yml in your repo root, then: apm install
+# Example consumer apm.yml. Copy to apm.yml in your repo root, then: apm install -g
+# (recommended). Project-only apm install deploys rules under <project>/.claude/rules;
+# the Cursor hook injects from workspace .claude/rules when present, else ~/.claude/rules.
 # https://microsoft.github.io/apm/
 #
 # Root package (instructions → .claude/rules, .cursor/rules, …) plus individual skills.
@@ -10,7 +12,7 @@ dependencies:
   apm:
     # Rules / always-on instructions (entire package primitive)
     - takak2166/agent
-    # Cursor only: sessionStart hook that injects the always-on rules (needs the claude target too)
+    # Cursor only: SessionStart hook → Cursor sessionStart (needs claude target; prefer apm install -g)
     - takak2166/agent/packages/cursor-always-on-rules
 
     # Skills (one path per skill)

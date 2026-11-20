@@ -62,10 +62,11 @@ Ensure the runtimes you use exist (e.g. `mkdir -p .claude .cursor`) or use `apm 
 | Harness | Mechanism |
 |---------|-----------|
 | Claude Code | `~/.claude/rules/*.md` without `paths:` load at launch (instructions without `applyTo`). |
-| Cursor (IDE / CLI) | APM turns instructions without `applyTo` into description-only `.mdc` rules, so they are not guaranteed in context. The **`packages/cursor-always-on-rules`** package adds a `sessionStart` hook that reads the always-on rules from `~/.claude/rules/*.md` (files without `paths:`) and returns them as `additional_context`. |
+| Cursor (IDE / CLI) | APM turns instructions without `applyTo` into description-only `.mdc` rules, so they are not guaranteed in context. The **`packages/cursor-always-on-rules`** package adds a **`SessionStart`** hook (APM renames to Cursor’s native `sessionStart` on install; see [APM hooks](https://microsoft.github.io/apm/producer/author-primitives/hooks-and-commands/)) that reads always-on rules from `.claude/rules/*.md` and returns them as `additional_context`. |
+| Copilot | Instructions without `applyTo` become description-only in `.github/instructions/` (on demand, not auto-injected like former `applyTo: "**/*"`). |
 | Codex | `apm compile -g` writes the instructions without `applyTo` into `~/.codex/AGENTS.md`. |
 
-Install the hook package next to the root package (user scope, with `claude` and `cursor` among the targets):
+Install the hook package next to the root package (**user scope** with `apm install -g`, with `claude` and `cursor` among the targets):
 
 ```yaml
 dependencies:
@@ -77,6 +78,8 @@ dependencies:
 Notes:
 
 - The hook package declares `target: cursor`. APM refuses to install one package's hooks to both Claude and Cursor (Cursor can import Claude hooks, so they could run twice), which is why the hook is not in the root package.
-- The hook reads `~/.claude/rules/`, so the `claude` target must also be installed. It answers only Cursor input (`cursor_version`), once per `session_id`, and prints nothing otherwise.
-- JSON is built with `jq`, or `python3` if `jq` is missing; with neither, the hook does nothing.
+- Prefer **`apm install -g`** for the root package and hook so rules land under `~/.claude/rules/`. **Project-scoped** `apm install` alone (no `-g`) writes rules under `<project>/.claude/rules`; the hook will use that path when Cursor provides `workspace_roots`, but if neither user nor project rules exist it exits silently with no output.
+- The `claude` target must be installed. Rule files are assumed **APM-generated** `.md` with standard `paths:` frontmatter; the hook skips files that declare `paths:` in the leading block.
+- The hook answers only Cursor input (`cursor_version`), once per `session_id`, and prints nothing otherwise. Set `APM_ALWAYS_ON_RULES_DEBUG=1` to log skip reasons on stderr.
+- JSON is built with `jq`, falling back to `python3` if `jq` is missing or fails; with neither usable, the hook does nothing.
 - Cursor runs `sessionStart` only for a new chat. A resumed chat (`--resume`) keeps the context from its first start, but does not pick up rule changes made since.

@@ -1,0 +1,24 @@
+name: cursor-always-on-rules
+
+on:
+  pull_request:
+    paths:
+      - 'packages/cursor-always-on-rules/**'
+      - '.github/workflows/cursor-always-on-rules.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/cursor-always-on-rules/**'
+      - '.github/workflows/cursor-always-on-rules.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck jq
+      - name: shellcheck
+        run: shellcheck packages/cursor-always-on-rules/.apm/hooks/scripts/always-on-rules.sh packages/cursor-always-on-rules/tests/run-tests.sh
+      - name: Run hook fixture tests
+        run: bash packages/cursor-always-on-rules/tests/run-tests.sh
