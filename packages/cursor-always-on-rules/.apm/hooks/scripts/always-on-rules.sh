@@ -142,7 +142,7 @@ ${body}"
 
 _collect_always_on_context() {
   local workspace_root="$1"
-  local home_dir ws_dir label
+  local home_dir ws_dir label body_before_ws ws_added=0
 
   _COLLECT_BODY=""
   _COLLECT_SEEN=""
@@ -157,19 +157,26 @@ _collect_always_on_context() {
   if [ -n "$home_dir" ]; then
     _append_rules_from_dir "$home_dir"
   fi
+  body_before_ws="$_COLLECT_BODY"
   if [ -n "$ws_dir" ]; then
     _append_rules_from_dir "$ws_dir"
+    if [ "$_COLLECT_BODY" != "$body_before_ws" ]; then
+      ws_added=1
+    fi
   fi
 
   if [ -z "$_COLLECT_BODY" ]; then
     return 1
   fi
 
-  label="home+workspace"
-  if [ -n "$home_dir" ] && [ -z "$ws_dir" ]; then
-    label="$home_dir"
-  elif [ -z "$home_dir" ] && [ -n "$ws_dir" ]; then
-    label="$ws_dir"
+  if [ -n "$home_dir" ]; then
+    if [ "$ws_added" -eq 1 ]; then
+      label="home+workspace"
+    else
+      label="home"
+    fi
+  else
+    label="workspace"
   fi
 
   printf '%s' "Always-on rules (injected from ${label} via cursor-always-on-rules sessionStart hook):${_COLLECT_BODY}"

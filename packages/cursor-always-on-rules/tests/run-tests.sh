@@ -30,6 +30,30 @@ assert_json_context() {
   fi
 }
 
+assert_injection_label() {
+  local label="$1"
+  local out="$2"
+  local src_label="$3"
+  if ! printf '%s' "$out" | jq -r '.additional_context' | grep -Fq "injected from ${src_label} via"; then
+    echo "FAIL: $label — expected injection label '${src_label}'"
+    FAIL=1
+  else
+    echo "ok: $label"
+  fi
+}
+
+assert_injection_label_absent() {
+  local label="$1"
+  local out="$2"
+  local src_label="$3"
+  if printf '%s' "$out" | jq -r '.additional_context' | grep -Fq "injected from ${src_label} via"; then
+    echo "FAIL: $label — unexpected injection label '${src_label}'"
+    FAIL=1
+  else
+    echo "ok: $label"
+  fi
+}
+
 run_hook() {
   local env_prefix="$1"
   local json="$2"
@@ -80,6 +104,8 @@ cp "${RULES_ALWAYS}/always-one.md" "${HOME_LAYER}/.claude/rules/"
 json_layer='{"cursor_version":"1","session_id":"sess-layer","workspace_roots":["'"${WS_SCOPED}"'"]}'
 out4=$(run_hook "HOME=${HOME_LAYER} XDG_RUNTIME_DIR=${STAMP_BASE}/c" "$json_layer" 2>/dev/null || true)
 assert_json_context "home rules when workspace is paths-only" "$out4" "RULE_BODY_ALWAYS"
+assert_injection_label "paths-only ws label" "$out4" "home"
+assert_injection_label_absent "paths-only ws label" "$out4" "home+workspace"
 if printf '%s' "$out4" | jq -r '.additional_context' | grep -q 'RULE_BODY_SCOPED'; then
   echo "FAIL: home rules when workspace is paths-only — scoped body leaked"
   FAIL=1
@@ -131,6 +157,7 @@ json_both='{"cursor_version":"1","session_id":"sess-both","workspace_roots":["'"
 out_both=$(run_hook "HOME=${HOME_BOTH} XDG_RUNTIME_DIR=${STAMP_BASE}/h" "$json_both" 2>/dev/null || true)
 assert_json_context "home and workspace always-on" "$out_both" "RULE_BODY_ALWAYS"
 assert_json_context "home and workspace always-on (ws)" "$out_both" "RULE_BODY_WORKSPACE_ALWAYS"
+assert_injection_label "home+workspace label" "$out_both" "home+workspace"
 
 # 11) Basename dedupe: workspace file with same name as home is skipped
 WS_DEDUP="${TMP_BASE}/ws-dedup"
