@@ -62,8 +62,8 @@ Ensure the runtimes you use exist (e.g. `mkdir -p .claude .cursor`) or use `apm 
 | Harness | Mechanism |
 |---------|-----------|
 | Claude Code | `~/.claude/rules/*.md` without `paths:` load at launch (instructions without `applyTo`). |
-| Cursor (IDE / CLI) | APM turns instructions without `applyTo` into description-only `.mdc` rules, so they are not guaranteed in context. The **`packages/cursor-always-on-rules`** package adds a **`SessionStart`** hook (APM renames to Cursor’s native `sessionStart` on install; see [APM hooks](https://microsoft.github.io/apm/producer/author-primitives/hooks-and-commands/)) that reads always-on rules from `.claude/rules/*.md` and returns them as `additional_context`. |
-| Copilot | Instructions without `applyTo` become description-only in `.github/instructions/` (on demand, not auto-injected like former `applyTo: "**/*"`). |
+| Cursor (IDE / CLI) | APM turns instructions without `applyTo` into description-only `.mdc` rules, so they are not guaranteed in context. The **`packages/cursor-always-on-rules`** package adds a **`SessionStart`** hook (APM renames to Cursor’s native `sessionStart` on install; see [APM hooks](https://microsoft.github.io/apm/producer/author-primitives/hooks-and-commands/)) that merges user-scope and project always-on rules from `.claude/rules/*.md` (skipping `paths:`) and returns them as `additional_context`. |
+| Copilot | Instructions without `applyTo` are not scope-attached; APM folds them into compiled root context (`AGENTS.md` / `copilot-instructions.md`) at `apm compile` time rather than as a per-glob `.github/instructions/` rule ([APM instructions](https://microsoft.github.io/apm/producer/author-primitives/instructions-and-agents/)). Scoped instructions still deploy as `.github/instructions/*.instructions.md` with `applyTo`. |
 | Codex | `apm compile -g` writes the instructions without `applyTo` into `~/.codex/AGENTS.md`. |
 
 Install the hook package next to the root package (**user scope** with `apm install -g`, with `claude` and `cursor` among the targets):
@@ -78,8 +78,10 @@ dependencies:
 Notes:
 
 - The hook package declares `target: cursor`. APM refuses to install one package's hooks to both Claude and Cursor (Cursor can import Claude hooks, so they could run twice), which is why the hook is not in the root package.
-- Prefer **`apm install -g`** for the root package and hook so rules land under `~/.claude/rules/`. **Project-scoped** `apm install` alone (no `-g`) writes rules under `<project>/.claude/rules`; the hook will use that path when Cursor provides `workspace_roots`, but if neither user nor project rules exist it exits silently with no output.
+- Prefer **`apm install -g`** for the root package and hook so rules land under `~/.claude/rules/`. **Project-scoped** `apm install` adds path-scoped rules under `<project>/.claude/rules`; the hook always merges user-scope always-on rules first, then appends project always-on rules (same basename: home wins).
 - The `claude` target must be installed. Rule files are assumed **APM-generated** `.md` with standard `paths:` frontmatter; the hook skips files that declare `paths:` in the leading block.
 - The hook answers only Cursor input (`cursor_version`), once per `session_id`, and prints nothing otherwise. Set `APM_ALWAYS_ON_RULES_DEBUG=1` to log skip reasons on stderr.
-- JSON is built with `jq`, falling back to `python3` if `jq` is missing or fails; with neither usable, the hook does nothing.
+- Session stamps live under `${XDG_RUNTIME_DIR:-$HOME/.cache}/apm-always-on-rules-stamps/`; entries older than seven days are removed best-effort on each run.
+- JSON is built with `jq`, falling back to `python3` if `jq` is missing or fails; with neither usable, the hook does nothing. Without `jq`, hook input fields are parsed with a whitespace-tolerant `sed` fallback.
 - Cursor runs `sessionStart` only for a new chat. A resumed chat (`--resume`) keeps the context from its first start, but does not pick up rule changes made since.
+- Cursor does **not** natively load project `.claude/rules/*.md` (it uses `.cursor/rules/*.mdc` and root `AGENTS.md` / `CLAUDE.md`; see [Cursor Rules](https://cursor.com/docs/context/rules)). This hook is the bridge for APM’s Claude-shaped rule tree, so project always-on rules are not expected to double-inject via a separate Cursor loader.

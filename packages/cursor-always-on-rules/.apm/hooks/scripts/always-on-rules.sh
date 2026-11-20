@@ -1,13 +1,17 @@
 #!/bin/bash
 # Cursor sessionStart hook: inject always-on rules as additional_context.
 #
-# Assumes rule files under rules_dir are APM-generated `.claude/rules/*.md`
-# (standard `---` / `paths:` frontmatter). Hand-edited or non-APM layouts are
-# out of scope for path-scoped detection.
+# Resolution: user-scope rules under ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/rules are
+# always merged first; project always-on rules under <workspace>/.claude/rules (no
+# paths: frontmatter) are appended. Same basename: home wins, workspace skipped.
+# APM_ALWAYS_ON_RULES_DIR overrides the home directory (tests only).
 #
-# Claude Code loads ~/.claude/rules/*.md without `paths:` at launch, but Cursor
-# turns instructions without applyTo into description-only rules. This hook
-# reads always-on rules and returns them to Cursor as {"additional_context": "..."}.
+# Assumes rule files are APM-generated `.claude/rules/*.md` with standard `paths:`
+# frontmatter. Hand-edited or non-APM layouts are out of scope for path detection.
+#
+# Claude Code loads ~/.claude/rules/*.md without paths: at launch; Cursor does not
+# reliably apply APM description-only .mdc rules, so this hook supplies always-on
+# text as {"additional_context": "..."}.
 #
 # Fail-open: missing deps or errors exit 0 with no stdout (optional stderr when
 # APM_ALWAYS_ON_RULES_DEBUG=1).
@@ -25,6 +29,7 @@ _safe_stamp_dir() {
   local dir="${base}/apm-always-on-rules-stamps"
   mkdir -p "$dir" 2>/dev/null || return 1
   chmod 700 "$dir" 2>/dev/null || true
+  find "$dir" -type f -mtime +7 -delete 2>/dev/null || true
   printf '%s' "$dir"
 }
 
@@ -51,8 +56,9 @@ _stamp_path_for_session() {
 _is_cursor_input() {
   local json="$1"
   if command -v jq >/dev/null 2>&1; then
-    printf '%s' "$json" | jq -e 'type == "object" and .cursor_version != null' >/dev/null 2>&1
-    return $?
+    if printf '%s' "$json" | jq -e 'type == "object" and .cursor_version != null' >/dev/null 2>&1; then
+      return 0
+    fi
   fi
   case "$json" in
     *'"cursor_version"'*) return 0 ;;
@@ -67,20 +73,19 @@ _parse_hook_fields() {
   if command -v jq >/dev/null 2>&1; then
     PARSED_SESSION_ID=$(printf '%s' "$json" | jq -r '.session_id // empty' 2>/dev/null || true)
     PARSED_WORKSPACE_ROOT=$(printf '%s' "$json" | jq -r '.workspace_roots[0] // .workspace_root // empty' 2>/dev/null || true)
-    return 0
+    if [ -n "$PARSED_SESSION_ID" ] || [ -n "$PARSED_WORKSPACE_ROOT" ]; then
+      return 0
+    fi
   fi
   PARSED_SESSION_ID=$(printf '%s' "$json" | sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
-  PARSED_WORKSPACE_ROOT=$(printf '%s' "$json" | sed -n 's/.*"workspace_roots"[[:space:]]*:\[[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
+  PARSED_WORKSPACE_ROOT=$(
+    printf '%s' "$json" | sed -n 's/.*"workspace_roots"[[:space:]]*:[[:space:]]*\[[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+  )
 }
 
-_resolve_rules_dir() {
-  local workspace_root="$1"
+_home_rules_dir() {
   if [ -n "${APM_ALWAYS_ON_RULES_DIR:-}" ] && [ -d "${APM_ALWAYS_ON_RULES_DIR}" ]; then
     printf '%s' "${APM_ALWAYS_ON_RULES_DIR}"
-    return 0
-  fi
-  if [ -n "$workspace_root" ] && [ -d "${workspace_root}/.claude/rules" ]; then
-    printf '%s' "${workspace_root}/.claude/rules"
     return 0
   fi
   local home_rules="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}/rules"
@@ -89,6 +94,86 @@ _resolve_rules_dir() {
     return 0
   fi
   return 1
+}
+
+_workspace_rules_dir() {
+  local workspace_root="$1"
+  if [ -n "${APM_ALWAYS_ON_RULES_DIR:-}" ]; then
+    return 1
+  fi
+  if [ -n "$workspace_root" ] && [ -d "${workspace_root}/.claude/rules" ]; then
+    printf '%s' "${workspace_root}/.claude/rules"
+    return 0
+  fi
+  return 1
+}
+
+_rule_has_paths_scope() {
+  local f="$1"
+  awk 'NR==1 { if ($0 != "---") exit 1; next } /^---$/ { exit 1 } /^paths:/ { found=1; exit } END { exit found ? 0 : 1 }' "$f"
+}
+
+_COLLECT_BODY=""
+_COLLECT_SEEN=""
+
+_append_rules_from_dir() {
+  local rules_dir="$1"
+  local f base body chunk
+
+  for f in "$rules_dir"/*.md; do
+    [ -f "$f" ] || continue
+    if _rule_has_paths_scope "$f"; then
+      continue
+    fi
+    base=$(basename "$f")
+    case " ${_COLLECT_SEEN} " in
+      *" ${base} "*) continue ;;
+    esac
+    _COLLECT_SEEN="${_COLLECT_SEEN} ${base}"
+    body=$(awk 'NR==1 && $0=="---" { fm=1; next } fm && $0=="---" { fm=0; next } !fm' "$f")
+    [ -n "$body" ] || continue
+    chunk="
+
+<!-- source: ${rules_dir}/${base} -->
+${body}"
+    _COLLECT_BODY="${_COLLECT_BODY}${chunk}"
+  done
+}
+
+_collect_always_on_context() {
+  local workspace_root="$1"
+  local home_dir ws_dir label
+
+  _COLLECT_BODY=""
+  _COLLECT_SEEN=""
+
+  home_dir=$(_home_rules_dir) || home_dir=""
+  ws_dir=$(_workspace_rules_dir "$workspace_root") || ws_dir=""
+
+  if [ -z "$home_dir" ] && [ -z "$ws_dir" ]; then
+    return 1
+  fi
+
+  if [ -n "$home_dir" ]; then
+    _append_rules_from_dir "$home_dir"
+  fi
+  if [ -n "$ws_dir" ]; then
+    _append_rules_from_dir "$ws_dir"
+  fi
+
+  if [ -z "$_COLLECT_BODY" ]; then
+    return 1
+  fi
+
+  label="home+workspace"
+  if [ -n "$home_dir" ] && [ -z "$ws_dir" ]; then
+    label="$home_dir"
+  elif [ -z "$home_dir" ] && [ -n "$ws_dir" ]; then
+    label="$ws_dir"
+  fi
+
+  printf '%s' "Always-on rules (injected from ${label} via cursor-always-on-rules sessionStart hook):${_COLLECT_BODY}"
+  return 0
 }
 
 _emit_json() {
@@ -120,11 +205,6 @@ fi
 
 _parse_hook_fields "$input"
 
-rules_dir=$(_resolve_rules_dir "${PARSED_WORKSPACE_ROOT:-}") || {
-  _debug "skip: no rules directory (set APM_ALWAYS_ON_RULES_DIR, install claude target, or use apm install -g)"
-  exit 0
-}
-
 stamp=""
 if [ -n "${PARSED_SESSION_ID:-}" ]; then
   if ! _session_id_safe "${PARSED_SESSION_ID}"; then
@@ -138,27 +218,10 @@ if [ -n "${PARSED_SESSION_ID:-}" ]; then
   fi
 fi
 
-context=""
-for f in "$rules_dir"/*.md; do
-  [ -f "$f" ] || continue
-  # Skip path-scoped rules: APM emits `paths:` in the leading frontmatter block.
-  if awk 'NR==1 { if ($0 != "---") exit 1; next } /^---$/ { exit 1 } /^paths:/ { found=1; exit } END { exit found ? 0 : 1 }' "$f"; then
-    continue
-  fi
-  body=$(awk 'NR==1 && $0=="---" { fm=1; next } fm && $0=="---" { fm=0; next } !fm' "$f")
-  [ -n "$body" ] || continue
-  context="${context}
-
-<!-- source: ${rules_dir}/$(basename "$f") -->
-${body}"
-done
-
-if [ -z "$context" ]; then
-  _debug "skip: no always-on rule bodies under ${rules_dir}"
+context=$(_collect_always_on_context "${PARSED_WORKSPACE_ROOT:-}") || {
+  _debug "skip: no always-on rule bodies (install claude target with apm install -g or set APM_ALWAYS_ON_RULES_DIR)"
   exit 0
-fi
-
-context="Always-on rules (injected from ${rules_dir} via cursor-always-on-rules sessionStart hook):${context}"
+}
 
 json_out=$(_emit_json "$context") || {
   _debug "skip: could not build JSON (jq/python3 missing or failed)"
