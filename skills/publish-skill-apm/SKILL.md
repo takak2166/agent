@@ -25,7 +25,7 @@ Example:
 1. **Agent side:** The target skill is already merged and pushed to `takak2166/agent` (this skill does not verify; `apm install -g` fails fast if the dependency is unavailable).
 2. **Bootstrap (first time only):** This skill itself must be registered in `dot_apm/apm.yml` manually before it can be invoked via APM. After that, use this skill for subsequent skill publishes.
 3. **Chezmoi source:** Git operations run in `~/.local/share/chezmoi` on branch **main** tracking `origin/main`.
-4. **Manual global APM (outside this pipeline):** After any manual `apm install -g` or `apm update -g`, run `apm compile -g` — see `.apm/instructions/apm-global-root-context.instructions.md` in the agent repo (always-on for sessions that load APM instructions).
+4. **Manual global APM (outside this pipeline):** follow `.apm/instructions/apm-global-root-context.instructions.md`.
 
 ## Non-negotiables
 
@@ -45,6 +45,14 @@ When any step fails, stop immediately and report:
 - **Affected paths:** (step 10 only) each target path named in a failing `skipped` / `retained` / `error` line
 
 Do not continue to later steps.
+
+## Integrated example
+
+**Input:** `/publish-skill-apm takak2166/agent/skills/new-skill`
+
+**Duplicate (step 2):** `dot_apm/apm.yml` already lists the path under `dependencies.apm` → report **already registered — no changes made** and exit. No git commit, push, chezmoi, or apm.
+
+**Full run (path not present):** append line in agent skill block → `git add dot_apm/apm.yml` → commit (`chore: Add new-skill to apm dependencies`) → warn if other dirty files → `git push origin main` → `chezmoi update` → `apm install -g` → `apm compile -g` (capture, classify, list `wrote` paths) → success report with commit hash.
 
 ## Steps
 
@@ -83,7 +91,13 @@ All git commands run with working directory `~/.local/share/chezmoi`.
 ### 2. Check duplicate
 
 - Read `dot_apm/apm.yml`.
-- Treat the dependency as present if the file already has a list line `    - <path>` (same **4-space** indent as step 3; match the full line, not bare `- <path>`). Example check: `grep -Fq "    - <path>" dot_apm/apm.yml` from the chezmoi source root.
+- Treat the dependency as present only when it appears in **`dependencies.apm`** (not other keys or comments). Prefer:
+
+```bash
+yq -e '.dependencies.apm[] | select(. == "<path>")' dot_apm/apm.yml
+```
+
+- Exit code **0** → duplicate; **1** with no match → not registered. If `yq` is unavailable, scan only the `dependencies.apm` list block and run `grep -Fxq -- "    - <path>"` on those lines (full-line match; do not use `grep -Fq` substring match).
 - If present, report **already registered — no changes made** and **exit** — do not run steps 3–10.
 
 ### 3. Append dependency
@@ -191,14 +205,6 @@ When step 10 fails with `skipped (hand-authored)` on `~/.codex/AGENTS.md`:
 
 Do not edit generated root context files by hand afterwards; edits make APM retain/skip them on later compiles.
 
-## Integrated example
-
-**Input:** `/publish-skill-apm takak2166/agent/skills/new-skill`
-
-**Duplicate (step 2):** `dot_apm/apm.yml` already contains `    - takak2166/agent/skills/new-skill` → report **already registered — no changes made** and exit. No git commit, push, chezmoi, or apm.
-
-**Full run (path not present):** append line in agent skill block → `git add dot_apm/apm.yml` → commit (`chore: Add new-skill to apm dependencies`) → warn if other dirty files → `git push origin main` → `chezmoi update` → `apm install -g` → `apm compile -g` (capture, classify, list `wrote` paths) → success report with commit hash.
-
 ## Success report
 
 After step 10, report:
@@ -211,7 +217,7 @@ After step 10, report:
 
 ## Restrictions
 
-- **Allowed commands:** file read/edit for `dot_apm/apm.yml`; `git -C ~/.local/share/chezmoi rev-parse`; `git diff --staged`, `git add dot_apm/apm.yml`, `git commit -m`, `git status --porcelain`, `git branch --show-current`, `git push origin main`; `chezmoi update`; `apm install -g`; `apm compile -g`; `apm compile -g -v` (only when step 10 requires clearer output).
+- **Allowed commands:** file read/edit for `dot_apm/apm.yml`; read-only access to `~/.apm/apm.yml` in step 10 only; `yq` read queries on `dot_apm/apm.yml` in step 2 only; `git -C ~/.local/share/chezmoi rev-parse` (including `--is-inside-work-tree`); `git diff --staged`, `git add dot_apm/apm.yml`, `git commit -m`, `git status --porcelain`, `git branch --show-current`, `git push origin main`; `chezmoi update`; `apm install -g`; `apm compile -g`; `apm compile -g -v` (only when step 10 requires clearer output).
 - **Allowed file writes outside chezmoi:** user-scope root context files that `apm compile -g` generates or updates (under `~/.codex/`, `~/.cursor/`, `~/.config/opencode/`, and equivalent global compile targets).
 - Do not push branches other than **main**.
 - Do not run **project-scope** `apm update` or `apm compile` (without `-g`). Global `apm update -g` is **not** part of this pipeline; when run manually, follow `.apm/instructions/apm-global-root-context.instructions.md`.
