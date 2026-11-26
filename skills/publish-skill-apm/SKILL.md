@@ -25,6 +25,7 @@ Example:
 1. **Agent side:** The target skill is already merged and pushed to `takak2166/agent` (this skill does not verify; `apm install -g` fails fast if the dependency is unavailable).
 2. **Bootstrap (first time only):** This skill itself must be registered in `dot_apm/apm.yml` manually before it can be invoked via APM. After that, use this skill for subsequent skill publishes.
 3. **Chezmoi source:** Git operations run in `~/.local/share/chezmoi` on branch **main** tracking `origin/main`.
+4. **Manual global APM (outside this pipeline):** After any manual `apm install -g` or `apm update -g`, run `apm compile -g` — see `.apm/instructions/apm-global-root-context.instructions.md` in the agent repo (always-on for sessions that load APM instructions).
 
 ## Non-negotiables
 
@@ -40,7 +41,8 @@ When any step fails, stop immediately and report:
 
 - **Step:** step number and name (e.g. `Step 7 — Push to main`)
 - **Command:** exact command attempted (if applicable)
-- **Error:** stderr or exit message
+- **Error:** stderr, non-zero exit summary, or the compile/output lines that triggered failure
+- **Affected paths:** (step 10 only) each target path named in a failing `skipped` / `retained` / `error` line
 
 Do not continue to later steps.
 
@@ -81,12 +83,14 @@ All git commands run with working directory `~/.local/share/chezmoi`.
 ### 2. Check duplicate
 
 - Read `dot_apm/apm.yml`.
-- If a line `- <path>` (exact match) already exists under `dependencies.apm`, report **already registered — no changes made** and **exit** — do not run steps 3–9.
+- Treat the dependency as present if the file already has a list line `    - <path>` (same **4-space** indent as step 3; match the full line, not bare `- <path>`). Example check: `grep -Fq "    - <path>" dot_apm/apm.yml` from the chezmoi source root.
+- If present, report **already registered — no changes made** and **exit** — do not run steps 3–10.
 
 ### 3. Append dependency
 
 - Edit `dot_apm/apm.yml` only.
-- Insert one line `- <path>` in the **agent skill block**: after existing `takak2166/agent/skills/*` entries and **before** the first external repo dependency (lines that do not start with `takak2166/agent`).
+- Insert one line `    - <path>` in the **agent skill block**: after existing `takak2166/agent/skills/*` entries and **before** the first external repo dependency (list lines whose value does not start with `takak2166/agent`).
+- If there is **no** external repo line, append after the **last** `takak2166/agent/` dependency in the list (still before any non-agent entries if they appear later).
 - Keep YAML list indentation (4 spaces before `-`).
 - Preserve a blank line before the external-repo block if one already exists.
 
@@ -123,7 +127,7 @@ git commit -m "prefix: <Message starting with capital letter>"
 git push origin main
 ```
 
-### 8. Apply dotfiles
+### 8. chezmoi update
 
 ```bash
 chezmoi update
@@ -143,18 +147,57 @@ apm install -g
 apm compile -g
 ```
 
-- `apm install -g` and `apm update -g` only print a hint; they do not regenerate user-scope root files such as `~/.codex/AGENTS.md`. Run this step after every global install or update, including manual `apm update -g` runs outside this pipeline.
-- Output files follow the `targets:` list in `dot_apm/apm.yml`. Instructions without `applyTo` are written to root files; Claude is skipped when `~/.claude/rules/` already holds the same rules.
-- A `skipped (hand-authored)` line or a `retained … (edited or unverifiable generated file)` warning means APM did not write that file. Treat it as a failure and report it.
-- **First switch only:** a hand-written `~/.codex/AGENTS.md` (no APM marker) blocks generation and shows as `skipped (hand-authored)`. Stop and report it. The one-time fix runs outside this pipeline with the owner's approval: copy the file to a dated backup (for example `~/.codex/AGENTS.md.bak-YYYYMMDD`), move it out of the way, then rerun `apm compile -g`. Do not edit the generated file by hand afterwards; edits make APM skip it.
+1. **Capture** combined stdout and stderr from the command.
+2. **Exit code:** non-zero → fail-fast (include captured output).
+3. **Classify lines** using **Compile output contract** below (match meaning, not a bare `retained` prefix).
+4. **Success:** every global compile target either shows a benign line or a `wrote` / `unchanged` line for its root file; list each `wrote` path in the **Success report**. If classification is ambiguous, rerun once with `apm compile -g -v` and reclassify; still ambiguous → fail-fast.
+
+#### Compile output contract
+
+Read `targets:` from `~/.apm/apm.yml` (after step 9). Global user-scope root files are the compile outputs this step must account for (for example `~/.codex/AGENTS.md`, `~/.cursor/AGENTS.md`).
+
+**Failure — stop and report** (include the full line and path):
+
+- `skipped (hand-authored)` for any expected root target
+- `retained` with `(edited or unverifiable generated file)`
+- `retained` with `(symlink)` or any other `retained` variant that means APM did not write the file
+- `skipped (no global instructions)` when that target should receive compiled instructions
+- `error` / compile failure text from APM
+
+**Benign — continue** (note in success report when relevant):
+
+- `skipped (instructions already in native rules)` (Claude when rules already exist)
+- `retained redundant` (optional cleanup via `apm compile -g --clean`; not a pipeline failure)
+- `unchanged` for a target (idempotent success)
+- `[+] <target>: wrote <path>` (success)
+
+**Idempotent / empty `wrote` output:**
+
+- Non-verbose compile may omit `unchanged`. If **no** `wrote` lines appear for targets that normally write, rerun with `apm compile -g -v`.
+- After `-v`, if every non-benign-skipped target shows `wrote` or `unchanged`, success.
+- If expected targets still lack `wrote` / `unchanged` / a documented benign skip, fail-fast.
+
+## Troubleshooting (outside this pipeline)
+
+Allowed only with **owner approval** and **outside** steps 0–10. These commands are **not** in **Restrictions** for the pipeline itself.
+
+### First-time switch to generated `~/.codex/AGENTS.md`
+
+When step 10 fails with `skipped (hand-authored)` on `~/.codex/AGENTS.md`:
+
+1. Copy the hand-written file to a dated backup (for example `~/.codex/AGENTS.md.bak-YYYYMMDD`).
+2. Move the original out of the way.
+3. Rerun `apm compile -g` (then `apm compile -g -v` if output is still unclear).
+
+Do not edit generated root context files by hand afterwards; edits make APM retain/skip them on later compiles.
 
 ## Integrated example
 
 **Input:** `/publish-skill-apm takak2166/agent/skills/new-skill`
 
-**Duplicate (step 2):** `dot_apm/apm.yml` already contains `- takak2166/agent/skills/new-skill` → report **already registered — no changes made** and exit. No git commit, push, chezmoi, or apm.
+**Duplicate (step 2):** `dot_apm/apm.yml` already contains `    - takak2166/agent/skills/new-skill` → report **already registered — no changes made** and exit. No git commit, push, chezmoi, or apm.
 
-**Full run (path not present):** append line in agent skill block → `git add dot_apm/apm.yml` → commit (`chore: Add new-skill to apm dependencies`) → warn if other dirty files → `git push origin main` → `chezmoi update` → `apm install -g` → `apm compile -g` → success report with commit hash.
+**Full run (path not present):** append line in agent skill block → `git add dot_apm/apm.yml` → commit (`chore: Add new-skill to apm dependencies`) → warn if other dirty files → `git push origin main` → `chezmoi update` → `apm install -g` → `apm compile -g` (capture, classify, list `wrote` paths) → success report with commit hash.
 
 ## Success report
 
@@ -163,11 +206,14 @@ After step 10, report:
 - Added dependency path
 - Commit hash (from step 5)
 - Push target (`origin/main`)
-- `chezmoi update`, `apm install -g`, and `apm compile -g` completed (list the files compile wrote)
+- `chezmoi update`, `apm install -g`, and `apm compile -g` completed
+- **Compile outputs:** each path from a `wrote` line; note `unchanged` or benign skips (for example Claude native-rules skip) per target
 
 ## Restrictions
 
-- Allowed commands: file read/edit for `dot_apm/apm.yml`; `git -C ~/.local/share/chezmoi rev-parse`; `git diff --staged`, `git add dot_apm/apm.yml`, `git commit -m`, `git status --porcelain`, `git branch --show-current`, `git push origin main`; `chezmoi update`; `apm install -g`; `apm compile -g`.
+- **Allowed commands:** file read/edit for `dot_apm/apm.yml`; `git -C ~/.local/share/chezmoi rev-parse`; `git diff --staged`, `git add dot_apm/apm.yml`, `git commit -m`, `git status --porcelain`, `git branch --show-current`, `git push origin main`; `chezmoi update`; `apm install -g`; `apm compile -g`; `apm compile -g -v` (only when step 10 requires clearer output).
+- **Allowed file writes outside chezmoi:** user-scope root context files that `apm compile -g` generates or updates (under `~/.codex/`, `~/.cursor/`, `~/.config/opencode/`, and equivalent global compile targets).
 - Do not push branches other than **main**.
-- Do not run `apm update`, project-scope `apm compile` (without `-g`), or modify files outside the pipeline scope.
+- Do not run **project-scope** `apm update` or `apm compile` (without `-g`). Global `apm update -g` is **not** part of this pipeline; when run manually, follow `.apm/instructions/apm-global-root-context.instructions.md`.
+- Do not pass `apm compile -g --clean`, `--force`, or other destructive/extra flags in this pipeline unless the owner explicitly approves outside this skill.
 - Do not create git commits in repos other than the chezmoi source.
