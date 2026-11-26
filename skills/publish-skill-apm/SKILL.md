@@ -32,7 +32,7 @@ Example:
 
 1. **Explicit path only** — require a full APM dependency path (e.g. `takak2166/agent/skills/foo`). Do not infer from skill name alone.
 2. **Fail-fast** — stop at the first failing step; report using **Fail-fast report** below.
-3. **Duplicate = no-op** — if the path already exists in `dot_apm/apm.yml`, exit without commit, push, chezmoi, or apm.
+3. **Duplicate = no-op** — if the path already exists under **`dependencies.apm`** in `dot_apm/apm.yml` (step 2 semantics; other keys such as `dependencies.discussed` do not count), exit without commit, push, chezmoi, or apm.
 4. **Stage `dot_apm/apm.yml` only** — never stage other files.
 5. **Do not modify** `/create-commit-en` or `apm.yml.example` in the `takak2166/agent` repository.
 
@@ -84,13 +84,13 @@ All git commands run with working directory `~/.local/share/chezmoi`.
 - Accept format: `owner/repo` or `owner/repo/sub/path` — segments of `[A-Za-z0-9_.-]+`, separated by `/`, no leading or trailing `/`.
 - Example valid: `takak2166/agent/skills/publish-skill-apm`
 - Example invalid: `foo`, `/takak2166/agent/skills/foo`, `takak2166/agent/skills/foo/`
-- On rejection, fail-fast with a valid path example (e.g. `takak2166/agent/skills/<name>`).
+- On rejection, stop and report using **Fail-fast report** (**Step 0 — Validate input**, command: the invocation, error: why the path was rejected) and include a valid path example (e.g. `takak2166/agent/skills/<name>`).
 
 ### 1. Verify chezmoi source
 
 - Confirm `~/.local/share/chezmoi` exists and is a git repository (`git -C ~/.local/share/chezmoi rev-parse --is-inside-work-tree`).
 - Confirm `dot_apm/apm.yml` exists.
-- If either check fails, **stop** with fail-fast report.
+- If either check fails, stop and report using **Fail-fast report** (**Step 1 — Verify chezmoi source**, command: the failing check — e.g. `git -C ~/.local/share/chezmoi rev-parse --is-inside-work-tree` or existence of `dot_apm/apm.yml`, error: summary of the failure).
 
 ### 2. Check duplicate
 
@@ -101,17 +101,19 @@ All git commands run with working directory `~/.local/share/chezmoi`.
 yq -e '.dependencies.apm[] | select(. == "<path>")' dot_apm/apm.yml
 ```
 
-- Exit code **0** → duplicate; **1** with no match → not registered. **`yq` is required** for steps 2 and 2b; if it is missing, fail-fast at step 2 (do not grep the whole file — other keys such as `dependencies.discussed` can contain the same string).
+- Exit code **0** → duplicate; **1** with no match → not registered. **`yq` is required** for steps 2 and 2b; if it is missing, stop and report using **Fail-fast report** (**Step 2 — Check duplicate**, command: `yq`, error: `yq` not on PATH). Do not grep the whole file — other keys such as `dependencies.discussed` can contain the same string.
 - If present, report **already registered — no changes made** and **exit** — do not run steps 3–10.
 
 ### 2b. Root-package consumer layout
 
 Some manifests declare only `takak2166/agent` and omit per-skill `takak2166/agent/skills/*` lines. APM ≥0.36 rejects adding a repository together with its own subdirectory packages.
 
-Detect **root-only** layout in `dot_apm/apm.yml`:
+Detect **root-only** layout in `dot_apm/apm.yml` with `yq` (from the chezmoi source directory):
 
-- A string entry equals `takak2166/agent` under `dependencies.apm`.
-- No string entry matches `^takak2166/agent/skills/`.
+1. `yq -e '.dependencies.apm[] | select(. == "takak2166/agent")' dot_apm/apm.yml` → exit **0** (root package listed).
+2. `yq -e '.dependencies.apm[] | select(tag == "!!str" and (. | test("^takak2166/agent/skills/")))' dot_apm/apm.yml` → exit **1** with no match (no per-skill `takak2166/agent/skills/*` lines).
+
+**Root-only** when check 1 exits **0** and check 2 exits **1** with no match (both predicates met — not “both commands exit 0”).
 
 When layout is root-only **and** the input matches `takak2166/agent/skills/<name>`:
 
@@ -119,7 +121,7 @@ When layout is root-only **and** the input matches `takak2166/agent/skills/<name
 2. Resolve `skills/<name>/apm.yml` from the first readable file:
    - `$HOME/apm_modules/takak2166/agent/skills/<name>/apm.yml`
    - `$HOME/ghq/github.com/takak2166/agent/skills/<name>/apm.yml`
-3. If neither exists, fail-fast (cannot resolve transitive dependencies).
+3. If neither exists, stop and report using **Fail-fast report** (**Step 2b — Root-package consumer layout**, command: read `skills/<name>/apm.yml` at the documented paths, error: manifest not found — cannot resolve transitive dependencies).
 4. Collect string entries from `dependencies.apm` in that file (`yq '.dependencies.apm[] | select(tag == "!!str")'`). Treat any still missing in `dot_apm/apm.yml` (step 2 semantics) as **paths to append**.
 5. If **paths to append** is empty, report **root package covers skill — no dot_apm changes** and run steps **8–10 only** (skip 3–7).
 6. If non-empty, pass the list to step 3 (one commit for all lines), then continue 4–10.
@@ -140,18 +142,22 @@ Otherwise continue to step 3 with the single input path.
 git add dot_apm/apm.yml
 ```
 
+- Non-zero exit → stop and report using **Fail-fast report** (**Step 4 — Stage**, command: `git add dot_apm/apm.yml`, error: non-zero exit; include captured stderr in **Error**).
+
 ### 5. Commit (create-commit-en equivalent)
 
 Inline the commit logic; do **not** invoke `/create-commit-en` (different repo; full pipeline ownership).
 
 1. Run `git diff --staged`.
-   - If no diff, report and **exit**.
+   - If no diff, stop and report using **Fail-fast report** (**Step 5 — Commit**, command: `git diff --staged`, error: no staged changes after step 3) and **exit** — do not push or run apm.
 2. Summarize the staged diff in one concise English sentence; pick prefix from `feat` / `fix` / `chore` / `test` / `refactor` / `docs` (typically `chore` for new apm dependency).
 3. Commit:
 
 ```bash
 git commit -m "prefix: <Message starting with capital letter>"
 ```
+
+- Non-zero exit → stop and report using **Fail-fast report** (**Step 5 — Commit**, command: `git commit -m "…"`, error: non-zero exit; include captured stderr in **Error**) — do not push or run apm.
 
 ### 6. Warn on other dirty files
 
@@ -160,12 +166,14 @@ git commit -m "prefix: <Message starting with capital letter>"
 
 ### 7. Push to main
 
-1. Confirm current branch is `main` (`git branch --show-current`). If not, **stop** and report.
+1. Confirm current branch is `main` (`git branch --show-current`). If not, stop and report using **Fail-fast report** (**Step 7 — Push to main**, command: `git branch --show-current`, error: current branch is not `main`).
 2. Push without extra confirmation:
 
 ```bash
 git push origin main
 ```
+
+- Non-zero exit → stop and report using **Fail-fast report** (**Step 7 — Push to main**, command: `git push origin main`, error: non-zero exit; include captured stderr in **Error**) — do not run chezmoi or apm.
 
 ### 8. chezmoi update
 
@@ -173,12 +181,15 @@ git push origin main
 chezmoi update
 ```
 
+- Non-zero exit → stop and report using **Fail-fast report** (**Step 8 — chezmoi update**, command: `chezmoi update`, error: non-zero exit; include captured stdout/stderr in **Error**).
+
 ### 9. Materialize globally
 
 ```bash
 apm install -g
 ```
 
+- Non-zero exit → stop and report using **Fail-fast report** (**Step 9 — Materialize globally**, command: `apm install -g`, error: non-zero exit; include captured stdout/stderr in **Error**).
 - `apm install` has no `--yes` flag; run as shown. If a future APM version adds a non-interactive flag for install, prefer it.
 
 ### 10. Regenerate user-scope root context
@@ -188,15 +199,15 @@ apm compile -g
 ```
 
 1. **Capture** combined stdout and stderr from the command.
-2. **Exit code:** non-zero → fail-fast (include captured output).
+2. **Exit code:** non-zero → stop and report using **Fail-fast report** (**Step 10 — Regenerate user-scope root context**, command: `apm compile -g`, error: non-zero exit; include captured output in **Error** and list **Affected paths** when output names targets).
 3. **Classify lines** using **Compile output contract** below (match meaning, not a bare `retained` prefix).
-4. **Success:** every global compile target either shows a benign line or a `wrote` / `unchanged` line for its root file; list each `wrote` path in the **Success report**. If classification is ambiguous, rerun once with `apm compile -g -v` and reclassify; still ambiguous → fail-fast.
+4. **Success:** every global compile target either shows a benign line or a `wrote` / `unchanged` line for its root file; list each `wrote` path in the **Success report**. If classification is ambiguous, rerun once with `apm compile -g -v` and reclassify; still ambiguous → stop and report using **Fail-fast report** (same step; command: `apm compile -g -v`; error: ambiguous compile output after verbose rerun).
 
 #### Compile output contract
 
 Read `targets:` from `~/.apm/apm.yml` (after step 9). Global user-scope root files are the compile outputs this step must account for (for example `~/.codex/AGENTS.md`, `~/.cursor/AGENTS.md`).
 
-**Failure — stop and report** (include the full line and path):
+**Failure — stop and report using Fail-fast report** (**Step 10 — Regenerate user-scope root context**, command: `apm compile -g` or `apm compile -g -v` if rerun, error: the full triggering line(s), **Affected paths:** each path named in those lines):
 
 - `skipped (hand-authored)` for any expected root target
 - `retained` with `(edited or unverifiable generated file)`
@@ -215,7 +226,7 @@ Read `targets:` from `~/.apm/apm.yml` (after step 9). Global user-scope root fil
 
 - Non-verbose compile may omit `unchanged`. If **no** `wrote` lines appear for targets that normally write, rerun with `apm compile -g -v`.
 - After `-v`, if every non-benign-skipped target shows `wrote` or `unchanged`, success.
-- If expected targets still lack `wrote` / `unchanged` / a documented benign skip, fail-fast.
+- If expected targets still lack `wrote` / `unchanged` / a documented benign skip, stop and report using **Fail-fast report** (step 10; command as above; error: missing expected output for one or more targets; **Affected paths:** targets still unaccounted for).
 
 ## Troubleshooting (outside this pipeline)
 
