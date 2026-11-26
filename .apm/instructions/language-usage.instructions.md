@@ -1,6 +1,5 @@
 ---
 description: All responses and explanations in Japanese
-applyTo: "**/*"
 ---
 
 # Language Usage

@@ -1,6 +1,5 @@
 ---
 description: Fix underlying root causes rather than masking symptoms with defensive patches
-applyTo: "**/*"
 ---
 
 # Fix Root Causes

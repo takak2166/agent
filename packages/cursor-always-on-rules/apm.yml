@@ -1,0 +1,6 @@
+# Cursor-only hook package. Kept separate from the root package because APM
+# refuses to deploy one package's hooks to both Claude and Cursor (Cursor can
+# import Claude hooks, so they could run twice).
+name: cursor-always-on-rules
+version: 1.0.0
+target: cursor

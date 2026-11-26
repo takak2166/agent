@@ -1,6 +1,5 @@
 ---
 description: How to handle PR review comment labels
-applyTo: "**/*"
 ---
 
 # Code Review Comment Rules

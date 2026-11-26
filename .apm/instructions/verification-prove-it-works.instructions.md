@@ -1,6 +1,5 @@
 ---
 description: Verify changes with real execution and actual output, not proxies or assumptions
-applyTo: "**/*"
 ---
 
 # Verification: Prove It Works
