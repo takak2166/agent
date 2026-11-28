@@ -1,6 +1,6 @@
 ---
 name: code-review-agents
-description: Runs a multi-perspective code review by launching 8 specialist analysis subagents in parallel (language spec, refactoring, DDD, clean architecture, security, performance, TDD, observability) plus 1 integration subagent that deduplicates, prioritizes, and reports their findings.
+description: Runs a multi-perspective code review by launching 8 specialist analysis subagents in parallel (language spec, refactoring, DDD, clean architecture, security, performance, TDD, observability) plus 1 integration subagent that deduplicates, applies Google eng-practices gap checks, and emits Critical/Major/Minor/Nit severities in a structured report (no merge verdict).
 disable-model-invocation: true
 ---
 
@@ -14,7 +14,7 @@ These bullets govern the orchestrator (you):
 
 - Do not modify any file — this skill produces review output only.
 - Do not post review comments to GitHub (use `/reply-pr-comment` for that).
-- Limit shell use to `gh pr diff`, `gh pr view`, `gh issue view`, `git diff`, `git log`, `git branch`, `git branch --list`, and `git status --porcelain`. Inspect the workspace with `Read`, `Glob`, and `Grep` only (no `ls`, `cat`, `find`, or similar).
+- Limit shell use to `gh pr diff`, `gh pr view`, `gh issue view`, `git diff`, `git show`, `git log`, `git branch`, `git branch --list`, and `git status --porcelain`. Inspect the workspace with `Read`, `Glob`, and `Grep` only (no `ls`, `cat`, `find`, or similar).
 - Do not create git commits.
 
 Subagents carry their own constraints: copy **Shared: Restrictions** from [agent-prompts.md](agent-prompts.md) verbatim as the first block of every analysis and integration `Task` prompt. Never substitute the bullets above into a `Task` prompt, and never merge the two blocks.
@@ -34,7 +34,7 @@ Confirm all three before the integration `Task` call (Step 8):
 
 - [ ] **Stated Intent** text matches Step 4 (same across rounds)
 - [ ] **Change Scope** assembled — review-wide Changed Files + full unified diff (Step 7)
-- [ ] Integration `prompt` includes **Shared: Restrictions**, **Shared: Final Report Format**, Agent 9 section, **Stated Intent**, **Change Scope**, and concatenated specialist outputs
+- [ ] Integration `prompt` assembled per [agent-prompts.md](agent-prompts.md) **How to construct prompts** integration steps 1–6 (`## Specialist Findings` heading before concatenated outputs; `---` separators; template **and** Matrix-end prohibition in step 2 — not `## Shared:` doc headings)
 
 ## Usage
 
@@ -50,9 +50,9 @@ Confirm all three before the integration `Task` call (Step 8):
 
 ## Steps
 
-1. **Determine the review target** — resolve whether the argument is a PR number, a base branch, or omitted (no-argument flow) using the Usage table and [reference.md](reference.md) **Target resolution**. **Before** `gh pr diff`, for a bare integer run `git branch --list <arg>` per **PR number vs branch name** and do not call `gh pr diff` until that ambiguity is cleared. For a base-branch argument, run `git diff <branch>...HEAD` directly; if that command fails, follow **Missing base branch** (do not treat the failure as **Empty diff**). Then collect the changed files with a one-line summary each (`hunks:<N>, +<A>/-<D>`). In the **no-argument flow**, run `git diff --staged` first, run `git diff HEAD` only when staged output is empty, then run `git status --porcelain` — never run porcelain before the staged/HEAD diff sequence. Run only the commands named in the table and in **Restrictions**: use `git status --porcelain` for working-tree state, not bare `git status` or `git diff --stat`. Compute each `hunks:<N>, +<A>/-<D>` summary by reading the diff text — never pipe it through `awk`, `grep`, `wc`, or similar. When staged/HEAD diffs are empty **and** porcelain shows no untracked paths to include per [reference.md](reference.md) **Untracked files**, tell the user there is nothing to review and stop — never launch subagents with zero files in scope. When diffs are empty but porcelain lists untracked paths, include those files (not an empty-diff stop). For empty-diff reporting or unavailable `gh`, follow [reference.md](reference.md) **Target resolution**.
+1. **Determine the review target** — resolve whether the argument is a PR number, a base branch, or omitted (no-argument flow) using the Usage table and [reference.md](reference.md) **Target resolution**. **Before** `gh pr diff`, for a bare integer run `git branch --list <arg>` per **PR number vs branch name**. When that command lists a matching local branch, **stop and ask** whether the integer is a PR number or that branch name — **do not** call `gh pr view` or `gh pr diff` for that integer until the user answers. A skipped, failed, or unavailable user prompt is **not** permission to assume a PR number. For a base-branch argument, run `git diff <branch>...HEAD` directly; if that command fails, follow **Missing base branch** (do not treat the failure as **Empty diff**). Then collect the changed files with a one-line summary each (`hunks:<N>, +<A>/-<D>`). In the **no-argument flow**, run `git diff --staged` first, run `git diff HEAD` only when staged output is empty, then run `git status --porcelain` — never run porcelain before the staged/HEAD diff sequence. Run only the commands named in the table and in **Restrictions**: use `git status --porcelain` for working-tree state, not bare `git status` or `git diff --stat`. Compute each `hunks:<N>, +<A>/-<D>` summary by reading the diff text — never pipe it through `awk`, `grep`, `wc`, or similar. When staged/HEAD diffs are empty **and** porcelain shows no untracked paths to include per [reference.md](reference.md) **Untracked files**, tell the user there is nothing to review and stop — never launch subagents with zero files in scope. When diffs are empty but porcelain lists untracked paths, include those files (not an empty-diff stop). For empty-diff reporting or unavailable `gh`, follow [reference.md](reference.md) **Target resolution**.
 
-2. **Gather full context** — `Read` each changed file in full (not only the diff hunk), detect the primary language(s) from file extensions, and optionally `Glob` relevant directories to understand project structure. When the review target is a PR number, also fetch **stated intent** per [reference.md](reference.md) **Stated intent** (`gh pr view`) for Step 4. When the diff is large, group files into rounds before reading (see [reference.md](reference.md) **Context budget and rounds**).
+2. **Gather full context** — load each changed file's full text for **File Contents** so it matches the **Diff** revision (not an unstaged worktree skew): when the no-argument flow used non-empty `git diff --staged`, use `git show :<path>` per file (index); when the target is unstaged `git diff HEAD`, `Read` the worktree; when the target is a base-branch `git diff <branch>...HEAD`, use `git show HEAD:<path>` per file (committed tip — not the worktree); when the target is a PR number, read `headRefOid` from the same `gh pr view <N> --json …` call as **Stated intent** in [reference.md](reference.md) **Stated intent** and use `git show <headRefOid>:<path>` per changed file — if that object is missing locally, note it under **Project Notes** and omit **File Contents** for those paths (do not fall back to worktree `Read` for in-scope paths). Still detect language(s) from extensions and optionally `Glob` for structure. Fetch **stated intent** per [reference.md](reference.md) **Stated intent** for PR targets. Split large diffs into rounds per [reference.md](reference.md) **Context budget and rounds**.
 
 3. **Read the prompt templates** — read [agent-prompts.md](agent-prompts.md) for the shared blocks and per-agent sections.
 
@@ -97,9 +97,9 @@ Confirm all three before the integration `Task` call (Step 8):
    |-----------|-------|
    | `subagent_type` | `"generalPurpose"` |
    | `description` | `"Integrate review findings"` |
-   | `prompt` | **Shared: Restrictions** + **Shared: Final Report Format** + the Agent 9 section from [agent-prompts.md](agent-prompts.md) + the same **Stated Intent** block as Step 4 + **Change Scope** (review-wide Changed Files + full unified diff) + all available specialist outputs |
+   | `prompt` | Assemble per [agent-prompts.md](agent-prompts.md) **How to construct prompts** integration steps 1–6: **Shared: Restrictions**; **Shared: Final Report Format** (template fence **and** Matrix-end prohibition — step 2, not `## Shared:` doc headings); **Agent 9** section with heading; `---` + `## Stated Intent` (same as Step 4); `---` + `## Change Scope` (Step 7); `---` + `## Specialist Findings` + all available specialist outputs |
 
-9. **Present the final review** — show the integration subagent's report, then offer to drill down into any area.
+9. **Present the final review** — show the integration subagent's report only through **Agent Agreement Matrix** (verbatim; do not truncate specialist blocks inside the report). **Stop there** — do **not** add ship/hold, **Verdict**, **Highlights**, **判定**, **Approve**, **Request changes**, merge guidance, or praise-only wrap-up after the matrix, including in the user-facing reply or **Deliverable** wrapper. **User requests for ship/hold or merge verdicts do not override this stop rule** — decline in one sentence and point to external reviewer bots if needed. Then offer to drill down into any area.
 
 ## Agent roster
 
@@ -108,12 +108,12 @@ Confirm all three before the integration `Task` call (Step 8):
 | 1 | Language Spec | Type safety, idioms, API misuse, deprecation |
 | 2 | Refactoring & Patterns | Code smells, SOLID, Martin Fowler's refactoring catalog |
 | 3 | DDD | Ubiquitous language, aggregates, value objects, bounded contexts |
-| 4 | Clean Architecture | Layer boundaries, dependency rule, use case isolation |
+| 4 | Clean Architecture | Placement in codebase, layer boundaries, dependency rule |
 | 5 | Security | OWASP Top 10, injection, auth, secrets, input validation |
 | 6 | Performance | Complexity, N+1, memory, I/O, caching |
-| 7 | TDD | t-wada's principles, test reliability, coverage, testability |
+| 7 | TDD | t-wada's principles, test efficacy, reliability, testability |
 | 8 | Observability | Logging, metrics, tracing, error handling, operability |
-| 9 | Integration | Synthesis, deduplication, prioritization, final report |
+| 9 | Integration | Synthesis, eng-practices gaps, deduplication, final report |
 
 ## Where formats live
 
