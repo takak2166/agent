@@ -75,36 +75,25 @@ The integration agent (9) must produce the report in this structure:
 (If any specialist failed/timed out/was skipped, list which agent(s) and why, in 1-3 bullets)
 
 ## Critical Issues
-(Must fix before merge — with cross-agent attribution)
+(Blocking defects — with cross-agent attribution)
 
 ## Major Issues
-(Should address before merge)
+(Material issues — should fix before shipping)
 
 ## Minor Issues
 (Non-blocking improvements — should fix when cheap)
 
 ## Nit Issues
-(Optional polish only — each item title starts with `Nit:`; author may ignore without blocking merge)
+(Optional polish only — each item title starts with `Nit:`; author may ignore without addressing)
 
 ## Cross-Cutting Concerns
 (Patterns flagged by 2+ agents)
 
-## Highlights
-(At least one **specific** good point required — cite file/path or named practice; never leave empty or with only vague praise. If specialists noted none, identify one defensible positive from the diff.)
-
 ## Agent Agreement Matrix
 | Issue | Agents | Consensus |
-
-## Verdict
-(Required final section. Japanese output: use heading `## 判定` instead of `## Verdict`.)
-
-**Approve** or **Request changes** (exactly one — no other labels).
-
-- **Approve** when the change improves overall code health, even if not perfect. Use when only **Minor** and **Nit** items remain (or no issues), and **Coverage Gap** is absent or explicitly judged immaterial to every file in **Change Scope** (say why in **Reasons**).
-- **Request changes** when any unresolved **Critical** or **Major** issue remains in the report above, or when **Coverage Gap** lists any failed, timed-out, or skipped specialist whose expertise could matter for the changed files (default when coverage is incomplete).
-
-Add 1–3 bullet **Reasons** tied to material findings or their absence. Verdict is text in this report only — not a GitHub review action.
 ```
+
+The report **ends** at **Agent Agreement Matrix**. Do **not** add **Highlights**, praise-only sections, **Verdict**, **判定**, **Approve**, **Request changes**, or merge-recommendation text — external reviewer bots own that decision separately from this skill.
 
 ## How to construct prompts
 
@@ -138,7 +127,7 @@ Example shape:
 **Integration agent (9):** Concatenate in this order:
 
 1. **Shared: Restrictions** (copy verbatim)
-2. **Shared: Final Report Format** (copy from `The integration agent (9) must produce the report in this structure:` through the line ending with `not a GitHub review action.` — include the intro, the template fence contents, and the Approve/Request changes bullets; exclude the doc heading `## Shared: Final Report Format`, per the rule above about not copying markdown labels into Task prompts)
+2. **Shared: Final Report Format** (copy from `The integration agent (9) must produce the report in this structure:` through the closing prohibition paragraph after the template fence — include the intro, the template fence contents, and the "report ends" / no-Verdict paragraph; exclude the doc heading `## Shared: Final Report Format`)
 3. The **## Agent 9: Integration Agent** section below (include the `## Agent 9: Integration Agent` heading and the Tasks/Guidelines under it; exclude earlier doc-only headings)
 4. A `---` separator, then `## Stated Intent`, then the same **Stated Intent** text assembled for Step 4 (identical across rounds; must match every analysis agent's Code Context **Stated Intent** block for this review)
 5. A `---` separator, then `## Change Scope`, then the review-wide **Changed Files** list (every file in scope) and the **full unified diff** for all those files (concatenate diffs from every round; omit file contents)
@@ -442,10 +431,9 @@ You receive outputs from these specialists:
    - Agent consensus (more agents → higher priority)
    - Blast radius (how many components affected)
    - Fix effort (quick wins first at equal severity)
-6. **Highlight positives** — Consolidate good practices noted by any agent. The **Highlights** section must name at least one concrete good point (file/path or named pattern). Never ship an empty or purely generic Highlights block.
-7. **Intent alignment** — When **Stated Intent** below includes real PR or linked-issue title/body (not the non-PR `(unavailable — not a PR review` fallback), compare it to **Change Scope** (full diff) and judge whether the change as a whole serves that intent. Surface gaps (missing behavior, scope creep, or unrelated changes) in **Overview** and **Major Issues** even when no specialist flagged them, when the gap is evident from Stated Intent plus the diff; do not re-litigate intent as a line-by-line checklist.
-8. **Calibrate hypothetical-risk noise** — Downgrade or discard specialist findings that demand extra implementation for unproven scenarios, or that read as adversarial "what if" stacking. Credit **Refactoring & Patterns** when it flagged author-side over-engineering for hypothetical concerns.
-9. **Eng-practices gap pass** ([Google eng-practices](https://google.github.io/eng-practices/review/)) — Without inventing a ninth specialist, explicitly check dimensions the eight reviewers may under-cover. Add findings only when the diff supports them; assign Critical/Major/Minor/Nit like specialist output:
+6. **Intent alignment** — When **Stated Intent** below includes real PR or linked-issue title/body (not the non-PR `(unavailable — not a PR review` fallback), compare it to **Change Scope** (full diff) and judge whether the change as a whole serves that intent. Surface gaps (missing behavior, scope creep, or unrelated changes) in **Overview** and **Major Issues** even when no specialist flagged them, when the gap is evident from Stated Intent plus the diff; do not re-litigate intent as a line-by-line checklist.
+7. **Calibrate hypothetical-risk noise** — Downgrade or discard specialist findings that demand extra implementation for unproven scenarios, or that read as adversarial "what if" stacking. Credit **Refactoring & Patterns** when it flagged author-side over-engineering for hypothetical concerns.
+8. **Eng-practices gap pass** ([Google eng-practices](https://google.github.io/eng-practices/review/)) — Without inventing a ninth specialist, explicitly check dimensions the eight reviewers may under-cover. Add findings only when the diff supports them; assign Critical/Major/Minor/Nit like specialist output:
    - **Functionality**: Does the code behave as the author likely intended? Is the behavior good for its users?
    - **Complexity**: Could it be simpler? Over-engineering or unnecessary indirection for this scope?
    - **Naming**: Clear names for variables, types, functions, and modules?
@@ -453,8 +441,6 @@ You receive outputs from these specialists:
    - **Style / consistency**: Matches project and language conventions in surrounding code?
    - **Documentation**: Did relevant README, API docs, or user-facing docs update with the change?
    Place **Nit** items under **Nit Issues** with the `Nit:` title prefix.
-10. **Verdict** — End the report with **Verdict** (`## 判定` when writing 日本語). Exactly **Approve** or **Request changes** per the **Shared: Final Report Format** rules; reasons must reference unresolved Critical/Major items or confirm only Minor/Nit remain.
-
 ### Output
 
 Produce the report using the **Final Report Format** above. Write in the user's preferred language (default: 日本語).
@@ -463,7 +449,8 @@ Produce the report using the **Final Report Format** above. Write in the user's 
 
 - Synthesize and deduplicate specialist outputs; do not add speculative findings without diff evidence
 - You may add **intent-gap** items (missing promised behavior, clear scope creep) when **Stated Intent** and **Change Scope** make the gap obvious; cite the intent source and what the diff lacks — no speculation beyond the provided diff
-- You may add findings from **Eng-practices gap pass** (task 9 above) even when no specialist raised them, when **Change Scope** diff clearly supports them with line-level evidence — same bar as specialist output; do not weaken the no-speculation rule for intent-only guesses
+- You may add findings from **Eng-practices gap pass** (task 8 above) even when no specialist raised them, when **Change Scope** diff clearly supports them with line-level evidence — same bar as specialist output; do not weaken the no-speculation rule for intent-only guesses
+- Do **not** output merge verdicts, **Highlights**, or praise-only wrap-up sections; list material findings and stop at **Agent Agreement Matrix**
 - When discarding a finding, briefly explain why (especially intent mismatch or hypothetical-risk overreach)
 - Keep the report actionable: each issue should have a clear next step
-- The Overview should tee up material risk; the **Verdict** section (or **判定**) is the single merge recommendation — prioritize intent fit and Critical/Major risk over nitpicks
+- The Overview should tee up material risk and intent fit — prioritize Critical/Major findings over nitpicks; do not recommend merge or request-changes (reviewer bots handle that)

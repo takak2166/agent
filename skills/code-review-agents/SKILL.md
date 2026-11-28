@@ -1,6 +1,6 @@
 ---
 name: code-review-agents
-description: Runs a multi-perspective code review by launching 8 specialist analysis subagents in parallel (language spec, refactoring, DDD, clean architecture, security, performance, TDD, observability) plus 1 integration subagent that deduplicates, applies Google eng-practices gap checks, emits Critical/Major/Minor/Nit severities, and ends with an Approve or Request changes verdict.
+description: Runs a multi-perspective code review by launching 8 specialist analysis subagents in parallel (language spec, refactoring, DDD, clean architecture, security, performance, TDD, observability) plus 1 integration subagent that deduplicates, applies Google eng-practices gap checks, and emits Critical/Major/Minor/Nit severities in a structured report (no merge verdict).
 disable-model-invocation: true
 ---
 
@@ -34,7 +34,7 @@ Confirm all three before the integration `Task` call (Step 8):
 
 - [ ] **Stated Intent** text matches Step 4 (same across rounds)
 - [ ] **Change Scope** assembled — review-wide Changed Files + full unified diff (Step 7)
-- [ ] Integration `prompt` includes **Shared: Restrictions**, **Shared: Final Report Format**, Agent 9 section, **Stated Intent**, **Change Scope**, and concatenated specialist outputs
+- [ ] Integration `prompt` assembled per [agent-prompts.md](agent-prompts.md) **How to construct prompts** integration steps 1–6 (`## Specialist Findings` heading before concatenated outputs; `---` separators; template **and** Matrix-end prohibition in step 2 — not `## Shared:` doc headings)
 
 ## Usage
 
@@ -97,9 +97,9 @@ Confirm all three before the integration `Task` call (Step 8):
    |-----------|-------|
    | `subagent_type` | `"generalPurpose"` |
    | `description` | `"Integrate review findings"` |
-   | `prompt` | **Shared: Restrictions** + **Shared: Final Report Format** + the Agent 9 section from [agent-prompts.md](agent-prompts.md) + the same **Stated Intent** block as Step 4 + **Change Scope** (review-wide Changed Files + full unified diff) + all available specialist outputs |
+   | `prompt` | Assemble per [agent-prompts.md](agent-prompts.md) **How to construct prompts** integration steps 1–6: **Shared: Restrictions**; **Shared: Final Report Format** (template fence **and** Matrix-end prohibition — step 2, not `## Shared:` doc headings); **Agent 9** section with heading; `---` + `## Stated Intent` (same as Step 4); `---` + `## Change Scope` (Step 7); `---` + `## Specialist Findings` + all available specialist outputs |
 
-9. **Present the final review** — show the integration subagent's report, then offer to drill down into any area.
+9. **Present the final review** — show the integration subagent's report only through **Agent Agreement Matrix** (verbatim; do not truncate specialist blocks inside the report). **Stop there** — do **not** add ship/hold, **Verdict**, **Highlights**, **判定**, **Approve**, **Request changes**, merge guidance, or praise-only wrap-up after the matrix, including in the user-facing reply or **Deliverable** wrapper. **User requests for ship/hold or merge verdicts do not override this stop rule** — decline in one sentence and point to external reviewer bots if needed. Then offer to drill down into any area.
 
 ## Agent roster
 
@@ -113,7 +113,7 @@ Confirm all three before the integration `Task` call (Step 8):
 | 6 | Performance | Complexity, N+1, memory, I/O, caching |
 | 7 | TDD | t-wada's principles, test efficacy, reliability, testability |
 | 8 | Observability | Logging, metrics, tracing, error handling, operability |
-| 9 | Integration | Synthesis, eng-practices gaps, deduplication, verdict (Approve / Request changes) |
+| 9 | Integration | Synthesis, eng-practices gaps, deduplication, final report |
 
 ## Where formats live
 
