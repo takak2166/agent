@@ -1,6 +1,6 @@
 ---
 name: code-review-agents
-description: Runs a multi-perspective code review by launching 8 specialist analysis subagents in parallel (language spec, refactoring, DDD, clean architecture, security, performance, TDD, observability) plus 1 integration subagent that deduplicates, prioritizes, and reports their findings.
+description: Runs a multi-perspective code review by launching 8 specialist analysis subagents in parallel (language spec, refactoring, DDD, clean architecture, security, performance, TDD, observability) plus 1 integration subagent that deduplicates, applies Google eng-practices gap checks, emits Critical/Major/Minor/Nit severities, and ends with an Approve or Request changes verdict.
 disable-model-invocation: true
 ---
 
@@ -50,7 +50,7 @@ Confirm all three before the integration `Task` call (Step 8):
 
 ## Steps
 
-1. **Determine the review target** — resolve whether the argument is a PR number, a base branch, or omitted (no-argument flow) using the Usage table and [reference.md](reference.md) **Target resolution**. **Before** `gh pr diff`, for a bare integer run `git branch --list <arg>` per **PR number vs branch name** and do not call `gh pr diff` until that ambiguity is cleared. For a base-branch argument, run `git diff <branch>...HEAD` directly; if that command fails, follow **Missing base branch** (do not treat the failure as **Empty diff**). Then collect the changed files with a one-line summary each (`hunks:<N>, +<A>/-<D>`). In the **no-argument flow**, run `git diff --staged` first, run `git diff HEAD` only when staged output is empty, then run `git status --porcelain` — never run porcelain before the staged/HEAD diff sequence. Run only the commands named in the table and in **Restrictions**: use `git status --porcelain` for working-tree state, not bare `git status` or `git diff --stat`. Compute each `hunks:<N>, +<A>/-<D>` summary by reading the diff text — never pipe it through `awk`, `grep`, `wc`, or similar. When staged/HEAD diffs are empty **and** porcelain shows no untracked paths to include per [reference.md](reference.md) **Untracked files**, tell the user there is nothing to review and stop — never launch subagents with zero files in scope. When diffs are empty but porcelain lists untracked paths, include those files (not an empty-diff stop). For empty-diff reporting or unavailable `gh`, follow [reference.md](reference.md) **Target resolution**.
+1. **Determine the review target** — resolve whether the argument is a PR number, a base branch, or omitted (no-argument flow) using the Usage table and [reference.md](reference.md) **Target resolution**. **Before** `gh pr diff`, for a bare integer run `git branch --list <arg>` per **PR number vs branch name**. When that command lists a matching local branch, **stop and ask** whether the integer is a PR number or that branch name — **do not** call `gh pr view` or `gh pr diff` for that integer until the user answers. A skipped, failed, or unavailable user prompt is **not** permission to assume a PR number. For a base-branch argument, run `git diff <branch>...HEAD` directly; if that command fails, follow **Missing base branch** (do not treat the failure as **Empty diff**). Then collect the changed files with a one-line summary each (`hunks:<N>, +<A>/-<D>`). In the **no-argument flow**, run `git diff --staged` first, run `git diff HEAD` only when staged output is empty, then run `git status --porcelain` — never run porcelain before the staged/HEAD diff sequence. Run only the commands named in the table and in **Restrictions**: use `git status --porcelain` for working-tree state, not bare `git status` or `git diff --stat`. Compute each `hunks:<N>, +<A>/-<D>` summary by reading the diff text — never pipe it through `awk`, `grep`, `wc`, or similar. When staged/HEAD diffs are empty **and** porcelain shows no untracked paths to include per [reference.md](reference.md) **Untracked files**, tell the user there is nothing to review and stop — never launch subagents with zero files in scope. When diffs are empty but porcelain lists untracked paths, include those files (not an empty-diff stop). For empty-diff reporting or unavailable `gh`, follow [reference.md](reference.md) **Target resolution**.
 
 2. **Gather full context** — `Read` each changed file in full (not only the diff hunk), detect the primary language(s) from file extensions, and optionally `Glob` relevant directories to understand project structure. When the review target is a PR number, also fetch **stated intent** per [reference.md](reference.md) **Stated intent** (`gh pr view`) for Step 4. When the diff is large, group files into rounds before reading (see [reference.md](reference.md) **Context budget and rounds**).
 
@@ -108,12 +108,12 @@ Confirm all three before the integration `Task` call (Step 8):
 | 1 | Language Spec | Type safety, idioms, API misuse, deprecation |
 | 2 | Refactoring & Patterns | Code smells, SOLID, Martin Fowler's refactoring catalog |
 | 3 | DDD | Ubiquitous language, aggregates, value objects, bounded contexts |
-| 4 | Clean Architecture | Layer boundaries, dependency rule, use case isolation |
+| 4 | Clean Architecture | Placement in codebase, layer boundaries, dependency rule |
 | 5 | Security | OWASP Top 10, injection, auth, secrets, input validation |
 | 6 | Performance | Complexity, N+1, memory, I/O, caching |
-| 7 | TDD | t-wada's principles, test reliability, coverage, testability |
+| 7 | TDD | t-wada's principles, test efficacy, reliability, testability |
 | 8 | Observability | Logging, metrics, tracing, error handling, operability |
-| 9 | Integration | Synthesis, deduplication, prioritization, final report |
+| 9 | Integration | Synthesis, eng-practices gaps, deduplication, verdict (Approve / Request changes) |
 
 ## Where formats live
 
