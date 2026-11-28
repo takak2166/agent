@@ -70,7 +70,7 @@ When assembling text for **Stated Intent**, truncate each PR or issue `body` lon
 After resolving a bare integer as a PR number (see **Target resolution**), run:
 
 ```bash
-gh pr view <N> --json title,body,closingIssuesReferences
+gh pr view <N> --json title,body,closingIssuesReferences,headRefName
 ```
 
 If that command fails (auth, network, or an older `gh` without `closingIssuesReferences`), use the **Branch or working-tree targets** fallback text below, note the fetch gap, and continue the review without PR/issue bodies.
