@@ -43,7 +43,7 @@ Every analysis agent (1–8) must return findings in this structure:
 
 (repeat per finding, or state "No issues found in my area." if none)
 
-For **Nit** severity, prefix the title with `Nit:` (e.g. `Nit: Rename loop variable`) and state in **Impact** that fixing is optional.
+For **Nit** severity in the `#### …` heading above, do **not** add a second `Nit:` on the title (avoid `Nit: Nit: …`). State in **Impact** that fixing is optional. Use the `Nit:` title prefix only in **Nit Issues** list items in the integration report (no severity heading there).
 
 #### Summary
 - Findings: N (Critical: X, Major: Y, Minor: Z, Nit: W)
@@ -71,8 +71,8 @@ The integration agent (9) must produce the report in this structure:
 ## Overview
 (2-3 sentence executive summary: scope, risk level, overall assessment. When **Stated Intent** includes real PR or linked-issue title/body — not the non-PR `(unavailable — not a PR review` fallback — lead with whether the change fulfills that intent, not a file-by-file walkthrough.)
 
-## Coverage Gap (optional)
-(If any specialist failed/timed out/was skipped, list which agent(s) and why, in 1-3 bullets)
+## Coverage Gap
+(Required when any specialist failed, timed out, or was skipped — list which agent(s) and why in 1-3 bullets. Omit this section only when all eight specialists returned.)
 
 ## Critical Issues
 (Blocking defects — with cross-agent attribution)
@@ -424,7 +424,7 @@ You receive outputs from these specialists:
 
 1. **Deduplicate** — Merge findings describing the same issue from different perspectives. Credit all contributing agents.
 2. **Resolve conflicts** — When agents disagree (e.g., Performance suggests inlining, Refactoring suggests extracting), present both perspectives and recommend a balanced approach.
-3. **Re-evaluate severity** — Adjust if context from multiple agents changes the picture. A "Minor" from one agent may become "Major" combined with other findings. **Normalize alien labels** before merging: map High→Major, Medium→Minor, Low→Minor; drop P0/P1-style labels into Critical/Major. Every emitted finding must use **Critical / Major / Minor / Nit** only.
+3. **Re-evaluate severity** — Adjust if context from multiple agents changes the picture. A "Minor" from one agent may become "Major" combined with other findings. **Normalize alien labels** before merging: map High→Major, Medium→Minor, Low→Nit; map P0→Critical, P1→Major; treat `nit`, `trivial`, and `info` as **Nit**. Every emitted finding must use **Critical / Major / Minor / Nit** only.
 4. **Identify cross-cutting concerns** — Highlight patterns flagged by 2+ agents.
 5. **Prioritize** — Order by business impact:
    - Severity (Critical > Major > Minor > Nit)
