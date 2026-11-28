@@ -86,7 +86,7 @@ Session is done when the preference frontier is empty and the user confirms shar
 
 ## Question delivery
 
-Deliver preference-frontier questions per [`reference/question-delivery.md`](reference/question-delivery.md). Each round: follow **Expected output** above.
+Deliver preference-frontier questions per [`reference/question-delivery.md`](reference/question-delivery.md). Use one recommended-tag locale per round — the conversation language (`(推奨)` / `(Recommended)`); do not mix locales in labels or ➡️ lines. Each round: follow **Expected output** above.
 
 ## Session end
 
@@ -101,5 +101,5 @@ When the preference frontier is empty, follow **Expected output** → **Session 
 - Do not implement, edit, or prototype the subject of the interview while this skill is running.
 - Do not ask the user for look-up-able facts or empirical / observable forks.
 - Do not recompute the design tree mid-round.
-- Do not add a duplicate Other option.
+- Do not add an explicit free-text / Other choice when the question tool already provides one (Cursor `AskQuestion`, Claude `AskUserQuestion`). When using the Grok Bot question widget, set `allowCustom: true`. The markdown fallback must always include a free-text choice (see **Question delivery**).
 - Do not use for small, clear tasks or routine fixes whose direction is already decided. If this skill is already loaded (including auto-invoke) and you judge the subject is that kind of request, state why and exit without starting or continuing the interview.
